@@ -69,7 +69,15 @@ async def lifespan(app: FastAPI):
     """
     Handles application startup and shutdown events using context managers.
     """
-    logger.info("Initializing application lifespan...")
+    import os
+    disable_scheduler = os.getenv("DISABLE_SCHEDULER", "false").lower() == "true"
+    
+    if disable_scheduler:
+        logger.info("Background Scheduler is disabled (DISABLE_SCHEDULER=true).")
+        yield
+        return
+        
+    logger.info("Initializing application lifespan with background scheduler...")
     
     # 1. Register the ingestion task (every 15 minutes)
     scheduler.add_job(
@@ -234,7 +242,7 @@ class PaginatedNewsResponse(BaseModel):
 
 # API Endpoints
 
-@app.post("/auth/login", response_model=TokenResponse, summary="Autenticação de Usuários")
+@app.post("/api/auth/login", response_model=TokenResponse, summary="Autenticação de Usuários")
 def login(payload: LoginRequest):
     """
     Authenticates users (Admins or Readers) and returns a JWT access token.
@@ -261,7 +269,7 @@ def login(payload: LoginRequest):
         )
 
 
-@app.get("/noticias", response_model=PaginatedNewsResponse, summary="Consultar Notícias")
+@app.get("/api/noticias", response_model=PaginatedNewsResponse, summary="Consultar Notícias")
 def get_news(
     page: int = Query(1, ge=1, description="Número da página (início em 1)"),
     size: int = Query(20, ge=1, le=100, description="Quantidade de registros por página"),
@@ -312,7 +320,7 @@ def get_news(
         )
 
 
-@app.post("/admin/coleta-manual", summary="Forçar Execução do Pipeline (Admin)")
+@app.post("/api/admin/coleta-manual", summary="Forçar Execução do Pipeline (Admin)")
 async def force_manual_collection(
     admin_claims: dict = Depends(require_admin_role)
 ):
@@ -347,7 +355,7 @@ async def force_manual_collection(
         )
 
 
-@app.post("/leads", summary="Registrar Lead da Landing Page")
+@app.post("/api/leads", summary="Registrar Lead da Landing Page")
 def register_lead(payload: LeadCreateRequest):
     """
     Saves a captured lead (Name, Email, WhatsApp) to the database.
@@ -383,7 +391,7 @@ def register_lead(payload: LeadCreateRequest):
         )
 
 
-@app.get("/admin/leads", response_model=List[LeadResponse], summary="Listar Leads Capturados (Admin)")
+@app.get("/api/admin/leads", response_model=List[LeadResponse], summary="Listar Leads Capturados (Admin)")
 def get_leads(
     admin_claims: dict = Depends(require_admin_role)
 ):
@@ -403,7 +411,7 @@ def get_leads(
         )
 
 
-@app.get("/health", summary="Health Check")
+@app.get("/api/health", summary="Health Check")
 def health_check():
     """
     Checks if API and database connection are working.

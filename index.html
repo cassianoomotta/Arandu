@@ -601,7 +601,9 @@
     <script>
         // Global Invite Config (ready to change when real Telegram is created)
         const TELEGRAM_CHANNEL_URL = "https://t.me/AranduTechPortal";
-        const API_BASE_URL = "http://localhost:8000";
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? "http://localhost:8000"
+            : "";
 
         // Initialize AOS animations
         AOS.init({
@@ -622,7 +624,7 @@
         async function fetchLatestNews() {
             try {
                 // Fetch the latest 20 news items to group them by category
-                const response = await fetch(`${API_BASE_URL}/noticias?page=1&size=20`);
+                const response = await fetch(`${API_BASE_URL}/api/noticias?page=1&size=20`);
                 if (!response.ok) throw new Error('API offline');
                 const data = await response.json();
                 
@@ -898,7 +900,7 @@
             `;
 
             // Submit lead to FastAPI REST endpoint
-            fetch(`${API_BASE_URL}/leads`, {
+            fetch(`${API_BASE_URL}/api/leads`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

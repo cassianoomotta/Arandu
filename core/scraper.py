@@ -324,6 +324,29 @@ async def main():
         except Exception as e:
             logger.error(f"Failed to bulk write news to database: {str(e)}")
 
+        # 6. Dispatch pending notifications to Telegram
+        logger.info("Scraper Dispatcher: Dispatching pending notifications...")
+        try:
+            from core.notifier import TelegramNotifier, dispatch_pending_notifications
+            notifier = TelegramNotifier()
+            sent_count = await dispatch_pending_notifications(notifier)
+            logger.info(f"Scraper Dispatcher: Successfully dispatched {sent_count} notifications.")
+        except Exception as e:
+            logger.error(f"Scraper Dispatcher: Notification dispatch failed: {str(e)}")
+
+        # 7. Database news cleanup (purge articles older than 20 days)
+        logger.info("Scraper Cleanup: Starting old news purge (retention: 20 days)...")
+        try:
+            from datetime import timedelta
+            with get_db_session() as session:
+                cutoff_date = datetime.utcnow() - timedelta(days=20)
+                deleted_count = session.query(News).filter(
+                    News.created_at < cutoff_date
+                ).delete(synchronize_session="fetch")
+                logger.info(f"Scraper Cleanup: Purged {deleted_count} news articles older than 20 days.")
+        except Exception as e:
+            logger.error(f"Scraper Cleanup: News cleanup failed: {str(e)}")
+
 
 if __name__ == "__main__":
     # Standard entry point to execute async main loop

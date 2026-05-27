@@ -396,14 +396,18 @@
             lucide.createIcons();
         });
 
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? "http://localhost:8000"
+            : "";
+
         // Fetch list of news
         async function fetchNewsList() {
             try {
                 // Fetch up to 100 recent articles
-                const response = await fetch('http://localhost:8000/noticias?page=1&size=100');
+                const response = await fetch(`${API_BASE_URL}/api/noticias?page=1&size=100`);
                 if (response.ok) {
                     const data = await response.json();
-                    allNews = data.items || [];
+                    allNews = data.results || data.items || [];
                 } else {
                     console.log('Backend response issue. Falling back to default list.');
                     allNews = fallbackNews;

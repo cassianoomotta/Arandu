@@ -268,7 +268,9 @@
     </div>
 
     <script>
-        const API_BASE_URL = "http://localhost:8000";
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? "http://localhost:8000"
+            : "";
         let token = localStorage.getItem("admin_token");
 
         // App life-cycle hook
@@ -299,7 +301,7 @@
         async function checkBackendHealth() {
             const statusIndicator = document.getElementById("apiStatusVal");
             try {
-                const res = await fetch(`${API_BASE_URL}/health`);
+                const res = await fetch(`${API_BASE_URL}/api/health`);
                 if (res.ok) {
                     statusIndicator.textContent = "Online";
                     statusIndicator.className = "text-lg font-bold text-green-400 uppercase tracking-wide";
@@ -331,7 +333,7 @@
             `;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
@@ -370,7 +372,7 @@
             const counter = document.getElementById("leadsCountVal");
 
             try {
-                const response = await fetch(`${API_BASE_URL}/admin/leads`, {
+                const response = await fetch(`${API_BASE_URL}/api/admin/leads`, {
                     headers: {
                         "Authorization": `Bearer ${token}`
                     }
@@ -439,7 +441,7 @@
             `;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/admin/coleta-manual`, {
+                const response = await fetch(`${API_BASE_URL}/api/admin/coleta-manual`, {
                     method: "POST",
                     headers: {
                         "Authorization": `Bearer ${token}`
