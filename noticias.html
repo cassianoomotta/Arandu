@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arandu | Todos os Relatórios & Curadoria</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#050505',
+                        gold: {
+                            DEFAULT: '#C5A85C',
+                            light: '#E8D098',
+                            dark: '#9A7B3E',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                    },
+                    backgroundImage: {
+                        'gold-glow': 'radial-gradient(circle, rgba(197,168,92,0.12) 0%, rgba(5,5,5,0) 70%)',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom Scrollbar & Premium Styles -->
+    <style type="text/css">
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #C5A85C33;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #C5A85C66;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .text-glow {
+            text-shadow: 0 0 15px rgba(232, 208, 152, 0.2);
+        }
+        .glow-btn {
+            position: relative;
+            overflow: hidden;
+        }
+        .glow-btn::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transition: all 0.6s ease;
+        }
+        .glow-btn:hover::after {
+            left: 100%;
+        }
+    </style>
+</head>
+<body class="bg-obsidian text-white font-sans overflow-x-hidden min-h-screen relative selection:bg-gold selection:text-black">
+
+    <!-- Ambient glowing backgrounds -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-gold-glow"></div>
+        <div class="absolute top-[45%] right-[-15%] w-[60%] h-[60%] bg-gold-glow"></div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="w-full py-6 px-6 md:px-12 border-b border-white/5 relative z-50 glass-panel">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <!-- Brand Logo -->
+            <a href="index.html" class="flex flex-col gap-1 items-start" aria-label="Arandu Home">
+                <div class="flex items-center gap-1">
+                    <!-- Stylized vector A to match logo image -->
+                    <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-[0_0_8px_rgba(197,168,92,0.6)]">
+                        <path d="M50 5L92 85H74L50 37L26 85H8L50 5Z" fill="url(#gold-grad-svg)" />
+                        <path d="M37 60H63L68 70H32L37 60Z" fill="url(#gold-grad-svg-2)" />
+                        <defs>
+                            <linearGradient id="gold-grad-svg" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#C5A85C" />
+                                <stop offset="50%" stop-color="#E8D098" />
+                                <stop offset="100%" stop-color="#9A7B3E" />
+                            </linearGradient>
+                            <linearGradient id="gold-grad-svg-2" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#E8D098" />
+                                <stop offset="100%" stop-color="#9A7B3E" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <span class="font-outfit text-2xl font-bold tracking-[0.2em] text-white">RANDU</span>
+                </div>
+                <span class="text-[8px] md:text-[9px] tracking-[0.25em] text-gold-light/60 font-outfit uppercase mt-0.5">
+                    Consultoria &bull; Tecnologia &bull; Inteligência
+                </span>
+            </a>
+
+            <div class="flex items-center gap-6">
+                <a href="index.html" class="text-gray-400 hover:text-white transition-colors text-sm font-medium tracking-wider font-outfit uppercase">
+                    Voltar ao Início
+                </a>
+                <!-- Administrative Route Button -->
+                <a href="admin.html" class="px-5 py-2.5 rounded-lg border border-gold/40 hover:border-gold text-gold-light hover:text-white transition-all duration-300 font-medium text-sm tracking-wider font-outfit uppercase bg-white/5 backdrop-blur">
+                    Área do Administrador
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="relative z-10 max-w-7xl mx-auto px-6 md:px-12 py-16">
+        
+        <!-- Hero Header -->
+        <div class="text-center max-w-3xl mx-auto mb-16">
+            <span class="text-gold text-xs font-bold tracking-[0.3em] uppercase block mb-3">CURADORIA E INTELIGÊNCIA</span>
+            <h1 class="font-outfit text-4xl md:text-5xl font-black text-white tracking-tight uppercase leading-tight mb-4">
+                TODOS OS RELATÓRIOS
+            </h1>
+            <p class="text-gray-400 text-sm md:text-base font-light leading-relaxed">
+                Explore a biblioteca completa de publicações monitoradas, traduzidas e resumidas em tempo real. Filtre por categorias para focar no que mais importa para o seu negócio.
+            </p>
+        </div>
+
+        <!-- Filters & Search Bar -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
+            <!-- Tabs -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0" id="filter-tabs">
+                <button onclick="setCategoryFilter('all')" id="tab-all" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black">
+                    Ver Tudo
+                </button>
+                <button onclick="setCategoryFilter('tecnologia')" id="tab-tecnologia" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white">
+                    Tecnologia
+                </button>
+                <button onclick="setCategoryFilter('empreendedorismo')" id="tab-empreendedorismo" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white">
+                    Empreendedorismo
+                </button>
+                <button onclick="setCategoryFilter('investimentos')" id="tab-investimentos" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white">
+                    Investimentos
+                </button>
+            </div>
+
+            <!-- Search input -->
+            <div class="relative w-full md:w-80">
+                <input type="text" id="search-input" oninput="handleSearch()" placeholder="Pesquisar notícias..." class="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold/50 transition-colors">
+                <i data-lucide="search" class="w-4 h-4 text-gray-500 absolute left-3.5 top-3.5"></i>
+            </div>
+        </div>
+
+        <!-- News Feed Grid -->
+        <div id="news-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Populated via JavaScript -->
+        </div>
+
+        <!-- Empty state placeholder -->
+        <div id="empty-state" class="hidden text-center py-20">
+            <i data-lucide="alert-circle" class="w-12 h-12 text-gold/40 mx-auto mb-4"></i>
+            <h3 class="font-outfit text-lg font-bold text-white mb-1">Nenhum resultado encontrado</h3>
+            <p class="text-sm text-gray-400">Tente alterar os filtros ou o termo de pesquisa.</p>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="w-full pt-16 pb-12 px-6 md:px-12 border-t border-white/5 relative z-10 mt-20 glass-panel">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+            <!-- Brand Column -->
+            <div class="flex flex-col items-start gap-4">
+                <div class="flex flex-col gap-1 items-start">
+                    <div class="flex items-center gap-1">
+                        <svg width="30" height="30" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-[0_0_8px_rgba(197,168,92,0.6)]">
+                            <path d="M50 5L92 85H74L50 37L26 85H8L50 5Z" fill="url(#gold-grad-svg-footer)" />
+                            <path d="M37 60H63L68 70H32L37 60Z" fill="url(#gold-grad-svg-footer-2)" />
+                            <defs>
+                                <linearGradient id="gold-grad-svg-footer" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stop-color="#C5A85C" />
+                                    <stop offset="50%" stop-color="#E8D098" />
+                                    <stop offset="100%" stop-color="#9A7B3E" />
+                                </linearGradient>
+                                <linearGradient id="gold-grad-svg-footer-2" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stop-color="#E8D098" />
+                                    <stop offset="100%" stop-color="#9A7B3E" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <span class="font-outfit text-xl font-bold tracking-[0.2em] text-white">RANDU</span>
+                    </div>
+                    <span class="text-[8px] tracking-[0.25em] text-gold-light/60 font-outfit uppercase mt-0.5">
+                        Consultoria &bull; Tecnologia &bull; Inteligência
+                    </span>
+                </div>
+                <p class="text-gray-400 text-xs font-light leading-relaxed">
+                    Consultoria de inteligência e curadoria estratégica de informações para tomadores de decisão em tecnologia e empreendedorismo.
+                </p>
+                <div class="flex items-center gap-3.5 mt-4">
+                    <!-- WhatsApp -->
+                    <a href="https://wa.me/5511999999999" target="_blank" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 hover:border-gold hover:text-gold transition-all duration-300 flex items-center justify-center text-gray-400" title="WhatsApp">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.458 5.704 1.459h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413"/>
+                        </svg>
+                    </a>
+                    <!-- Instagram -->
+                    <a href="https://instagram.com/arandu.tech" target="_blank" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 hover:border-gold hover:text-gold transition-all duration-300 flex items-center justify-center text-gray-400" title="Instagram">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+                        </svg>
+                    </a>
+                    <!-- Telegram -->
+                    <a href="https://t.me/AranduTechPortal" target="_blank" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 hover:border-gold hover:text-gold transition-all duration-300 flex items-center justify-center text-gray-400" title="Telegram">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18.966-.967 5.58-1.365 7.717-.168.9-.501 1.201-.82 1.23-1.042.096-1.832-.69-2.842-1.352-1.58-1.04-2.472-1.685-4.002-2.694-1.768-1.166-.622-1.807.386-2.856.264-.275 4.85-4.448 4.939-4.831.011-.047.021-.223-.083-.317-.105-.094-.258-.062-.369-.037-.157.036-2.658 1.69-7.502 4.966-.71.488-1.354.726-1.93.712-.635-.015-1.859-.36-2.768-.656-1.116-.363-2.003-.555-1.926-1.172.04-.321.482-.65 1.326-.988 5.197-2.264 8.665-3.758 10.404-4.482 4.95-2.056 5.978-2.413 6.649-2.425.148-.003.477.034.69.207.18.147.23.344.25.485.02.146.026.425.011.666z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Quick Links -->
+            <div class="flex flex-col items-start gap-4">
+                <h4 class="font-outfit text-sm font-bold text-white tracking-widest uppercase text-glow">Links Rápidos</h4>
+                <ul class="flex flex-col gap-2.5 text-xs text-gray-400 font-light">
+                    <li><a href="index.html#features" class="hover:text-gold transition">Recursos</a></li>
+                    <li><a href="index.html#curadoria" class="hover:text-gold transition">Curadoria do Dia</a></li>
+                    <li><a href="index.html#faq" class="hover:text-gold transition">FAQ</a></li>
+                    <li><a href="admin.html" class="hover:text-gold transition">Painel Administrativo</a></li>
+                </ul>
+            </div>
+
+            <!-- Best Pages Recommendation -->
+            <div class="flex flex-col items-start gap-4">
+                <h4 class="font-outfit text-sm font-bold text-white tracking-widest uppercase text-glow">Recomendações</h4>
+                <ul class="flex flex-col gap-2.5 text-xs text-gray-400 font-light">
+                    <li><a href="https://techcrunch.com" target="_blank" class="hover:text-gold transition">TechCrunch</a></li>
+                    <li><a href="https://www.technologyreview.com" target="_blank" class="hover:text-gold transition">MIT Tech Review</a></li>
+                    <li><a href="http://www.paulgraham.com/articles.html" target="_blank" class="hover:text-gold transition">Paul Graham Essays</a></li>
+                    <li><a href="https://venturebeat.com" target="_blank" class="hover:text-gold transition">VentureBeat</a></li>
+                </ul>
+            </div>
+
+            <!-- Contact / Channel Info -->
+            <div class="flex flex-col items-start gap-4">
+                <h4 class="font-outfit text-sm font-bold text-white tracking-widest uppercase text-glow">Canal de Transmissão</h4>
+                <p class="text-xs text-gray-400 font-light leading-relaxed">
+                    Receba os insights diretamente no seu aplicativo favorito. Distribuição automatizada em menos de 15 minutos de intervalo.
+                </p>
+                <a href="https://t.me/AranduTechPortal" target="_blank" class="glow-btn inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-gold-dark via-gold to-gold-light text-black text-xs font-bold uppercase tracking-wider transition hover:scale-105 duration-300">
+                    Acessar Telegram
+                    <i data-lucide="send" class="w-3 h-3"></i>
+                </a>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] text-gray-500 font-light tracking-wider uppercase">
+            <span>&copy; 2026 Arandu. Todos os direitos reservados.</span>
+            <span>Desenvolvido com foco em alta performance &amp; Inteligência de Dados</span>
+        </div>
+    </footer>
+
+    <!-- LOGIC FOR NEWS LIST AND FILTERS -->
+    <script>
+        let allNews = [];
+        let activeCategory = 'all';
+
+        // Static fallbacks in case API is offline
+        const fallbackNews = [
+            {
+                source_name: "Canaltech",
+                original_title: "A Nova Era dos Modelos de Linguagem em Negócios",
+                link: "https://canaltech.com.br",
+                image_url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Integração nativa de LLMs reduz custos operacionais de suporte em até 40%.\n- Novos modelos operam localmente garantindo segurança e privacidade corporativa.\n- Startups de infraestrutura de IA levantam rodadas históricas no mercado global.",
+                created_at: new Date(Date.now() - 3600000).toISOString()
+            },
+            {
+                source_name: "TechCrunch",
+                original_title: "Apple Intelligence Expands Globally in 2026",
+                link: "https://techcrunch.com",
+                image_url: "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Novas funcionalidades de inteligência local chegam a mais de 15 países na Europa.\n- Integração com assistentes de voz ganha processamento semântico avançado.\n- Foco em privacidade no chip garante processamento local sem envio à nuvem.",
+                created_at: new Date(Date.now() - 7200000).toISOString()
+            },
+            {
+                source_name: "MIT Technology Review",
+                original_title: "MIT: O Avanço dos Semicondutores de Próxima Geração",
+                link: "https://www.technologyreview.com",
+                image_url: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Novas fundições começam testes em larga escala de litografia ultravioleta extrema para chips de 2nm.\n- Novos materiais reduzem em 30% a dissipação térmica em servidores de alto desempenho.\n- Arquitetura híbrida de transistores acelera cálculos de redes neurais profundas.",
+                created_at: new Date(Date.now() - 10800000).toISOString()
+            },
+            {
+                source_name: "Tecnoblog",
+                original_title: "Como Startups Estão Escalando com Arquiteturas Serverless",
+                link: "https://tecnoblog.net",
+                image_url: "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Redução de despesas com infraestrutura de nuvem em mais de 50% no primeiro ano de operação.\n- Escalabilidade automática instantânea para picos repentinos de tráfego de usuários.\n- Desenvolvedores focam exclusivamente na regra de negócio, otimizando lançamentos.",
+                created_at: new Date(Date.now() - 14400000).toISOString()
+            },
+            {
+                source_name: "Paul Graham Essays",
+                original_title: "Paul Graham: Como Conseguir Ideias de Startups",
+                link: "http://www.paulgraham.com",
+                image_url: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- O ensaio foca na identificação de problemas orgânicos gerados pelas mudanças tecnológicas disruptivas.\n- Recomenda criar projetos baseados nas próprias necessidades para validar o mercado.\n- Explica que as melhores startups parecem ideias ruins no início.",
+                created_at: new Date(Date.now() - 18000000).toISOString()
+            },
+            {
+                source_name: "G1 Empreendedorismo",
+                original_title: "Negócios Digitais Lideram Abertura de Empresas no País",
+                link: "https://g1.globo.com/economia/empreendedorismo",
+                image_url: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Microempresas focadas em software e consultoria estratégica comandam a retomada de contratações.\n- Setor de tecnologia cresce acima da média nacional impulsionado pela digitalização acelerada.\n- Facilidades no registro online e tributação simplificada reduzem barreiras de entrada.",
+                created_at: new Date(Date.now() - 21600000).toISOString()
+            },
+            {
+                source_name: "G1 Tecnologia",
+                original_title: "Boom da Computação Quântica e Capital de Risco",
+                link: "https://g1.globo.com/economia/tecnologia/",
+                image_url: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Aportes financeiros em hardware e algoritmos quânticos crescem 80% globalmente no último ano.\n- Primeiros casos práticos de criptografia pós-quântica entram em produção bancária.\n- Fundos globais de VC abrem filiais focadas em Deep Tech voltadas a simulações moleculares.",
+                created_at: new Date(Date.now() - 25200000).toISOString()
+            },
+            {
+                source_name: "VentureBeat",
+                original_title: "VentureBeat: Capital Foca em Climatetech e Fusão",
+                link: "https://venturebeat.com",
+                image_url: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Investidores injetam recordes de US$ 2.4 bilhões em rodadas de inovação de matriz energética sustentável.\n- Fusão nuclear atrai grandes rodadas de investimentos com foco em sustentabilidade.\n- Startups de descarbonização registram valuations recordes devido a metas ESG globais.",
+                created_at: new Date(Date.now() - 28800000).toISOString()
+            },
+            {
+                source_name: "Época Negócios",
+                original_title: "As Empresas Mais Inovadoras e Resilientes do Ano",
+                link: "https://epocanegocios.globo.com",
+                image_url: "https://images.unsplash.com/photo-1542744094-3a31f103e35f?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Ranking especial destaca corporações financeiras e de biotecnologia na vanguarda de transformação digital.\n- Adaptação rápida a modelos de trabalho híbridos define vencedores globais.\n- Investimento em cibersegurança e automação de processos sustenta o lucro no ano.",
+                created_at: new Date(Date.now() - 32400000).toISOString()
+            }
+        ];
+
+        // Map sources to categories
+        const sourceMap = {
+            "Canaltech": "tecnologia",
+            "Olhar Digital": "tecnologia",
+            "Tecmundo": "tecnologia",
+            "Tecnoblog": "tecnologia",
+            "G1 Tecnologia": "tecnologia",
+            "TechCrunch": "tecnologia",
+            "Wired": "tecnologia",
+            "MIT Technology Review": "tecnologia",
+            "Google Research Blog": "tecnologia",
+            "AWS News Blog": "investimentos",
+            "VentureBeat": "investimentos",
+            "Época Negócios": "investimentos",
+            "G1 Empreendedorismo": "empreendedorismo",
+            "Paul Graham Essays": "empreendedorismo"
+        };
+
+        // Initialize Page
+        document.addEventListener('DOMContentLoaded', () => {
+            // Read category from URL params (e.g. ?categoria=tecnologia)
+            const urlParams = new URLSearchParams(window.location.search);
+            const categoriaParam = urlParams.get('categoria');
+            if (categoriaParam && ['tecnologia', 'empreendedorismo', 'investimentos'].includes(categoriaParam)) {
+                activeCategory = categoriaParam;
+                // Update tab styles immediately
+                const tabs = ['all', 'tecnologia', 'empreendedorismo', 'investimentos'];
+                tabs.forEach(tab => {
+                    const el = document.getElementById(`tab-${tab}`);
+                    if (el) {
+                        el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white";
+                    }
+                });
+                const activeEl = document.getElementById(`tab-${categoriaParam}`);
+                if (activeEl) {
+                    activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black";
+                }
+            }
+            fetchNewsList();
+            lucide.createIcons();
+        });
+
+        // Fetch list of news
+        async function fetchNewsList() {
+            try {
+                // Fetch up to 100 recent articles
+                const response = await fetch('http://localhost:8000/noticias?page=1&size=100');
+                if (response.ok) {
+                    const data = await response.json();
+                    allNews = data.items || [];
+                } else {
+                    console.log('Backend response issue. Falling back to default list.');
+                    allNews = fallbackNews;
+                }
+            } catch (err) {
+                console.log('Backend offline. Loading fallback curated list.', err);
+                allNews = fallbackNews;
+            }
+            renderFeed();
+        }
+
+        // Render articles based on filters
+        function renderFeed() {
+            const container = document.getElementById('news-grid-container');
+            const emptyState = document.getElementById('empty-state');
+            const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
+
+            container.innerHTML = '';
+            
+            // Filter news
+            const filtered = allNews.filter(item => {
+                const category = sourceMap[item.source_name] || 'tecnologia';
+                
+                // Category Filter
+                if (activeCategory !== 'all' && category !== activeCategory) {
+                    return false;
+                }
+
+                // Search Term
+                if (searchTerm) {
+                    const title = (item.translated_title || item.original_title || "").toLowerCase();
+                    const summary = (item.ai_summary || "").toLowerCase();
+                    const source = (item.source_name || "").toLowerCase();
+                    if (!title.includes(searchTerm) && !summary.includes(searchTerm) && !source.includes(searchTerm)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                container.classList.add('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            container.classList.remove('hidden');
+
+            filtered.forEach((item, index) => {
+                const title = item.translated_title || item.original_title;
+                const category = sourceMap[item.source_name] || 'tecnologia';
+                const formattedCategory = category.toUpperCase();
+                const image = item.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80';
+                
+                // Formatted domain
+                let domain = 'artigo original';
+                try {
+                    domain = new URL(item.link).hostname.replace('www.', '');
+                } catch (e) {}
+
+                // Publish Date Formatting
+                let dateStr = 'Recente';
+                if (item.created_at) {
+                    try {
+                        const date = new Date(item.created_at);
+                        dateStr = date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                    } catch (e) {}
+                }
+
+                // Parse Bullet Points
+                const summary = item.ai_summary || "";
+                const points = summary.split('\n').filter(p => p.trim() !== '');
+                let pointsHtml = '';
+                points.forEach(pt => {
+                    const cleanPt = pt.replace(/^-\s*/, '').replace(/^\*\s*/, '').replace(/^\d+\.\s*/, '').trim();
+                    if (cleanPt) {
+                        pointsHtml += `
+                            <li class="flex items-start gap-2.5 leading-snug">
+                                <span class="text-gold mt-1">&bull;</span>
+                                <span>${cleanPt}</span>
+                            </li>
+                        `;
+                    }
+                });
+
+                if (!pointsHtml) {
+                    pointsHtml = `
+                        <li class="flex items-start gap-2.5 leading-snug">
+                            <span class="text-gold mt-1">&bull;</span>
+                            <span>${summary}</span>
+                        </li>
+                    `;
+                }
+
+                // Set proper category icon
+                let iconName = "cpu";
+                if (category === "empreendedorismo") iconName = "bar-chart-3";
+                else if (category === "investimentos") iconName = "trending-up";
+
+                const card = document.createElement('div');
+                card.className = "glass-panel rounded-2xl overflow-hidden hover:border-gold/30 hover:bg-white/[0.04] transition-all duration-500 flex flex-col h-full group";
+                card.innerHTML = `
+                    <a href="${item.link}" target="_blank" class="block relative h-48 overflow-hidden cursor-pointer">
+                        <img src="${image}" alt="${title}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy">
+                        <span class="absolute top-4 left-4 bg-gold/95 backdrop-blur text-black text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded">
+                            ${formattedCategory}
+                        </span>
+                        <span class="absolute bottom-4 right-4 bg-black/60 backdrop-blur text-[10px] text-gray-300 px-2 py-0.5 rounded font-mono">
+                            ${dateStr}
+                        </span>
+                    </a>
+                    <div class="p-6 flex flex-col flex-grow">
+                        <h3 class="font-outfit text-lg font-bold text-white mb-4 line-clamp-2 hover:text-gold-light transition duration-300">
+                            <a href="${item.link}" target="_blank" class="hover:underline">${title}</a>
+                        </h3>
+                        
+                        <div class="mt-auto border-t border-white/5 pt-4">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-3 flex items-center gap-1.5">
+                                <i data-lucide="${iconName}" class="w-3.5 h-3.5 text-gold"></i>
+                                Resumo Executivo (IA)
+                            </span>
+                            <ul class="space-y-2.5 text-sm text-gray-400 mb-6">
+                                ${pointsHtml}
+                            </ul>
+                            <div class="flex items-center justify-between pt-2 border-t border-white/5 mt-auto">
+                                <span class="text-[10px] text-gray-500 font-medium">Fonte: ${domain}</span>
+                                <a href="${item.link}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold hover:text-gold-light transition duration-300">
+                                    Ler Fonte
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        // Category tab navigation controller
+        function setCategoryFilter(category) {
+            activeCategory = category;
+
+            // Remove active classes from all tabs
+            const tabs = ['all', 'tecnologia', 'empreendedorismo', 'investimentos'];
+            tabs.forEach(tab => {
+                const el = document.getElementById(`tab-${tab}`);
+                if (el) {
+                    el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white";
+                }
+            });
+
+            // Set active class on target tab
+            const activeEl = document.getElementById(`tab-${category}`);
+            if (activeEl) {
+                activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black";
+            }
+
+            renderFeed();
+        }
+
+        // Live text filter
+        function handleSearch() {
+            renderFeed();
+        }
+    </script>
+</body>
+</html>
