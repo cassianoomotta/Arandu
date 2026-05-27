@@ -127,7 +127,8 @@ async def fetch_rss_feed(
         response = await client.get(
             rss_url, 
             headers=USER_HEADERS, 
-            timeout=REQUEST_TIMEOUT
+            timeout=REQUEST_TIMEOUT,
+            follow_redirects=True
         )
         if response.status_code == 200:
             return response.text

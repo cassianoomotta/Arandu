@@ -61,8 +61,8 @@ def seed_database():
             active=True
         ),
         Source(
-            name="Época Negócios",
-            rss_url="https://epocanegocios.globo.com/rss/epoca-negocios/",
+            name="InfoMoney",
+            rss_url="https://www.infomoney.com.br/feed/",
             type=SourceType.NACIONAL,
             active=True
         ),
@@ -88,64 +88,58 @@ def seed_database():
         Source(
             name="Wired",
             rss_url="https://www.wired.com/feed/rss",
-            type=SourceType.INTERNACIONAL,
+            type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
             active=True
         ),
         Source(
             name="VentureBeat",
-            rss_url="https://feeds.feedburner.com/venturebeat/SgGo",
-            type=SourceType.INTERNACIONAL,
+            rss_url="https://venturebeat.com/feed/",
+            type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
             active=True
         ),
         Source(
             name="MIT Technology Review",
             rss_url="https://www.technologyreview.com/feed/",
-            type=SourceType.INTERNACIONAL,
+            type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
             active=True
         ),
         # --- Blogs Corporativos & Pesquisa ---
         Source(
             name="Google Research Blog",
             rss_url="https://feeds.feedburner.com/blogspot/gJZg",
-            type=SourceType.INTERNACIONAL,
+            type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
             active=True
         ),
         Source(
             name="AWS News Blog",
             rss_url="https://aws.amazon.com/blogs/aws/feed/",
-            type=SourceType.INTERNACIONAL,
+            type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
             active=True
         ),
         # --- Blogs de Opinião e Filosofia de Negócios ---
         Source(
             name="Paul Graham Essays",
             rss_url="http://www.paulgraham.com/rss.html",
-            type=SourceType.INTERNACIONAL,
+            type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
             active=True
         ),
         # --- Blogs de Universidades de Negócios, Tecnologia e Empreendedorismo ---
         Source(
             name="Harvard Business Review",
             rss_url="https://feeds.feedburner.com/harvardbusiness",
-            type=SourceType.INTERNACIONAL,
+            type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
             active=True
         ),
         Source(
             name="MIT Sloan Management Review",
             rss_url="https://sloanreview.mit.edu/feed/",
-            type=SourceType.INTERNACIONAL,
+            type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
             active=True
         ),
         Source(
-            name="Stanford eCorner",
-            rss_url="https://ecorner.stanford.edu/feed/",
-            type=SourceType.INTERNACIONAL,
-            active=True
-        ),
-        Source(
-            name="Knowledge at Wharton",
-            rss_url="https://knowledge.wharton.upenn.edu/feed/",
-            type=SourceType.INTERNACIONAL,
+            name="LSE Business Review",
+            rss_url="https://blogs.lse.ac.uk/businessreview/feed/",
+            type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
             active=True
         )
     ]
@@ -171,16 +165,34 @@ def seed_database():
         with get_db_session() as session:
             # 1. Incremental Seed for Sources
             added_sources = 0
+            updated_sources = 0
             for src in sources_to_add:
-                exists = session.query(Source).filter(Source.rss_url == src.rss_url).first()
-                if not exists:
+                existing = session.query(Source).filter(Source.name == src.name).first()
+                if existing:
+                    if existing.rss_url != src.rss_url or existing.type != src.type:
+                        existing.rss_url = src.rss_url
+                        existing.type = src.type
+                        existing.active = True
+                        updated_sources += 1
+                else:
                     session.add(src)
                     added_sources += 1
-            if added_sources > 0:
-                logger.info(f"Added {added_sources} new sources to the database.")
+            if added_sources > 0 or updated_sources > 0:
+                logger.info(f"Seeded sources: added {added_sources}, updated {updated_sources}.")
             else:
                 logger.info("All sources are already up-to-date in the database.")
                 
+            # Deactivate sources that are no longer in our seeding list
+            supported_names = {src.name for src in sources_to_add}
+            deactivated_count = 0
+            all_db_sources = session.query(Source).all()
+            for db_src in all_db_sources:
+                if db_src.name not in supported_names and db_src.active:
+                    db_src.active = False
+                    deactivated_count += 1
+            if deactivated_count > 0:
+                logger.info(f"Deactivated {deactivated_count} deprecated/broken sources.")
+
             # 2. Incremental Seed for Users
             added_users = 0
             for usr in users_to_add:

@@ -435,7 +435,15 @@
 
                 tableBody.innerHTML = "";
                 leads.forEach(lead => {
-                    const formattedDate = new Date(lead.created_at).toLocaleString("pt-BR");
+                    let leadDateStr = lead.created_at;
+                    if (leadDateStr && !leadDateStr.endsWith('Z') && !leadDateStr.includes('+') && !leadDateStr.includes('-')) {
+                        if (leadDateStr.includes('T')) {
+                            leadDateStr += 'Z';
+                        } else if (leadDateStr.includes(' ')) {
+                            leadDateStr = leadDateStr.replace(' ', 'T') + 'Z';
+                        }
+                    }
+                    const formattedDate = new Date(leadDateStr).toLocaleString("pt-BR");
                     const row = document.createElement("tr");
                     row.className = "border-b border-white/5 hover:bg-white/[0.02] transition duration-150";
                     row.innerHTML = `

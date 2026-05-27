@@ -386,9 +386,9 @@
                 created_at: new Date(Date.now() - 28800000).toISOString()
             },
             {
-                source_name: "Época Negócios",
+                source_name: "InfoMoney",
                 original_title: "As Empresas Mais Inovadoras e Resilientes do Ano",
-                link: "https://epocanegocios.globo.com",
+                link: "https://www.infomoney.com.br",
                 image_url: "https://images.unsplash.com/photo-1542744094-3a31f103e35f?auto=format&fit=crop&w=600&q=80",
                 ai_summary: "- Ranking especial destaca corporações financeiras e de biotecnologia na vanguarda de transformação digital.\n- Adaptação rápida a modelos de trabalho híbridos define vencedores globais.\n- Investimento em cibersegurança e automação de processos sustenta o lucro no ano.",
                 created_at: new Date(Date.now() - 32400000).toISOString()
@@ -411,6 +411,7 @@
             "AWS News Blog": "investimentos",
             "VentureBeat": "investimentos",
             "Época Negócios": "investimentos",
+            "InfoMoney": "investimentos",
             // --- Empreendedorismo ---
             "G1 Empreendedorismo": "empreendedorismo",
             "Paul Graham Essays": "empreendedorismo",
@@ -418,7 +419,8 @@
             // --- Blogs de Universidades de Negócios, Tecnologia e Empreendedorismo ---
             "Harvard Business Review": "empreendedorismo",
             "MIT Sloan Management Review": "empreendedorismo",
-            "Knowledge at Wharton": "empreendedorismo"
+            "Knowledge at Wharton": "empreendedorismo",
+            "LSE Business Review": "empreendedorismo"
         };
 
         // Initialize Page
@@ -520,9 +522,18 @@
 
                 // Publish Date Formatting
                 let dateStr = 'Recente';
-                if (item.created_at) {
+                const rawDate = item.original_published_at || item.created_at;
+                if (rawDate) {
                     try {
-                        const date = new Date(item.created_at);
+                        let dateInput = rawDate;
+                        if (!dateInput.endsWith('Z') && !dateInput.includes('+') && !dateInput.includes('-')) {
+                            if (dateInput.includes('T')) {
+                                dateInput += 'Z';
+                            } else if (dateInput.includes(' ')) {
+                                dateInput = dateInput.replace(' ', 'T') + 'Z';
+                            }
+                        }
+                        const date = new Date(dateInput);
                         dateStr = date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
                     } catch (e) {}
                 }
