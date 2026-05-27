@@ -422,25 +422,25 @@ def get_leads(
         )
 
 
-@app.get("/api/admin/stats/leads-daily", summary="Obter dados de evolução de leads (últimos 7 dias)")
+@app.get("/api/admin/stats/leads-daily", summary="Obter dados de evolução de leads (último mês)")
 def get_leads_daily_stats(
     admin_claims: dict = Depends(require_admin_role)
 ):
     """
-    Returns daily lead signups for the last 7 days.
+    Returns daily lead signups for the last 30 days (1 month).
     """
     try:
         from collections import defaultdict
         with get_db_session() as session:
-            # Query all leads created in the last 7 days
-            seven_days_ago = datetime.utcnow() - timedelta(days=7)
-            leads = session.query(Lead).filter(Lead.created_at >= seven_days_ago).all()
+            # Query all leads created in the last 30 days (1 month)
+            thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+            leads = session.query(Lead).filter(Lead.created_at >= thirty_days_ago).all()
             
             # Initialize daily counts
             daily_counts = defaultdict(int)
             
-            # Pre-fill last 7 days with 0
-            for i in range(7):
+            # Pre-fill last 30 days with 0
+            for i in range(30):
                 day = (datetime.utcnow() - timedelta(days=i)).strftime("%d/%m")
                 daily_counts[day] = 0
                 
@@ -491,7 +491,11 @@ def get_news_categories_stats(
                 "VentureBeat": "investimentos",
                 "Época Negócios": "investimentos",
                 "G1 Empreendedorismo": "empreendedorismo",
-                "Paul Graham Essays": "empreendedorismo"
+                "Paul Graham Essays": "empreendedorismo",
+                "Stanford eCorner": "empreendedorismo",
+                "Harvard Business Review": "empreendedorismo",
+                "MIT Sloan Management Review": "empreendedorismo",
+                "Knowledge at Wharton": "empreendedorismo"
             }
             
             categories = {"tecnologia": 0, "empreendedorismo": 0, "investimentos": 0}

@@ -77,6 +77,22 @@
         .glow-btn:hover::after {
             left: 100%;
         }
+        @keyframes pulse-gold {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(197, 168, 92, 0.4); }
+            50% { box-shadow: 0 0 20px 4px rgba(197, 168, 92, 0.2); }
+        }
+        .pulse-gold-animation {
+            animation: pulse-gold 2s infinite;
+        }
+        .toast-notification {
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .toast-notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="bg-obsidian text-white font-sans overflow-x-hidden min-h-screen relative selection:bg-gold selection:text-black">
@@ -143,7 +159,7 @@
         </div>
 
         <!-- Filters & Search Bar -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 border-b border-white/5 pb-8">
             <!-- Tabs -->
             <div class="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0" id="filter-tabs">
                 <button onclick="setCategoryFilter('all')" id="tab-all" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black">
@@ -161,9 +177,29 @@
             </div>
 
             <!-- Search input -->
-            <div class="relative w-full md:w-80">
-                <input type="text" id="search-input" oninput="handleSearch()" placeholder="Pesquisar notícias..." class="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold/50 transition-colors">
-                <i data-lucide="search" class="w-4 h-4 text-gray-500 absolute left-3.5 top-3.5"></i>
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="relative flex-grow md:w-72">
+                    <input type="text" id="search-input" oninput="handleSearch()" placeholder="Pesquisar notícias..." class="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold/50 transition-colors">
+                    <i data-lucide="search" class="w-4 h-4 text-gray-500 absolute left-3.5 top-3.5"></i>
+                </div>
+                <button id="instantSearchBtn" onclick="triggerInstantSearch()" class="pulse-gold-animation flex-shrink-0 px-5 py-2.5 rounded-lg bg-gradient-to-r from-gold-dark via-gold to-gold-light text-black text-xs font-extrabold uppercase tracking-wider hover:scale-[1.03] transition-all duration-300 flex items-center gap-2 glow-btn" title="Buscar novas notícias em tempo real">
+                    <i data-lucide="zap" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Buscar Agora</span>
+                    <span class="sm:hidden">Buscar</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Search Status Bar (hidden by default) -->
+        <div id="searchStatusBar" class="hidden mb-8 glass-panel rounded-xl p-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div id="searchStatusIcon" class="p-2 rounded-lg bg-gold/10 text-gold">
+                    <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
+                </div>
+                <div>
+                    <span id="searchStatusTitle" class="text-sm font-bold text-white block">Buscando notícias...</span>
+                    <span id="searchStatusMsg" class="text-[11px] text-gray-400 font-light">Coletando de todas as fontes configuradas</span>
+                </div>
             </div>
         </div>
 
@@ -176,7 +212,11 @@
         <div id="empty-state" class="hidden text-center py-20">
             <i data-lucide="alert-circle" class="w-12 h-12 text-gold/40 mx-auto mb-4"></i>
             <h3 class="font-outfit text-lg font-bold text-white mb-1">Nenhum resultado encontrado</h3>
-            <p class="text-sm text-gray-400">Tente alterar os filtros ou o termo de pesquisa.</p>
+            <p class="text-sm text-gray-400 mb-6">Tente alterar os filtros ou o termo de pesquisa.</p>
+            <button onclick="triggerInstantSearch()" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-gold-dark via-gold to-gold-light text-black text-xs font-extrabold uppercase tracking-wider hover:scale-[1.03] transition-all duration-300 glow-btn">
+                <i data-lucide="zap" class="w-4 h-4"></i>
+                Buscar Notícias Agora
+            </button>
         </div>
 
     </main>
@@ -357,6 +397,7 @@
 
         // Map sources to categories
         const sourceMap = {
+            // --- Tecnologia ---
             "Canaltech": "tecnologia",
             "Olhar Digital": "tecnologia",
             "Tecmundo": "tecnologia",
@@ -366,11 +407,18 @@
             "Wired": "tecnologia",
             "MIT Technology Review": "tecnologia",
             "Google Research Blog": "tecnologia",
+            // --- Investimentos ---
             "AWS News Blog": "investimentos",
             "VentureBeat": "investimentos",
             "Época Negócios": "investimentos",
+            // --- Empreendedorismo ---
             "G1 Empreendedorismo": "empreendedorismo",
-            "Paul Graham Essays": "empreendedorismo"
+            "Paul Graham Essays": "empreendedorismo",
+            "Stanford eCorner": "empreendedorismo",
+            // --- Blogs de Universidades de Negócios, Tecnologia e Empreendedorismo ---
+            "Harvard Business Review": "empreendedorismo",
+            "MIT Sloan Management Review": "empreendedorismo",
+            "Knowledge at Wharton": "empreendedorismo"
         };
 
         // Initialize Page
@@ -575,6 +623,135 @@
         // Live text filter
         function handleSearch() {
             renderFeed();
+        }
+
+        // Instant search: triggers backend pipeline and refreshes news
+        async function triggerInstantSearch() {
+            const btn = document.getElementById('instantSearchBtn');
+            const statusBar = document.getElementById('searchStatusBar');
+            const statusIcon = document.getElementById('searchStatusIcon');
+            const statusTitle = document.getElementById('searchStatusTitle');
+            const statusMsg = document.getElementById('searchStatusMsg');
+
+            // Disable button and show loading state
+            btn.disabled = true;
+            btn.classList.remove('pulse-gold-animation');
+            btn.innerHTML = `
+                <svg class="animate-spin h-4 w-4 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Buscando...</span>
+            `;
+
+            // Show status bar
+            statusBar.classList.remove('hidden');
+            statusTitle.textContent = 'Pipeline de coleta acionado...';
+            statusMsg.textContent = 'Coletando notícias de todas as fontes configuradas (blogs, universidades e portais).';
+            statusIcon.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>';
+            lucide.createIcons();
+
+            try {
+                // Try to trigger the backend collection pipeline (requires admin token)
+                const token = localStorage.getItem('admin_token');
+                let pipelineTriggered = false;
+
+                if (token) {
+                    try {
+                        const pipelineRes = await fetch(`${API_BASE_URL}/api/admin/coleta-manual`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (pipelineRes.ok) {
+                            pipelineTriggered = true;
+                            statusTitle.textContent = 'Pipeline executando em segundo plano!';
+                            statusMsg.textContent = 'O servidor está coletando, traduzindo e resumindo novas notícias. Aguarde...';
+                        }
+                    } catch (e) {
+                        console.log('Pipeline trigger not available, proceeding with refresh.');
+                    }
+                }
+
+                // Wait a moment for the pipeline to process (if triggered)
+                if (pipelineTriggered) {
+                    await new Promise(resolve => setTimeout(resolve, 8000));
+                }
+
+                // Re-fetch news from API
+                statusTitle.textContent = 'Atualizando a lista de notícias...';
+                statusMsg.textContent = 'Carregando os resultados mais recentes do servidor.';
+
+                await fetchNewsList();
+
+                // Success feedback
+                statusIcon.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i>';
+                statusIcon.className = 'p-2 rounded-lg bg-green-500/10 text-green-400';
+                statusTitle.textContent = 'Notícias atualizadas com sucesso!';
+                statusMsg.textContent = `${allNews.length} notícias disponíveis. Filtrados: ${document.getElementById('news-grid-container').children.length} artigos exibidos.`;
+                lucide.createIcons();
+
+                showNotificationToast('Busca Concluída', `${allNews.length} notícias carregadas com sucesso!`, 'success');
+
+            } catch (err) {
+                // Error feedback
+                statusIcon.innerHTML = '<i data-lucide="alert-triangle" class="w-5 h-5"></i>';
+                statusIcon.className = 'p-2 rounded-lg bg-red-500/10 text-red-400';
+                statusTitle.textContent = 'Erro na busca';
+                statusMsg.textContent = err.message || 'Não foi possível conectar ao servidor. As notícias de cache serão exibidas.';
+                lucide.createIcons();
+
+                showNotificationToast('Erro na Busca', 'Falha ao conectar. Exibindo notícias em cache.', 'error');
+            } finally {
+                // Restore button
+                btn.disabled = false;
+                btn.classList.add('pulse-gold-animation');
+                btn.innerHTML = `
+                    <i data-lucide="zap" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Buscar Agora</span>
+                    <span class="sm:hidden">Buscar</span>
+                `;
+                lucide.createIcons();
+
+                // Auto-hide status bar after 6 seconds
+                setTimeout(() => {
+                    statusBar.classList.add('hidden');
+                    statusIcon.className = 'p-2 rounded-lg bg-gold/10 text-gold';
+                }, 6000);
+            }
+        }
+
+        // Toast notification system
+        function showNotificationToast(title, message, type = 'success') {
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification fixed bottom-6 right-6 z-[200] glass-panel px-5 py-4 rounded-xl flex items-center gap-3 shadow-2xl max-w-sm';
+            
+            const iconClass = type === 'success' 
+                ? 'p-1.5 rounded-full bg-green-500/10 text-green-400' 
+                : 'p-1.5 rounded-full bg-red-500/10 text-red-400';
+            const iconName = type === 'success' ? 'check' : 'alert-triangle';
+
+            toast.innerHTML = `
+                <div class="${iconClass}"><i data-lucide="${iconName}" class="w-4 h-4"></i></div>
+                <div>
+                    <h4 class="font-outfit text-xs font-bold text-white">${title}</h4>
+                    <p class="text-gray-400 text-[11px] font-light mt-0.5">${message}</p>
+                </div>
+            `;
+
+            document.body.appendChild(toast);
+            lucide.createIcons();
+
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+
+            // Auto-remove after 4 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 4000);
         }
     </script>
 </body>

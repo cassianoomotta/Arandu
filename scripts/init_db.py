@@ -122,6 +122,31 @@ def seed_database():
             rss_url="http://www.paulgraham.com/rss.html",
             type=SourceType.INTERNACIONAL,
             active=True
+        ),
+        # --- Blogs de Universidades de Negócios, Tecnologia e Empreendedorismo ---
+        Source(
+            name="Harvard Business Review",
+            rss_url="https://feeds.feedburner.com/harvardbusiness",
+            type=SourceType.INTERNACIONAL,
+            active=True
+        ),
+        Source(
+            name="MIT Sloan Management Review",
+            rss_url="https://sloanreview.mit.edu/feed/",
+            type=SourceType.INTERNACIONAL,
+            active=True
+        ),
+        Source(
+            name="Stanford eCorner",
+            rss_url="https://ecorner.stanford.edu/feed/",
+            type=SourceType.INTERNACIONAL,
+            active=True
+        ),
+        Source(
+            name="Knowledge at Wharton",
+            rss_url="https://knowledge.wharton.upenn.edu/feed/",
+            type=SourceType.INTERNACIONAL,
+            active=True
         )
     ]
     
@@ -130,7 +155,7 @@ def seed_database():
         User(
             name="Admin Arandu",
             email="admin@arandu.com.br",
-            password_hash="240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9", # SHA-256 of admin123
+            password_hash="1f8ae10bd671238aac7a53620e271672881bc9b316c6b9380c9a1512027aa263", # SHA-256 of Aranduadmin
             role=UserRole.ADMIN
         ),
         User(
