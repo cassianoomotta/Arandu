@@ -150,7 +150,16 @@ BLACKLIST_PHRASES = [
     "polícia militar", "polícia civil", "corpo de bombeiros", "acidente de trânsito",
     "tráfego de drogas", "tráfico de drogas", "prisão em flagrante", "mandado de prisão",
     "campeonato brasileiro", "campeonato paulista", "campeonato carioca", "futebol feminino",
-    "futebol masculino"
+    "futebol masculino", "copa américa", "copa america", "eurocopa", "mundial de clubes",
+    "taça libertadores", "mercado da bola", "janela de transferências", "bola de ouro",
+    "ballon d'or", "chuteira de ouro", "super bowl", "superbowl", "são paulo fc",
+    "são paulo f.c.", "são paulo futebol clube", "campeonato espanhol", "campeonato inglês",
+    "campeonato italiano", "campeonato alemão", "campeonato francês", "liga dos campeões",
+    "liga europa", "europa league", "conference league", "formula 1", "formula-1",
+    "contratação de jogador", "novo técnico do", "novo técnico de", "tabela do campeonato",
+    "tabela do brasileirão", "jogo de futebol", "partida de futebol", "gol de placa",
+    "gol de bicicleta", "gol de cabeça", "marcou um gol", "fazer gol", "fez gol", "faz gol",
+    "reality show", "reality-show", "reality shows"
 ]
 
 BLACKLIST_WORDS = {
@@ -162,8 +171,24 @@ BLACKLIST_WORDS = {
     "tênis", "ufc", "boxe", "luta", "combate", "nocaute", "olimpíada", "olimpíadas",
     "olímpico", "olímpica", "esporte", "esportes", "esportiva", "esportivo", "seleção",
     "convocado", "convocação", "arbitragem", "árbitro", "pênalti", "impedimento",
+    "haaland", "haland", "lewandowski", "bellingham", "guardiola", "ancelotti", "dorival",
+    "tite", "zubeldia", "gabigol", "endrick", "estêvão", "estevao", "spfc", "coritiba",
+    "coxa", "chapecoense", "chape", "bragantino", "ituano", "novorizontino", "mirassol",
+    "brusque", "paysandu", "avai", "avaí", "criciúma", "criciuma", "juventude", "sporting",
+    "benfica", "arsenal", "chelsea", "liverpool", "juventus", "milan", "barcelona",
+    "psg", "bayer", "bayern", "dortmund", "tottenham", "sevilla", "atletico", "atlético",
+    "boca juniors", "river plate", "al-nassr", "al-hilal", "chuteira", "chuteiras",
+    "placar", "goleador", "goleadores", "goleada", "goleadas", "goleiro", "goleiros",
+    "zagueiro", "zagueiros", "atacante", "atacantes", "centroavante", "centroavantes",
+    "artilheiro", "artilheiros", "artilharia", "apitador", "apito", "futsal", "futevôlei",
+    "futevolei", "altinha", "nba", "nfl", "superbowl", "fifa", "cbf", "conmebol", "uefa",
+    "ciclista", "ciclismo", "maratona", "maratonista", "maratonistas", "ginasta", "ginastas",
+    "ginástica", "judoca", "karateca", "esgrimista", "esgrima", "surfista", "surfistas",
+    "skatista", "skatistas", "velejador", "velejadores", "gols", "djokovic", "alcaraz",
+    "federer", "nadal", "swiatek", "sinner", "hamilton", "verstappen", "senna", "pique",
+    "rubinho", "leclerc", "norris", "poatan", "popó", "bambam",
     # Celebridades, Entretenimento & TV
-    "bbb", "reality", "novela", "novelas", "ator", "atriz", "atores", "atrizes",
+    "bbb", "novela", "novelas", "ator", "atriz", "atores", "atrizes",
     "celebridade", "celebridades", "fofoca", "fofocas", "influencer", "influenciador",
     "influenciadores", "tiktok", "youtuber", "divórcio", "flagrado", "flagrada", "biquíni",
     "look", "looks", "anitta", "virgínia", "ludmilla", "gusttavo",
@@ -182,7 +207,7 @@ BLACKLIST_WORDS = {
 
 WHITELIST_WORDS = {
     # Tecnologia & Inovação
-    "tecnologia", "tech", "ia", "ai", "inteligência artificial", "inteligencia artificial",
+    "tecnologia", "tech", "ia", "ai", "inteligência", "inteligencia", "artificial",
     "software", "app", "aplicativo", "aplicativos", "startup", "startups", "chip", "chips",
     "semicondutor", "semicondutores", "dados", "cloud", "nuvem", "segurança", "hacker",
     "hackers", "cyber", "cibersegurança", "ciber", "robô", "robôs", "robótica", "cripto",
@@ -198,11 +223,12 @@ WHITELIST_WORDS = {
     "investidor", "investidores", "captar", "captação", "receita", "faturamento", "lucro",
     "lucros", "prejuízo", "valuation", "saf", "bilhão", "bilhões", "milhão", "milhões",
     "tesouro", "cdb", "fii", "fiis", "fundo", "fundos", "tributo", "tributos", "imposto",
-    "impostos", "taxação", "taxar", "taxa", "taxas", "reforma tributária", "bc", "banco central", "fed",
-    "monetário", "monetária", "crédito", "debentures", "ouro", "commodities", "dólar",
-    "euro", "câmbio", "vendas", "venda", "comercial", "varejo", "indústria", "produção",
-    "alta", "altas", "queda", "quedas", "recua", "recuo", "sobe", "subida", "despenca", "despencar",
-    "dispara", "disparar", "fecha", "fecham", "fechamento", "fechar",
+    "impostos", "taxação", "taxar", "taxa", "taxas", "reforma", "tributária", "tributário",
+    "bc", "central", "fed", "monetário", "monetária", "crédito", "debentures", "ouro",
+    "commodities", "dólar", "euro", "câmbio", "vendas", "venda", "comercial", "varejo",
+    "indústria", "produção", "alta", "altas", "queda", "quedas", "recua", "recuo", "sobe",
+    "subida", "despenca", "despencar", "dispara", "disparar", "fecha", "fecham", "fechamento",
+    "fechar",
     # Empreendedorismo & Gestão
     "empreendedor", "empreendedora", "empreendedores", "empreendedorismo", "negócio",
     "negócios", "empresa", "empresas", "empresário", "empresária", "empresários",
