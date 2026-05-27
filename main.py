@@ -7,7 +7,7 @@ from typing import List, Optional
 
 import jwt
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi import FastAPI, Depends, HTTPException, status, Query, Header
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -375,6 +375,54 @@ async def force_manual_collection(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Falha ao acionar o pipeline manual: {str(e)}"
+        )
+
+
+@app.get("/api/cron/coleta", summary="Executar Coleta Periódica (Cron Vercel)")
+async def vercel_cron_collection(
+    authorization: Optional[str] = Header(None)
+):
+    """
+    Cron endpoint triggered by Vercel Cron.
+    Secured by checking the Vercel-provided CRON_SECRET environment variable.
+    """
+    import os
+    cron_secret = os.getenv("CRON_SECRET")
+    
+    # If CRON_SECRET is configured, we verify the incoming request
+    if cron_secret:
+        expected_header = f"Bearer {cron_secret}"
+        if not authorization or authorization != expected_header:
+            logger.warning("Unauthorized cron trigger attempt blocked.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Acesso não autorizado para acionamento de cron."
+            )
+            
+    logger.info("Vercel Cron triggered scheduled news collection.")
+    
+    async def run_cron_pipeline():
+        try:
+            logger.info("Cron Pipeline: Starting execution...")
+            await run_scraper()
+            notifier = TelegramNotifier()
+            await dispatch_pending_notifications(notifier)
+            logger.info("Cron Pipeline: Finished successfully.")
+        except Exception as e:
+            logger.error(f"Cron Pipeline: Execution failed: {str(e)}")
+
+    try:
+        # Trigger full pipeline asynchronously as a background task
+        asyncio.create_task(run_cron_pipeline())
+        return {
+            "status": "success",
+            "message": "Cron pipeline de coleta e processamento disparado com sucesso."
+        }
+    except Exception as e:
+        logger.error(f"Cron collection trigger failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao acionar a coleta via cron: {str(e)}"
         )
 
 
