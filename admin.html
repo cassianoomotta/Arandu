@@ -439,7 +439,7 @@
                     if (leadDateStr && !leadDateStr.endsWith('Z') && !/[+-]\d{2}(?::?\d{2})?$/.test(leadDateStr)) {
                         leadDateStr += 'Z';
                     }
-                    const formattedDate = leadDateStr ? new Date(leadDateStr).toLocaleString("pt-BR") : 'N/A';
+                    const formattedDate = leadDateStr ? new Date(leadDateStr).toLocaleString("pt-BR", { timeZone: 'America/Sao_Paulo' }) : 'N/A';
                     const row = document.createElement("tr");
                     row.className = "border-b border-white/5 hover:bg-white/[0.02] transition duration-150";
                     row.innerHTML = `

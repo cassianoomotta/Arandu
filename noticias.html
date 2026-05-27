@@ -530,7 +530,13 @@
                             dateInput += 'Z';
                         }
                         const date = new Date(dateInput);
-                        dateStr = date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                        dateStr = date.toLocaleDateString('pt-BR', { 
+                            day: 'numeric', 
+                            month: 'short', 
+                            hour: '2-digit', 
+                            minute: '2-digit',
+                            timeZone: 'America/Sao_Paulo'
+                        });
                     } catch (e) {}
                 }
 
