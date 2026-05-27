@@ -1,7 +1,8 @@
 import logging
+import re
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set
 
 from deep_translator import GoogleTranslator
 from openai import OpenAI
@@ -139,6 +140,114 @@ def generate_ai_summary(title: str, source_name: str) -> str:
     )
 
 
+# --- Intelligent Relevance Filter Configuration ---
+BLACKLIST_PHRASES = [
+    "champions league", "real madrid", "copa do mundo", "libertadores", "brasileirão",
+    "previsão do tempo", "corpo encontrado", "receita de", "como fazer bolo",
+    "ex-bbb", "dança dos famosos", "zona de rebaixamento", "fórmula 1", "fórmula-1",
+    "grand slam", "roland garros", "wimbledon", "ucl", "premier league", "la liga",
+    "série a", "série b", "série c", "copa do brasil", "sul-americana",
+    "polícia militar", "polícia civil", "corpo de bombeiros", "acidente de trânsito",
+    "tráfego de drogas", "tráfico de drogas", "prisão em flagrante", "mandado de prisão",
+    "campeonato brasileiro", "campeonato paulista", "campeonato carioca", "futebol feminino",
+    "futebol masculino"
+]
+
+BLACKLIST_WORDS = {
+    # Esportes & Futebol
+    "futebol", "partida", "campeonato", "copa", "torcida", "escalação", "clássico",
+    "palmeiras", "corinthians", "flamengo", "santos", "vasco", "botafogo", "fluminense",
+    "grêmio", "cruzeiro", "neymar", "messi", "ronaldo", "mbappé", "treinador", "quadra",
+    "estádio", "arena", "atleta", "atletas", "basquete", "vôlei", "voleibol", "natação",
+    "tênis", "ufc", "boxe", "luta", "combate", "nocaute", "olimpíada", "olimpíadas",
+    "olímpico", "olímpica", "esporte", "esportes", "esportiva", "esportivo", "seleção",
+    "convocado", "convocação", "arbitragem", "árbitro", "pênalti", "impedimento",
+    # Celebridades, Entretenimento & TV
+    "bbb", "reality", "novela", "novelas", "ator", "atriz", "atores", "atrizes",
+    "celebridade", "celebridades", "fofoca", "fofocas", "influencer", "influenciador",
+    "influenciadores", "tiktok", "youtuber", "divórcio", "flagrado", "flagrada", "biquíni",
+    "look", "looks", "anitta", "virgínia", "ludmilla", "gusttavo",
+    # Violência, Crimes & Acidentes
+    "assassinato", "homicídio", "latrocínio", "estupro", "baleado", "baleada",
+    "tiroteio", "facada", "furto", "assalto", "sequestro", "refém", "reféns",
+    "cadeia", "penitenciária", "tragédia", "trágico", "trágica", "atropelamento",
+    "capotamento", "enchente", "inundação", "ventania", "tornado", "furacão",
+    # Política Partidária e Eleitoral
+    "eleição", "eleições", "urna", "urnas", "candidato", "candidata", "candidatos",
+    "campanha", "debate", "debates", "prefeito", "prefeita", "vereador", "vereadora",
+    "governador", "governadora", "senador", "senadora", "bolsonarista", "petista",
+    # Cotidiano & Variedades
+    "horóscopo", "signos", "astrologia", "culinária"
+}
+
+WHITELIST_WORDS = {
+    # Tecnologia & Inovação
+    "tecnologia", "tech", "ia", "ai", "inteligência artificial", "inteligencia artificial",
+    "software", "app", "aplicativo", "aplicativos", "startup", "startups", "chip", "chips",
+    "semicondutor", "semicondutores", "dados", "cloud", "nuvem", "segurança", "hacker",
+    "hackers", "cyber", "cibersegurança", "ciber", "robô", "robôs", "robótica", "cripto",
+    "bitcoin", "btc", "blockchain", "algoritmo", "algoritmos", "programação", "desenvolvedor",
+    "desenvolvedores", "hardware", "celular", "celulares", "smartphone", "smartphones",
+    "apple", "microsoft", "google", "meta", "nvidia", "amazon", "telefonia", "5g", "inovação",
+    "inovações", "digital", "digitais", "plataforma", "plataformas", "sistema", "sistemas",
+    # Negócios, Economia & Mercado Financeiro
+    "mercado", "mercados", "bolsa", "ações", "ação", "dividendo", "dividendos", "juros",
+    "selic", "inflação", "ipca", "pib", "economia", "financeiro", "financeira", "finanças",
+    "banco", "bancos", "fintech", "fintechs", "aporte", "aportes", "fusão", "fusões",
+    "aquisição", "aquisições", "m&a", "investe", "investimento", "investimentos",
+    "investidor", "investidores", "captar", "captação", "receita", "faturamento", "lucro",
+    "lucros", "prejuízo", "valuation", "saf", "bilhão", "bilhões", "milhão", "milhões",
+    "tesouro", "cdb", "fii", "fiis", "fundo", "fundos", "tributo", "tributos", "imposto",
+    "impostos", "taxação", "taxar", "taxa", "taxas", "reforma tributária", "bc", "banco central", "fed",
+    "monetário", "monetária", "crédito", "debentures", "ouro", "commodities", "dólar",
+    "euro", "câmbio", "vendas", "venda", "comercial", "varejo", "indústria", "produção",
+    "alta", "altas", "queda", "quedas", "recua", "recuo", "sobe", "subida", "despenca", "despencar",
+    "dispara", "disparar", "fecha", "fecham", "fechamento", "fechar",
+    # Empreendedorismo & Gestão
+    "empreendedor", "empreendedora", "empreendedores", "empreendedorismo", "negócio",
+    "negócios", "empresa", "empresas", "empresário", "empresária", "empresários",
+    "franquia", "franquias", "pyme", "pmes", "microempresa", "fundador", "fundadora",
+    "fundadores", "liderança", "gestão", "ceo", "co-founder", "carreira", "vaga", "vagas",
+    "trabalho", "emprego", "empregos", "estratégia", "estratégias", "cliente", "clientes",
+    "produtos", "produto", "marca", "marcas", "líder", "setor", "setores", "grupo",
+    "fábrica", "unidade", "unidades", "exportação", "exportações", "importação", "importações",
+    # Governo & Regulação Econômica/Tech
+    "governo", "regra", "regras", "lei", "leis", "projeto", "projetos", "senado", "câmara",
+    "ministério", "ministro", "presidente", "decisão", "decisões", "medida", "medidas",
+    "orçamento", "público", "pública", "estado", "tcu", "stf"
+}
+
+GENERALIST_SOURCES = {"InfoMoney", "G1 Tecnologia"}
+
+def tokenize_and_normalize(text: str) -> Set[str]:
+    # Replace non-alphanumeric characters (including hyphens) with spaces and split
+    normalized = re.sub(r'[^\w\s]', ' ', text.lower())
+    return set(normalized.split())
+
+def is_relevant_article(title: str, source_name: str) -> bool:
+    title_lower = title.lower()
+    
+    # 1. Blacklist Phrases Check (Substring match)
+    for phrase in BLACKLIST_PHRASES:
+        if phrase in title_lower:
+            return False
+            
+    # Tokenize the title for word-level checks
+    words = tokenize_and_normalize(title)
+    
+    # 2. Blacklist Words Check (Exact match of tokenized words)
+    if not words.isdisjoint(BLACKLIST_WORDS):
+        return False
+        
+    # 3. Whitelist Check for Generalist Sources
+    if source_name in GENERALIST_SOURCES:
+        # Require at least one word from the title to be in the whitelist
+        if words.isdisjoint(WHITELIST_WORDS):
+            return False
+            
+    return True
+
+
 def process_article(
     article_data: Dict[str, Any], 
     source: Source, 
@@ -146,6 +255,7 @@ def process_article(
 ) -> Dict[str, Any] | None:
     """
     Applies the full processing pipeline to a newly scraped news item:
+    0. Heuristic relevance check.
     1. Check for similarity deduplication.
     2. Check source type; translate title if SourceType.INTERNACIONAL.
     3. Generate executive summary using LLM.
@@ -154,6 +264,11 @@ def process_article(
     """
     title = article_data["original_title"]
     
+    # 0. Relevance Heuristic Filter (skip off-topic/gossip/sports)
+    if not is_relevant_article(title, source.name):
+        logger.info(f"Skipping article (irrelevant content): '{title[:50]}'")
+        return None
+        
     # 1. Deduplication check (Similarity > 80%)
     if is_similar_to_recent(title, recent_titles, threshold=0.8):
         logger.info(f"Skipping article (similar news exists): '{title[:50]}'")
