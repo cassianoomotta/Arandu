@@ -7,7 +7,7 @@ from typing import List, Optional
 
 import jwt
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI, Depends, HTTPException, status, Query, Header
+from fastapi import FastAPI, Depends, HTTPException, status, Query, Header, Response
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -609,6 +609,11 @@ def read_noticias():
 @app.get("/admin.html", summary="Servir admin.html")
 def read_admin():
     return FileResponse("admin.html")
+
+@app.get("/favicon.ico", summary="Servir favicon")
+def read_favicon():
+    svg_content = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none"><path d="M50 5L92 85H74L50 37L26 85H8L50 5Z" fill="#C5A85C"/><path d="M37 60H63L68 70H32L37 60Z" fill="#E8D098"/></svg>"""
+    return Response(content=svg_content, media_type="image/svg+xml")
 
 
 if __name__ == "__main__":
