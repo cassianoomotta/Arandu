@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import func
+from sqlalchemy import func, text
 
 from database.config import settings
 from database.connection import get_db_session
@@ -363,12 +363,13 @@ async def force_manual_collection(
             logger.error(f"Manual Pipeline: Execution failed: {str(e)}")
 
     try:
-        # Trigger full pipeline asynchronously as a background task
-        asyncio.create_task(run_manual_pipeline())
+        # Await the pipeline execution directly so that serverless functions (like Vercel)
+        # do not freeze/terminate the process before it completes.
+        await run_manual_pipeline()
         
         return {
             "status": "success",
-            "message": "Pipeline de coleta, processamento e notificação disparado em segundo plano com sucesso."
+            "message": "Pipeline de coleta, processamento e notificação executado com sucesso."
         }
     except Exception as e:
         logger.error(f"Manual collection trigger failed: {str(e)}")
@@ -412,11 +413,12 @@ async def vercel_cron_collection(
             logger.error(f"Cron Pipeline: Execution failed: {str(e)}")
 
     try:
-        # Trigger full pipeline asynchronously as a background task
-        asyncio.create_task(run_cron_pipeline())
+        # Await the pipeline execution directly so that serverless functions (like Vercel)
+        # do not freeze/terminate the process before it completes.
+        await run_cron_pipeline()
         return {
             "status": "success",
-            "message": "Cron pipeline de coleta e processamento disparado com sucesso."
+            "message": "Cron pipeline de coleta e processamento executado com sucesso."
         }
     except Exception as e:
         logger.error(f"Cron collection trigger failed: {str(e)}")
@@ -588,8 +590,8 @@ def health_check():
     """
     try:
         with get_db_session() as session:
-            # Simple query to check connection
-            session.execute(func.now())
+            # Simple query to check connection (database-agnostic)
+            session.execute(text("SELECT 1"))
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         return {"status": "unhealthy", "database_error": str(e)}
