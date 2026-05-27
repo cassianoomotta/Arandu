@@ -230,6 +230,7 @@ class TokenResponse(BaseModel):
 class NewsItemResponse(BaseModel):
     id: int
     source_id: int
+    source_name: Optional[str] = None
     original_title: str
     translated_title: Optional[str]
     link: str
@@ -313,8 +314,19 @@ def get_news(
                 .all()
             )
             
-            # Convert models to dictionaries before session closes to avoid LazyLoading errors
-            items = [NewsItemResponse.from_orm(item) for item in results]
+            # Build source name lookup cache
+            source_ids = list({item.source_id for item in results})
+            sources_lookup = {}
+            if source_ids:
+                sources_data = session.query(Source).filter(Source.id.in_(source_ids)).all()
+                sources_lookup = {s.id: s.name for s in sources_data}
+            
+            # Convert models to dictionaries with source_name included
+            items = []
+            for item in results:
+                item_dict = NewsItemResponse.from_orm(item)
+                item_dict.source_name = sources_lookup.get(item.source_id, "")
+                items.append(item_dict)
             
             return {
                 "total": total,
