@@ -525,13 +525,9 @@
                 const rawDate = item.original_published_at || item.created_at;
                 if (rawDate) {
                     try {
-                        let dateInput = rawDate;
-                        if (!dateInput.endsWith('Z') && !dateInput.includes('+') && !dateInput.includes('-')) {
-                            if (dateInput.includes('T')) {
-                                dateInput += 'Z';
-                            } else if (dateInput.includes(' ')) {
-                                dateInput = dateInput.replace(' ', 'T') + 'Z';
-                            }
+                        let dateInput = rawDate.replace(' ', 'T');
+                        if (!dateInput.endsWith('Z') && !/[+-]\d{2}(?::?\d{2})?$/.test(dateInput)) {
+                            dateInput += 'Z';
                         }
                         const date = new Date(dateInput);
                         dateStr = date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
