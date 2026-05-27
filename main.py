@@ -103,6 +103,16 @@ async def lifespan(app: FastAPI):
     scheduler.start()
     logger.info("Background Scheduler started successfully (ingestion + 20-day cleanup).")
     
+    # Trigger initial ingestion in background on startup if DB is empty of news
+    try:
+        with get_db_session() as session:
+            news_count = session.query(News).count()
+        if news_count == 0:
+            logger.info("Database is empty of news. Triggering initial ingestion on startup in background...")
+            asyncio.create_task(execute_scheduled_ingestion())
+    except Exception as e:
+        logger.error(f"Startup check failed: {str(e)}")
+        
     yield
     
     # 3. Shutdown scheduler gracefully on app close
@@ -409,6 +419,101 @@ def get_leads(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erro ao obter a lista de leads."
+        )
+
+
+@app.get("/api/admin/stats/leads-daily", summary="Obter dados de evolução de leads (últimos 7 dias)")
+def get_leads_daily_stats(
+    admin_claims: dict = Depends(require_admin_role)
+):
+    """
+    Returns daily lead signups for the last 7 days.
+    """
+    try:
+        from collections import defaultdict
+        with get_db_session() as session:
+            # Query all leads created in the last 7 days
+            seven_days_ago = datetime.utcnow() - timedelta(days=7)
+            leads = session.query(Lead).filter(Lead.created_at >= seven_days_ago).all()
+            
+            # Initialize daily counts
+            daily_counts = defaultdict(int)
+            
+            # Pre-fill last 7 days with 0
+            for i in range(7):
+                day = (datetime.utcnow() - timedelta(days=i)).strftime("%d/%m")
+                daily_counts[day] = 0
+                
+            # Aggregate counts
+            for lead in leads:
+                day_str = lead.created_at.strftime("%d/%m")
+                if day_str in daily_counts:
+                    daily_counts[day_str] += 1
+            
+            # Return sorted chronologically
+            sorted_days = sorted(list(daily_counts.keys()), key=lambda d: datetime.strptime(d + f"/{datetime.utcnow().year}", "%d/%m/%Y"))
+            return {
+                "labels": sorted_days,
+                "data": [daily_counts[day] for day in sorted_days]
+            }
+    except Exception as e:
+        logger.error(f"Error fetching daily lead stats: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao obter estatísticas de leads."
+        )
+
+
+@app.get("/api/admin/stats/news-categories", summary="Obter estatísticas de distribuição de notícias por nicho")
+def get_news_categories_stats(
+    admin_claims: dict = Depends(require_admin_role)
+):
+    """
+    Returns counts of news articles grouped by category.
+    Maps sources to categories matching frontend rules.
+    """
+    try:
+        with get_db_session() as session:
+            news_items = session.query(News).all()
+            
+            # Hardcoded source to category map matching the frontend mapping
+            source_map = {
+                "Canaltech": "tecnologia",
+                "Olhar Digital": "tecnologia",
+                "Tecmundo": "tecnologia",
+                "Tecnoblog": "tecnologia",
+                "G1 Tecnologia": "tecnologia",
+                "TechCrunch": "tecnologia",
+                "Wired": "tecnologia",
+                "MIT Technology Review": "tecnologia",
+                "Google Research Blog": "tecnologia",
+                "AWS News Blog": "investimentos",
+                "VentureBeat": "investimentos",
+                "Época Negócios": "investimentos",
+                "G1 Empreendedorismo": "empreendedorismo",
+                "Paul Graham Essays": "empreendedorismo"
+            }
+            
+            categories = {"tecnologia": 0, "empreendedorismo": 0, "investimentos": 0}
+            
+            # In order to query Source names, we need to load Sources and build a cache
+            sources = {s.id: s.name for s in session.query(Source).all()}
+            
+            for item in news_items:
+                src_name = sources.get(item.source_id, "")
+                cat = source_map.get(src_name, "tecnologia")
+                if cat in categories:
+                    categories[cat] += 1
+                    
+            return {
+                "labels": ["Tecnologia", "Empreendedorismo", "Investimentos"],
+                "data": [categories["tecnologia"], categories["empreendedorismo"], categories["investimentos"]]
+            }
+    except Exception as e:
+        logger.error(f"Error fetching news category stats: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao obter estatísticas de categorias."
         )
 
 

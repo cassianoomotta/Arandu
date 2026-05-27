@@ -42,6 +42,8 @@
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
         .glass-panel {
@@ -135,7 +137,7 @@
                             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
                                 <i data-lucide="mail" class="w-4 h-4"></i>
                             </span>
-                            <input type="email" id="email" required class="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white text-sm focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition duration-200" placeholder="admin@arandu.com.br">
+                            <input type="email" id="email" required class="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white text-sm focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition duration-200" placeholder="">
                         </div>
                     </div>
 
@@ -212,6 +214,31 @@
                     </div>
                 </div>
 
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Chart 1: Leads Growth -->
+                    <div class="glass-panel p-6 rounded-2xl flex flex-col gap-4">
+                        <h4 class="font-outfit text-base font-bold text-white flex items-center gap-2">
+                            <i data-lucide="trending-up" class="w-4 h-4 text-gold"></i>
+                            Evolução de Cadastro de Leads (Últimos 7 Dias)
+                        </h4>
+                        <div class="relative w-full h-[220px]">
+                            <canvas id="leadsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 2: News Categories -->
+                    <div class="glass-panel p-6 rounded-2xl flex flex-col gap-4">
+                        <h4 class="font-outfit text-base font-bold text-white flex items-center gap-2">
+                            <i data-lucide="pie-chart" class="w-4 h-4 text-gold"></i>
+                            Distribuição de Relatórios por Nicho
+                        </h4>
+                        <div class="relative w-full h-[220px] flex items-center justify-center">
+                            <canvas id="categoriesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Captured Leads Table -->
                 <div class="flex flex-col gap-4">
                     <div class="flex items-center justify-between">
@@ -272,6 +299,8 @@
             ? "http://localhost:8000"
             : "";
         let token = localStorage.getItem("admin_token");
+        let leadsChartInstance = null;
+        let categoriesChartInstance = null;
 
         // App life-cycle hook
         window.addEventListener("DOMContentLoaded", () => {
@@ -290,6 +319,7 @@
                 dashSec.classList.remove("hidden");
                 logoutBtn.classList.remove("hidden");
                 fetchLeads();
+                fetchStatsAndRenderCharts();
             } else {
                 loginSec.classList.remove("hidden");
                 dashSec.classList.add("hidden");
@@ -425,6 +455,159 @@
                     </tr>
                 `;
             }
+        }
+
+        // Fetch Stats and Render Charts
+        async function fetchStatsAndRenderCharts() {
+            if (!token) return;
+
+            // 1. Fetch leads growth data
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/stats/leads-daily`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    renderLeadsChart(data.labels, data.data);
+                }
+            } catch (err) {
+                console.error("Error fetching leads daily stats:", err);
+            }
+
+            // 2. Fetch news categories data
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/stats/news-categories`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    renderCategoriesChart(data.labels, data.data);
+                }
+            } catch (err) {
+                console.error("Error fetching news categories stats:", err);
+            }
+        }
+
+        // Render Leads Growth Chart
+        function renderLeadsChart(labels, data) {
+            const ctx = document.getElementById('leadsChart').getContext('2d');
+            
+            // Destroy existing chart to prevent overlay glitched tooltip rendering
+            if (leadsChartInstance) {
+                leadsChartInstance.destroy();
+            }
+
+            leadsChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Novos Leads',
+                        data: data,
+                        borderColor: '#C5A85C',
+                        backgroundColor: 'rgba(197, 168, 92, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#E8D098',
+                        pointBorderColor: '#050505',
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#C5A85C',
+                        pointHoverBorderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(5, 5, 5, 0.9)',
+                            titleFont: { family: 'Outfit', size: 12 },
+                            bodyFont: { family: 'Plus Jakarta Sans', size: 12 },
+                            borderColor: 'rgba(197, 168, 92, 0.2)',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#9ca3af',
+                                font: { family: 'Plus Jakarta Sans', size: 10 }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#9ca3af',
+                                font: { family: 'Plus Jakarta Sans', size: 10 },
+                                stepSize: 1
+                            },
+                            min: 0
+                        }
+                    }
+                }
+            });
+        }
+
+        // Render News Categories Chart
+        function renderCategoriesChart(labels, data) {
+            const ctx = document.getElementById('categoriesChart').getContext('2d');
+
+            if (categoriesChartInstance) {
+                categoriesChartInstance.destroy();
+            }
+
+            categoriesChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#C5A85C', // Gold
+                            '#E8D098', // Gold Light
+                            '#9A7B3E'  // Gold Dark
+                        ],
+                        borderColor: 'rgba(5, 5, 5, 0.5)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#d1d5db',
+                                font: { family: 'Plus Jakarta Sans', size: 11 },
+                                boxWidth: 12,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(5, 5, 5, 0.9)',
+                            titleFont: { family: 'Outfit', size: 12 },
+                            bodyFont: { family: 'Plus Jakarta Sans', size: 12 },
+                            borderColor: 'rgba(197, 168, 92, 0.2)',
+                            borderWidth: 1
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
         }
 
         // Trigger manual collection pipeline
