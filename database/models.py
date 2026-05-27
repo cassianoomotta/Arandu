@@ -9,10 +9,10 @@ from sqlalchemy import (
     ForeignKey, 
     Index, 
     Enum as SQLEnum, 
-    func
+    func,
+    JSON
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import ARRAY, DOUBLE_PRECISION
 
 # Base class for SQLAlchemy 2.0 declarative models
 class Base(DeclarativeBase):
@@ -96,9 +96,9 @@ class News(Base):
     
     # We can also store the similarity vector (vetor_similaridade) as an Array of Floats.
     # Note: If pgvector is installed in Postgres, you could use Vector(dimensions) from pgvector.sqlalchemy.
-    # Here we use standard PostgreSQL double precision ARRAY to remain cross-platform out-of-the-box.
+    # Here we use JSON to remain cross-platform out-of-the-box (compatible with SQLite and PostgreSQL).
     similarity_vector: Mapped[Optional[List[float]]] = mapped_column(
-        ARRAY(DOUBLE_PRECISION), 
+        JSON, 
         nullable=True
     )
     

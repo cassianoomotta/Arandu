@@ -130,13 +130,13 @@ def seed_database():
         User(
             name="Admin Arandu",
             email="admin@arandu.com.br",
-            password_hash="4813494d137e1631bba301d5acab6e7bb7aa74ce1185d456565ef51d737677b2", # SHA-256 of admin123
+            password_hash="240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9", # SHA-256 of admin123
             role=UserRole.ADMIN
         ),
         User(
             name="Leitor Teste",
             email="leitor@arandu.com.br",
-            password_hash="3db841f4864fa9c94317b3bf9449fbf7922d9c12b7f73967d605658e401ec86e", # SHA-256 of leitor123
+            password_hash="5bb586e91c868fc9a5f274046be699d1ed7059b29e5195025a1882a17831152f", # SHA-256 of leitor123
             role=UserRole.LEITOR
         )
     ]
