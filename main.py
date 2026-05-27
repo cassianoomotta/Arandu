@@ -8,6 +8,7 @@ from typing import List, Optional
 import jwt
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
@@ -423,6 +424,20 @@ def health_check():
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         return {"status": "unhealthy", "database_error": str(e)}
+
+
+@app.get("/", summary="Servir index.html")
+@app.get("/index.html", summary="Servir index.html")
+def read_index():
+    return FileResponse("index.html")
+
+@app.get("/noticias.html", summary="Servir noticias.html")
+def read_noticias():
+    return FileResponse("noticias.html")
+
+@app.get("/admin.html", summary="Servir admin.html")
+def read_admin():
+    return FileResponse("admin.html")
 
 
 if __name__ == "__main__":
