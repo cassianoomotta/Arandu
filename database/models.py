@@ -95,6 +95,9 @@ class News(Base):
     # We can store key phrases / reduced key (chave_reduzida) as Text
     reduced_key: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
+    # Flag to track if the title was translated using Gemini
+    translated_by_gemini: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
+    
     # We can also store the similarity vector (vetor_similaridade) as an Array of Floats.
     # Note: If pgvector is installed in Postgres, you could use Vector(dimensions) from pgvector.sqlalchemy.
     # Here we use JSON to remain cross-platform out-of-the-box (compatible with SQLite and PostgreSQL).

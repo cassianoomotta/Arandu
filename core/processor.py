@@ -299,21 +299,110 @@ def is_similar_to_recent(
     return False
 
 
-def translate_text(text: str, target_lang: str = "pt") -> str:
+def translate_text(text: str, target_lang: str = "pt") -> tuple[str, bool]:
     """
-    Translates a title into Portuguese using deep-translator (Google Translator API).
-    Includes failure fallback that returns the original text to prevent execution stops.
+    Translates a title into Portuguese using Gemini API (with fallback to Google Translator).
+    Returns (translated_text, translated_by_gemini).
     """
     if not text:
-        return ""
+        return "", False
+        
+    system_prompt = (
+        "Você é um tradutor especialista em tecnologia e negócios.\n"
+        "Sua tarefa é traduzir o título de notícia fornecido para o português do Brasil (pt-BR).\n"
+        "REGRAS:\n"
+        "1. Retorne APENAS o texto traduzido final, sem aspas, explicações, introdução ou notas.\n"
+        "2. Se o texto já estiver em português brasileiro, retorne o texto original exatamente como está."
+    )
+    
+    if settings.GEMINI_API_KEY:
+        try:
+            logger.info(f"Translating via Gemini: '{text[:40]}...'")
+            translated = call_gemini_api(
+                prompt=text,
+                system_instruction=system_prompt,
+                max_tokens=100,
+                temperature=0.1
+            )
+            if translated:
+                clean_translated = translated.strip().replace('"', '')
+                return clean_translated, True
+        except Exception as e:
+            logger.error(f"Gemini translation failed: {str(e)}. Falling back to deep-translator...")
+            
     try:
-        logger.info(f"Translating: '{text[:40]}...'")
+        logger.info(f"Translating via GoogleTranslator: '{text[:40]}...'")
         translated = GoogleTranslator(source="auto", target=target_lang).translate(text)
-        return translated
+        return translated, False
     except Exception as e:
-        logger.error(f"Translation API failed for text '{text[:40]}...': {str(e)}")
-        # Fallback: Return original text to keep the news moving
-        return text
+        logger.error(f"GoogleTranslator failed: {str(e)}")
+        return text, False
+
+
+def translate_existing_news_with_gemini(start_time, timeout_limit=7.5):
+    """
+    Finds news articles in the database from international sources that have not
+    been translated by Gemini yet (translated_by_gemini is False/None),
+    and translates their titles using Gemini.
+    """
+    import time
+    logger.info("Checking for existing news in database that need Gemini translation...")
+    try:
+        with get_db_session() as session:
+            # Query News join Source where source.type == SourceType.INTERNACIONAL and News.translated_by_gemini != True
+            to_translate = (
+                session.query(News)
+                .join(Source)
+                .filter(Source.type == SourceType.INTERNACIONAL)
+                .filter((News.translated_by_gemini == False) | (News.translated_by_gemini == None))
+                .order_by(News.created_at.desc())
+                .all()
+            )
+            
+            if not to_translate:
+                logger.info("All existing international news are already translated by Gemini.")
+                return
+                
+            logger.info(f"Found {len(to_translate)} existing news articles needing Gemini translation.")
+            
+            from core.status import update_pipeline_status
+            update_pipeline_status(
+                phase="Tradução BD", 
+                detail=f"Traduzindo {len(to_translate)} notícias existentes no banco com Gemini..."
+            )
+            
+            translated_count = 0
+            for item in to_translate:
+                # Check timeout before calling API
+                elapsed = time.time() - start_time
+                if elapsed > timeout_limit:
+                    logger.warning(f"Timeout approaching ({elapsed:.2f}s). Pausing database translation pass.")
+                    break
+                    
+                logger.info(f"Translating existing news ID {item.id}: '{item.original_title[:40]}...'")
+                
+                # Call translate_text which uses Gemini
+                translated_title, success = translate_text(item.original_title, target_lang="pt")
+                if success:
+                    item.translated_title = translated_title
+                    item.translated_by_gemini = True
+                    # Also update reduced key based on the new translated title
+                    item.reduced_key = " ".join(
+                        [word.lower() for word in translated_title.split() if len(word) > 3]
+                    )[:255]
+                    
+                    # Committing inside the loop so we save progress incrementally
+                    session.commit()
+                    translated_count += 1
+                    
+                    update_pipeline_status(
+                        phase="Tradução BD", 
+                        detail=f"Traduzidas {translated_count}/{len(to_translate)} notícias no BD..."
+                    )
+            
+            logger.info(f"Database translation pass complete. Translated {translated_count} news.")
+    except Exception as e:
+        logger.error(f"Failed during translate_existing_news_with_gemini: {e}")
 
 
 def _clean_summary_preamble(text: str) -> str:
@@ -607,8 +696,9 @@ def process_article(
     title = article_data["original_title"]
     
     # 1. Translate first if the source is international
+    translated_by_gemini = False
     if source.type == SourceType.INTERNACIONAL:
-        translated_title = translate_text(title, target_lang="pt")
+        translated_title, translated_by_gemini = translate_text(title, target_lang="pt")
     else:
         translated_title = title
 
@@ -629,6 +719,7 @@ def process_article(
 
     processed_data = article_data.copy()
     processed_data["translated_title"] = translated_title
+    processed_data["translated_by_gemini"] = translated_by_gemini
 
     # 5. AI Summary Generation
     processed_data["ai_summary"] = generate_ai_summary(

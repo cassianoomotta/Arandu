@@ -76,6 +76,16 @@ async def lifespan(app: FastAPI):
     try:
         logger.info("Lifespan: Ensuring all database tables exist...")
         Base.metadata.create_all(bind=engine)
+        
+        # Dynamic migration: add translated_by_gemini column if it doesn't exist
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("ALTER TABLE news ADD COLUMN translated_by_gemini BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+                logger.info("Lifespan Database Migration: Added column 'translated_by_gemini' to news table.")
+            except Exception as e:
+                # Column likely already exists or database type doesn't support the syntax
+                logger.info(f"Lifespan Database Migration: Column 'translated_by_gemini' check: {str(e)}")
     except Exception as e:
         logger.error(f"Lifespan: Failed to create database tables: {e}")
 

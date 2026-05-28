@@ -248,6 +248,17 @@ async def main():
         current_max_items = 2 if news_count == 0 else MAX_ITEMS_PER_FEED
         logger.info(f"Setting maximum items to fetch per feed: {current_max_items} (Current DB news count: {news_count})")
         
+        # 1.5 Translate existing news articles in the database using Gemini before searching/scraping for new ones
+        from core.processor import translate_existing_news_with_gemini
+        await asyncio.to_thread(translate_existing_news_with_gemini, start_time, 7.5)
+        
+        # Check timeout after DB translation
+        elapsed = time.time() - start_time
+        if elapsed > 7.5:
+            logger.warning(f"Timeout limit reached during database translation pass ({elapsed:.2f}s). Skipping RSS scraping for this run.")
+            update_pipeline_status(is_end=True, phase="Pausa", detail="Pausa para evitar timeout (tradução do BD concluída parcialmente).")
+            return
+
         update_pipeline_status(phase="Busca RSS", detail=f"Buscando feeds em {len(active_sources)} fontes ativas...")
         
         # 2. Asynchronously fetch all RSS feeds
@@ -343,6 +354,7 @@ async def main():
                                     original_published_at=processed["original_published_at"],
                                     hash_title=processed["hash_title"],
                                     reduced_key=processed["reduced_key"],
+                                    translated_by_gemini=processed.get("translated_by_gemini", False),
                                     send_status=SendStatus.PENDENTE
                                 )
                                 session.add(news_obj)
