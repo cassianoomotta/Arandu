@@ -584,6 +584,29 @@ def get_news_categories_stats(
         )
 
 
+@app.get("/api/admin/stats/gemini-usage", summary="Obter uso diário do Gemini")
+def get_gemini_usage_stats(
+    admin_claims: dict = Depends(require_admin_role)
+):
+    """
+    Returns the daily usage and quota limit for the Gemini API.
+    """
+    try:
+        from core.processor import get_gemini_usage_today
+        usage = get_gemini_usage_today()
+        return {
+            "usage": usage,
+            "limit": settings.GEMINI_DAILY_LIMIT,
+            "has_key": bool(settings.GEMINI_API_KEY)
+        }
+    except Exception as e:
+        logger.error(f"Error fetching Gemini usage stats: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao obter estatísticas de uso do Gemini."
+        )
+
+
 @app.get("/api/debug-gemini", summary="Debug Gemini API Connection")
 def debug_gemini():
     """

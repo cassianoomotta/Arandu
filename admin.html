@@ -182,7 +182,7 @@
                 </div>
 
                 <!-- Stats summary grid -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div class="glass-panel p-6 rounded-xl flex items-center gap-5">
                         <div class="p-4 rounded-lg bg-gold/10 border border-gold/20 text-gold">
                             <i data-lucide="users-2" class="w-7 h-7"></i>
@@ -210,6 +210,16 @@
                         <div>
                             <span class="text-[10px] uppercase font-bold tracking-wider text-gray-500 block">Intervalo do Pipeline</span>
                             <span class="text-base font-bold text-white tracking-wide">A cada 15 Minutos</span>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-6 rounded-xl flex items-center gap-5">
+                        <div id="geminiUsageIconBox" class="p-4 rounded-lg bg-gold/10 border border-gold/20 text-gold">
+                            <i data-lucide="cpu" class="w-7 h-7"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gray-500 block">Uso Diário Gemini</span>
+                            <span id="geminiUsageVal" class="text-base font-bold text-white tracking-wide">Calculando...</span>
                         </div>
                     </div>
                 </div>
@@ -246,7 +256,7 @@
                             <i data-lucide="database" class="w-5 h-5 text-gold"></i>
                             Contatos e Leads Capturados
                         </h3>
-                        <button onclick="fetchLeads()" class="text-xs font-bold uppercase tracking-wider text-gold hover:text-gold-light transition duration-200 flex items-center gap-1.5 focus:outline-none">
+                        <button onclick="fetchLeads(); fetchGeminiUsage();" class="text-xs font-bold uppercase tracking-wider text-gold hover:text-gold-light transition duration-200 flex items-center gap-1.5 focus:outline-none">
                             <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
                             Atualizar Tabela
                         </button>
@@ -320,6 +330,7 @@
                 logoutBtn.classList.remove("hidden");
                 fetchLeads();
                 fetchStatsAndRenderCharts();
+                fetchGeminiUsage();
             } else {
                 loginSec.classList.remove("hidden");
                 dashSec.classList.add("hidden");
@@ -341,6 +352,44 @@
             } catch (err) {
                 statusIndicator.textContent = "Offline (Erro de Rede)";
                 statusIndicator.className = "text-lg font-bold text-red-500 uppercase tracking-wide";
+            }
+        }
+
+        // Check Gemini usage and limits
+        async function fetchGeminiUsage() {
+            if (!token) return;
+            const usageVal = document.getElementById("geminiUsageVal");
+            const iconBox = document.getElementById("geminiUsageIconBox");
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/stats/gemini-usage`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (!data.has_key) {
+                        usageVal.textContent = "Chave Ausente";
+                        usageVal.className = "text-base font-bold text-red-400 tracking-wide";
+                        iconBox.className = "p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400";
+                    } else {
+                        usageVal.textContent = `${data.usage} / ${data.limit}`;
+                        if (data.usage >= data.limit) {
+                            usageVal.className = "text-base font-bold text-red-500 tracking-wide animate-pulse";
+                            iconBox.className = "p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400";
+                        } else if (data.usage >= data.limit * 0.8) {
+                            usageVal.className = "text-base font-bold text-yellow-500 tracking-wide";
+                            iconBox.className = "p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400";
+                        } else {
+                            usageVal.className = "text-base font-bold text-white tracking-wide";
+                            iconBox.className = "p-4 rounded-lg bg-gold/10 border border-gold/20 text-gold";
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching Gemini usage:", err);
+                usageVal.textContent = "Erro de Rede";
+                usageVal.className = "text-base font-bold text-red-400 tracking-wide";
             }
         }
 
@@ -640,7 +689,8 @@
                 }
 
                 const data = await response.json();
-                showToast("Pipeline Acionado", "Coleta iniciada em segundo plano com sucesso!", "success");
+                showToast("Coleta Concluída", "Processamento e notificação concluídos com sucesso!", "success");
+                fetchGeminiUsage();
             } catch (err) {
                 showToast("Erro no Disparo", err.message || "Erro ao conectar com a rota administrativa.", "error");
             } finally {
