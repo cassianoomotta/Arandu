@@ -16,7 +16,7 @@ from sqlalchemy import func, text
 
 from database.config import settings
 from database.connection import get_db_session, engine
-from database.models import Base, News, Source, User, UserRole, SendStatus, Lead, PipelineStatus
+from database.models import Base, News, Source, User, UserRole, SendStatus, Lead, PipelineStatus, ActiveSession
 from core.scraper import main as run_scraper
 from core.notifier import TelegramNotifier, dispatch_pending_notifications
 
@@ -170,10 +170,12 @@ def generate_jwt_token(user_id: int, email: str, role: str) -> str:
     """
     Generates a secure JWT token valid for 24 hours.
     """
+    import uuid
     payload = {
         "sub": str(user_id),
         "email": email,
         "role": role,
+        "jti": uuid.uuid4().hex,
         "exp": datetime.utcnow() + timedelta(hours=24)
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
@@ -192,6 +194,15 @@ def get_current_user_claims(
             settings.JWT_SECRET, 
             algorithms=[settings.JWT_ALGORITHM]
         )
+        
+        # Verify the session is still active in the database
+        with get_db_session() as session:
+            active_session = session.query(ActiveSession).filter(ActiveSession.token == token).first()
+            if not active_session:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Sessão inválida, expirada ou encerrada por limite de conexões."
+                )
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(
@@ -288,6 +299,34 @@ def login(payload: LoginRequest):
                 )
             
             token = generate_jwt_token(user.id, user.email, user.role.value)
+            
+            # Clean up expired sessions first
+            session.query(ActiveSession).filter(ActiveSession.expires_at <= datetime.utcnow()).delete()
+            
+            # Enforce max 3 active admin sessions if role is Admin
+            if user.role == UserRole.ADMIN:
+                active_admins = (
+                    session.query(ActiveSession)
+                    .join(User, User.id == ActiveSession.user_id)
+                    .filter(User.role == UserRole.ADMIN)
+                    .order_by(ActiveSession.created_at.asc())
+                    .all()
+                )
+                if len(active_admins) >= 3:
+                    # Kick out the oldest session(s) to keep at most 2 active, so the new one makes 3
+                    to_remove = len(active_admins) - 2
+                    for i in range(to_remove):
+                        session.delete(active_admins[i])
+            
+            # Save the new active session
+            expires_at = datetime.utcnow() + timedelta(hours=24)
+            new_session = ActiveSession(
+                token=token,
+                user_id=user.id,
+                expires_at=expires_at
+            )
+            session.add(new_session)
+            
             return {"access_token": token, "token_type": "bearer"}
     except HTTPException:
         raise
@@ -296,6 +335,27 @@ def login(payload: LoginRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erro interno durante a autenticação."
+        )
+
+
+@app.post("/api/auth/logout", summary="Logout de Usuário")
+def logout(
+    claims: dict = Depends(get_current_user_claims),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """
+    Invalidates the current session by removing it from the active_sessions table.
+    """
+    token = credentials.credentials
+    try:
+        with get_db_session() as session:
+            session.query(ActiveSession).filter(ActiveSession.token == token).delete()
+            return {"status": "success", "message": "Desconectado com sucesso."}
+    except Exception as e:
+        logger.error(f"Logout error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao realizar logout."
         )
 
 

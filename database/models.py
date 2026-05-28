@@ -210,3 +210,22 @@ class PipelineStatus(Base):
     )
 
 
+class ActiveSession(Base):
+    """
+    Tracks active logged in user sessions to enforce concurrency limits.
+    """
+    __tablename__ = "active_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    token: Mapped[str] = mapped_column(String(512), nullable=False, unique=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<ActiveSession(id={self.id}, user_id={self.user_id}, expires_at={self.expires_at})>"
+
+Index("ix_active_sessions_token", ActiveSession.token, unique=True)
+
+
+

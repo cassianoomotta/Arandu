@@ -1051,7 +1051,19 @@
         };
 
         // Logout handler
-        function handleLogout() {
+        async function handleLogout() {
+            if (token) {
+                try {
+                    await fetch(`${API_BASE_URL}/api/auth/logout`, {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${token}`
+                        }
+                    });
+                } catch (err) {
+                    console.error("Erro ao chamar endpoint de logout:", err);
+                }
+            }
             localStorage.removeItem("admin_token");
             token = null;
             checkAuthentication();
