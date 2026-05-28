@@ -209,6 +209,8 @@ async def process_source(
 
 
 async def main():
+    import time
+    start_time = time.time()
     logger.info("Initializing async news scraper...")
     update_pipeline_status(is_start=True, phase="Inicialização", detail="Verificando fontes e artigos recentes no banco...")
     try:
@@ -294,6 +296,13 @@ async def main():
                 # 4. Asynchronously enrich each article (fetch og:image + process metadata) and save it in real-time
                 async def enrich_item(article: dict) -> dict | None:
                     nonlocal processed_count
+                    
+                    # Pre-processing timeout check
+                    elapsed = time.time() - start_time
+                    if elapsed > 7.5:
+                        logger.warning(f"Timeout approaching ({elapsed:.2f}s). Skipping: '{article['original_title'][:30]}...'")
+                        return None
+                        
                     # A. Fetch og:image asynchronously
                     img_url = await fetch_og_image_with_fallback(client, article["link"])
                     article["image_url"] = img_url
@@ -302,7 +311,16 @@ async def main():
                     source = sources_by_id[article["source_id"]]
                     
                     # B. Run CPU-bound or blocking API operations (translation, similarity against DB, AI summary) in a thread pool (throttled by semaphore)
+                    # Check timeout before acquiring semaphore
+                    elapsed = time.time() - start_time
+                    if elapsed > 7.5:
+                        return None
+                        
                     async with processor_sem:
+                        # Check timeout after acquiring semaphore before calling API
+                        elapsed = time.time() - start_time
+                        if elapsed > 7.5:
+                            return None
                         processed = await asyncio.to_thread(process_article, article, source, recent_titles)
                         
                     async with status_lock:
@@ -344,38 +362,50 @@ async def main():
                 logger.info("No new unique articles to enrich.")
 
             # 6. Dispatch pending notifications to Telegram
-            logger.info("Scraper Dispatcher: Dispatching pending notifications...")
-            update_pipeline_status(phase="Notificações", detail="Enviando notícias qualificadas ao Telegram...")
-            try:
-                from core.notifier import TelegramNotifier, dispatch_pending_notifications
-                notifier = TelegramNotifier()
-                sent_count = await dispatch_pending_notifications(notifier)
-                logger.info(f"Scraper Dispatcher: Successfully dispatched {sent_count} notifications.")
-            except Exception as e:
-                logger.error(f"Scraper Dispatcher: Notification dispatch failed: {str(e)}")
+            elapsed = time.time() - start_time
+            if elapsed < 8.0:
+                logger.info("Scraper Dispatcher: Dispatching pending notifications...")
+                update_pipeline_status(phase="Notificações", detail="Enviando notícias qualificadas ao Telegram...")
+                try:
+                    from core.notifier import TelegramNotifier, dispatch_pending_notifications
+                    notifier = TelegramNotifier()
+                    sent_count = await dispatch_pending_notifications(notifier)
+                    logger.info(f"Scraper Dispatcher: Successfully dispatched {sent_count} notifications.")
+                except Exception as e:
+                    logger.error(f"Scraper Dispatcher: Notification dispatch failed: {str(e)}")
+            else:
+                logger.warning(f"Skipping Telegram notification dispatch to avoid Vercel timeout (elapsed: {elapsed:.2f}s)")
 
             # 7. Database news cleanup (purge articles older than 20 days)
-            logger.info("Scraper Cleanup: Starting old news purge (retention: 20 days)...")
-            update_pipeline_status(phase="Limpeza", detail="Limpando notícias antigas (mais de 20 dias)...")
-            try:
-                from datetime import timedelta
-                with get_db_session() as session:
-                    cutoff_date = datetime.utcnow() - timedelta(days=20)
-                    deleted_count = session.query(News).filter(
-                        News.created_at < cutoff_date
-                    ).delete(synchronize_session="fetch")
-                    logger.info(f"Scraper Cleanup: Purged {deleted_count} news articles older than 20 days.")
-            except Exception as e:
-                logger.error(f"Scraper Cleanup: News cleanup failed: {str(e)}")
+            elapsed = time.time() - start_time
+            if elapsed < 8.3:
+                logger.info("Scraper Cleanup: Starting old news purge (retention: 20 days)...")
+                update_pipeline_status(phase="Limpeza", detail="Limpando notícias antigas (mais de 20 dias)...")
+                try:
+                    from datetime import timedelta
+                    with get_db_session() as session:
+                        cutoff_date = datetime.utcnow() - timedelta(days=20)
+                        deleted_count = session.query(News).filter(
+                            News.created_at < cutoff_date
+                        ).delete(synchronize_session="fetch")
+                        logger.info(f"Scraper Cleanup: Purged {deleted_count} news articles older than 20 days.")
+                except Exception as e:
+                    logger.error(f"Scraper Cleanup: News cleanup failed: {str(e)}")
+            else:
+                logger.warning(f"Skipping old news purge to avoid Vercel timeout (elapsed: {elapsed:.2f}s)")
 
             # 8. Scraper Maintenance: Heal up to 3 missing or invalid summaries
-            logger.info("Scraper Maintenance: Checking for older news with missing/bad summaries to heal...")
-            update_pipeline_status(phase="Correção de Resumos", detail="Verificando resumos pendentes de correção com IA...")
-            try:
-                from core.processor import heal_incomplete_summaries
-                await asyncio.to_thread(heal_incomplete_summaries, limit=3)
-            except Exception as e:
-                logger.error(f"Scraper Maintenance: Summary healing failed: {str(e)}")
+            elapsed = time.time() - start_time
+            if elapsed < 8.5:
+                logger.info("Scraper Maintenance: Checking for older news with missing/bad summaries to heal...")
+                update_pipeline_status(phase="Correção de Resumos", detail="Verificando resumos pendentes de correção com IA...")
+                try:
+                    from core.processor import heal_incomplete_summaries
+                    await asyncio.to_thread(heal_incomplete_summaries, limit=3)
+                except Exception as e:
+                    logger.error(f"Scraper Maintenance: Summary healing failed: {str(e)}")
+            else:
+                logger.warning(f"Skipping summary healing to avoid Vercel timeout (elapsed: {elapsed:.2f}s)")
 
             # Success ending
             update_pipeline_status(is_end=True)

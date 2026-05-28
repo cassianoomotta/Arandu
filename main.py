@@ -617,6 +617,24 @@ def get_gemini_usage_stats(
         )
 
 
+def check_and_reset_stuck_pipeline(session, status_entry):
+    """
+    Checks if the pipeline status has been stuck in the 'running' state for more than 5 minutes.
+    In serverless environments like Vercel, processes are killed at the timeout limit,
+    leaving the status stuck. This auto-heals the state.
+    """
+    if status_entry and status_entry.status == "running":
+        from datetime import datetime, timedelta
+        last_active = status_entry.updated_at or status_entry.last_run_at
+        if last_active and datetime.utcnow() - last_active > timedelta(minutes=5):
+            logger.warning("Pipeline status was stuck in 'running' for >5 minutes. Auto-resetting to failed (timeout).")
+            status_entry.status = "failed"
+            status_entry.current_phase = None
+            status_entry.current_detail = None
+            status_entry.last_error = "Timeout: O pipeline foi interrompido (provavelmente pelo limite de execução de 10s da Vercel)."
+            session.commit()
+
+
 @app.get("/api/admin/pipeline-status", summary="Obter status em tempo real da IA e Scraper")
 def get_pipeline_status(
     admin_claims: dict = Depends(require_admin_role)
@@ -638,6 +656,8 @@ def get_pipeline_status(
                     "last_error": None,
                     "updated_at": None
                 }
+            
+            check_and_reset_stuck_pipeline(session, status_entry)
             
             return {
                 "status": status_entry.status,
@@ -677,6 +697,8 @@ def get_public_pipeline_status():
                     "last_error": None,
                     "updated_at": None
                 }
+            
+            check_and_reset_stuck_pipeline(session, status_entry)
             
             return {
                 "status": status_entry.status,
