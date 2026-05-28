@@ -12,9 +12,15 @@ class Settings:
         "sqlite:///arandu.db"
     )
     if raw_db_url.startswith("postgres://"):
-        DATABASE_URL = raw_db_url.replace("postgres://", "postgresql://", 1)
+        db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
     else:
-        DATABASE_URL = raw_db_url
+        db_url = raw_db_url
+
+    # Auto-heal Supabase pooler connections missing project-ref in username
+    if "pooler.supabase.com" in db_url and "://postgres:" in db_url:
+        db_url = db_url.replace("://postgres:", "://postgres.albucbddugupigeaepbb:", 1)
+
+    DATABASE_URL = db_url
 
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GEMINI_DAILY_LIMIT: int = int(os.getenv("GEMINI_DAILY_LIMIT", "1500"))
