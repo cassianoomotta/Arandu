@@ -157,7 +157,7 @@ def seed_database():
         ),
         Source(
             name="Governo Brasileiro",
-            rss_url="https://www.gov.br/pt-br/noticias/feed",
+            rss_url="https://www.gov.br/pt-br/noticias/RSS",
             type=SourceType.NACIONAL,
             active=True
         ),
@@ -169,13 +169,13 @@ def seed_database():
         ),
         Source(
             name="Governo Americano",
-            rss_url="https://www.whitehouse.gov/feed/",
+            rss_url="https://www.state.gov/press-releases/feed/",
             type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
             active=True
         ),
         Source(
             name="Governo Russo",
-            rss_url="http://en.kremlin.ru/feed.xml",
+            rss_url="http://en.kremlin.ru/events/all/feed",
             type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
             active=True
         )
