@@ -19,6 +19,28 @@ logging.basicConfig(
 logger = logging.getLogger("news_processor")
 
 import httpx
+import time as _time_module
+
+# Rate limit tracking
+_last_rate_limit_at: Optional[datetime] = None
+_RATE_LIMIT_COOLDOWN_SECONDS = 60  # Gemini free tier resets per-minute limits
+
+def get_rate_limit_info() -> dict:
+    """Returns rate limit status info for the admin dashboard."""
+    global _last_rate_limit_at
+    if _last_rate_limit_at is None:
+        return {"active": False, "last_hit_at": None, "cooldown_seconds": 0, "resets_at": None}
+    
+    elapsed = (datetime.utcnow() - _last_rate_limit_at).total_seconds()
+    remaining = max(0, _RATE_LIMIT_COOLDOWN_SECONDS - elapsed)
+    resets_at = _last_rate_limit_at + timedelta(seconds=_RATE_LIMIT_COOLDOWN_SECONDS)
+    
+    return {
+        "active": remaining > 0,
+        "last_hit_at": _last_rate_limit_at.isoformat() + "Z",
+        "cooldown_seconds": round(remaining),
+        "resets_at": resets_at.isoformat() + "Z"
+    }
 
 
 from sqlalchemy import text
@@ -127,6 +149,8 @@ def call_gemini_api(prompt: str, system_instruction: str = None, max_tokens: int
                     response = client.post(url, json=payload, headers=headers)
                     
                     if response.status_code == 429:
+                        global _last_rate_limit_at
+                        _last_rate_limit_at = datetime.utcnow()
                         delay = base_delay * (2 ** attempt)
                         logger.warning(f"Gemini API rate limit (429) hit for model {model}. Retrying in {delay:.1f}s...")
                         if attempt == max_attempts - 1:

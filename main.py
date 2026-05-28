@@ -589,15 +589,17 @@ def get_gemini_usage_stats(
     admin_claims: dict = Depends(require_admin_role)
 ):
     """
-    Returns the daily usage and quota limit for the Gemini API.
+    Returns the daily usage, quota limit, and rate limit status for the Gemini API.
     """
     try:
-        from core.processor import get_gemini_usage_today
+        from core.processor import get_gemini_usage_today, get_rate_limit_info
         usage = get_gemini_usage_today()
+        rate_limit = get_rate_limit_info()
         return {
             "usage": usage,
             "limit": settings.GEMINI_DAILY_LIMIT,
-            "has_key": bool(settings.GEMINI_API_KEY)
+            "has_key": bool(settings.GEMINI_API_KEY),
+            "rate_limit": rate_limit
         }
     except Exception as e:
         logger.error(f"Error fetching Gemini usage stats: {str(e)}")

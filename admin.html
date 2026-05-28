@@ -217,9 +217,19 @@
                         <div id="geminiUsageIconBox" class="p-4 rounded-lg bg-gold/10 border border-gold/20 text-gold">
                             <i data-lucide="cpu" class="w-7 h-7"></i>
                         </div>
-                        <div>
+                        <div class="flex-grow">
                             <span class="text-[10px] uppercase font-bold tracking-wider text-gray-500 block">Uso Diário Gemini</span>
                             <span id="geminiUsageVal" class="text-base font-bold text-white tracking-wide">Calculando...</span>
+                            <div id="rateLimitIndicator" class="hidden mt-1.5">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="relative flex h-2 w-2">
+                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                                    </span>
+                                    <span id="rateLimitText" class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Rate Limit</span>
+                                </div>
+                                <span id="rateLimitCountdown" class="text-[10px] text-gray-500 font-mono"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -356,10 +366,16 @@
         }
 
         // Check Gemini usage and limits
+        let rateLimitInterval = null;
+
         async function fetchGeminiUsage() {
             if (!token) return;
             const usageVal = document.getElementById("geminiUsageVal");
             const iconBox = document.getElementById("geminiUsageIconBox");
+            const rateLimitIndicator = document.getElementById("rateLimitIndicator");
+            const rateLimitText = document.getElementById("rateLimitText");
+            const rateLimitCountdown = document.getElementById("rateLimitCountdown");
+
             try {
                 const response = await fetch(`${API_BASE_URL}/api/admin/stats/gemini-usage`, {
                     headers: {
@@ -372,6 +388,7 @@
                         usageVal.textContent = "Chave Ausente";
                         usageVal.className = "text-base font-bold text-red-400 tracking-wide";
                         iconBox.className = "p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400";
+                        rateLimitIndicator.classList.add("hidden");
                     } else {
                         usageVal.textContent = `${data.usage} / ${data.limit}`;
                         if (data.usage >= data.limit) {
@@ -384,6 +401,24 @@
                             usageVal.className = "text-base font-bold text-white tracking-wide";
                             iconBox.className = "p-4 rounded-lg bg-gold/10 border border-gold/20 text-gold";
                         }
+
+                        // Handle rate limit info
+                        if (data.rate_limit && data.rate_limit.active) {
+                            rateLimitIndicator.classList.remove("hidden");
+                            startRateLimitCountdown(data.rate_limit.cooldown_seconds, data.rate_limit.resets_at);
+                        } else if (data.rate_limit && !data.rate_limit.active && data.rate_limit.last_hit_at) {
+                            // Rate limit was hit but has since cleared
+                            rateLimitIndicator.classList.remove("hidden");
+                            rateLimitText.textContent = "Rate Limit Liberado";
+                            rateLimitText.className = "text-[10px] font-bold text-green-400 uppercase tracking-wider";
+                            rateLimitCountdown.textContent = "";
+                            // Auto-hide after 5 seconds
+                            setTimeout(() => {
+                                rateLimitIndicator.classList.add("hidden");
+                            }, 5000);
+                        } else {
+                            rateLimitIndicator.classList.add("hidden");
+                        }
                     }
                 }
             } catch (err) {
@@ -391,6 +426,46 @@
                 usageVal.textContent = "Erro de Rede";
                 usageVal.className = "text-base font-bold text-red-400 tracking-wide";
             }
+        }
+
+        function startRateLimitCountdown(seconds, resetsAtISO) {
+            const rateLimitText = document.getElementById("rateLimitText");
+            const rateLimitCountdown = document.getElementById("rateLimitCountdown");
+            const iconBox = document.getElementById("geminiUsageIconBox");
+
+            // Clear any existing interval
+            if (rateLimitInterval) clearInterval(rateLimitInterval);
+
+            let remaining = seconds;
+            
+            const updateDisplay = () => {
+                if (remaining <= 0) {
+                    clearInterval(rateLimitInterval);
+                    rateLimitInterval = null;
+                    rateLimitText.textContent = "Rate Limit Liberado";
+                    rateLimitText.className = "text-[10px] font-bold text-green-400 uppercase tracking-wider";
+                    rateLimitCountdown.textContent = "";
+                    iconBox.className = "p-4 rounded-lg bg-gold/10 border border-gold/20 text-gold";
+                    // Re-fetch data after cooldown
+                    setTimeout(() => fetchGeminiUsage(), 2000);
+                    return;
+                }
+                
+                const mins = Math.floor(remaining / 60);
+                const secs = remaining % 60;
+                const timeStr = mins > 0 
+                    ? `${mins}m ${secs.toString().padStart(2, '0')}s` 
+                    : `${secs}s`;
+                
+                rateLimitText.textContent = "Rate Limit Ativo";
+                rateLimitText.className = "text-[10px] font-bold text-amber-400 uppercase tracking-wider";
+                rateLimitCountdown.textContent = `Libera em ${timeStr}`;
+                iconBox.className = "p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400";
+                remaining--;
+            };
+
+            updateDisplay();
+            rateLimitInterval = setInterval(updateDisplay, 1000);
         }
 
         // Login Handler
