@@ -21,26 +21,79 @@ logger = logging.getLogger("news_processor")
 import httpx
 import time as _time_module
 
-# Rate limit tracking
-_last_rate_limit_at: Optional[datetime] = None
-_RATE_LIMIT_COOLDOWN_SECONDS = 60  # Gemini free tier resets per-minute limits
+# Gemini Free Tier rate limits (per minute):
+# - gemini-2.5-flash-lite: 15 RPM
+# - gemini-2.5-flash: 10 RPM  
+# - gemini-3.5-flash: ~10 RPM (paid tier only, but may work with some keys)
+_RATE_LIMIT_COOLDOWN_SECONDS = 60  # Gemini resets per-minute limits every 60s
+
+
+def _ensure_rate_limit_table(session):
+    """Creates the rate limit tracking table if it doesn't exist."""
+    try:
+        session.execute(text(
+            "CREATE TABLE IF NOT EXISTS gemini_rate_limit ("
+            "  id INTEGER PRIMARY KEY, "
+            "  last_hit_at TIMESTAMP NOT NULL"
+            ")"
+        ))
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Failed to create gemini_rate_limit table: {e}")
+
+
+def record_rate_limit_hit():
+    """Persists the timestamp of the last 429 rate limit error to the database."""
+    try:
+        with get_db_session() as session:
+            _ensure_rate_limit_table(session)
+            # Upsert: try update first, insert if no row exists
+            result = session.execute(
+                text("UPDATE gemini_rate_limit SET last_hit_at = :now WHERE id = 1"),
+                {"now": datetime.utcnow()}
+            )
+            if result.rowcount == 0:
+                session.execute(
+                    text("INSERT INTO gemini_rate_limit (id, last_hit_at) VALUES (1, :now)"),
+                    {"now": datetime.utcnow()}
+                )
+            session.commit()
+    except Exception as e:
+        logger.error(f"Failed to record rate limit hit: {e}")
+
 
 def get_rate_limit_info() -> dict:
-    """Returns rate limit status info for the admin dashboard."""
-    global _last_rate_limit_at
-    if _last_rate_limit_at is None:
+    """Returns rate limit status info for the admin dashboard, persisted in DB."""
+    try:
+        with get_db_session() as session:
+            _ensure_rate_limit_table(session)
+            result = session.execute(
+                text("SELECT last_hit_at FROM gemini_rate_limit WHERE id = 1")
+            ).fetchone()
+            
+            if not result or not result[0]:
+                return {"active": False, "last_hit_at": None, "cooldown_seconds": 0, "resets_at": None}
+            
+            last_hit = result[0]
+            # Handle timezone-naive datetimes
+            if hasattr(last_hit, 'replace'):
+                last_hit = last_hit.replace(tzinfo=None)
+            
+            elapsed = (datetime.utcnow() - last_hit).total_seconds()
+            remaining = max(0, _RATE_LIMIT_COOLDOWN_SECONDS - elapsed)
+            resets_at = last_hit + timedelta(seconds=_RATE_LIMIT_COOLDOWN_SECONDS)
+            
+            return {
+                "active": remaining > 0,
+                "last_hit_at": last_hit.isoformat() + "Z",
+                "cooldown_seconds": round(remaining),
+                "resets_at": resets_at.isoformat() + "Z"
+            }
+    except Exception as e:
+        logger.error(f"Failed to get rate limit info: {e}")
         return {"active": False, "last_hit_at": None, "cooldown_seconds": 0, "resets_at": None}
-    
-    elapsed = (datetime.utcnow() - _last_rate_limit_at).total_seconds()
-    remaining = max(0, _RATE_LIMIT_COOLDOWN_SECONDS - elapsed)
-    resets_at = _last_rate_limit_at + timedelta(seconds=_RATE_LIMIT_COOLDOWN_SECONDS)
-    
-    return {
-        "active": remaining > 0,
-        "last_hit_at": _last_rate_limit_at.isoformat() + "Z",
-        "cooldown_seconds": round(remaining),
-        "resets_at": resets_at.isoformat() + "Z"
-    }
+
 
 
 from sqlalchemy import text
@@ -86,13 +139,22 @@ def increment_gemini_usage():
         logger.error(f"Error incrementing Gemini usage: {e}")
 
 
+import threading
+
+# Thread-safe rate limiter to space calls by at least 6 seconds (max 10 RPM)
+_gemini_api_lock = threading.Lock()
+_last_gemini_call_time = 0.0
+
 def call_gemini_api(prompt: str, system_instruction: str = None, max_tokens: int = 150, temperature: float = 0.3) -> str:
     """
     Direct HTTP request to Google Gemini API (bypassing OpenAI compatibility layer to avoid version/v1main errors).
     Tries multiple active models (gemini-3.5-flash, gemini-2.5-flash-lite) to avoid deprecation/quota failures,
     with exponential backoff for rate limits (HTTP 429).
+    Includes a strict 6-second delay between calls to guarantee compliance with the Gemini free tier limits.
     """
     import time
+    global _last_gemini_call_time
+    
     key = settings.GEMINI_API_KEY
     if not key:
         raise ValueError("GEMINI_API_KEY is not configured.")
@@ -107,6 +169,17 @@ def call_gemini_api(prompt: str, system_instruction: str = None, max_tokens: int
         raise
     except Exception as e:
         logger.error(f"Failed to verify Gemini daily usage limits: {e}")
+
+    # Enforce minimum 6-second delay using thread lock to serialize requests
+    with _gemini_api_lock:
+        now = time.time()
+        elapsed = now - _last_gemini_call_time
+        required_gap = 6.0  # 10 RPM max
+        if elapsed < required_gap:
+            sleep_needed = required_gap - elapsed
+            logger.info(f"Rate limiting: sleeping for {sleep_needed:.2f}s to respect Gemini API RPM limits.")
+            time.sleep(sleep_needed)
+        _last_gemini_call_time = time.time()
 
     # Log/track call
     try:
@@ -149,8 +222,7 @@ def call_gemini_api(prompt: str, system_instruction: str = None, max_tokens: int
                     response = client.post(url, json=payload, headers=headers)
                     
                     if response.status_code == 429:
-                        global _last_rate_limit_at
-                        _last_rate_limit_at = datetime.utcnow()
+                        record_rate_limit_hit()
                         delay = base_delay * (2 ** attempt)
                         logger.warning(f"Gemini API rate limit (429) hit for model {model}. Retrying in {delay:.1f}s...")
                         if attempt == max_attempts - 1:
@@ -383,7 +455,12 @@ BLACKLIST_PHRASES = [
     "contratação de jogador", "novo técnico do", "novo técnico de", "tabela do campeonato",
     "tabela do brasileirão", "jogo de futebol", "partida de futebol", "gol de placa",
     "gol de bicicleta", "gol de cabeça", "marcou um gol", "fazer gol", "fez gol", "faz gol",
-    "reality show", "reality-show", "reality shows"
+    "reality show", "reality-show", "reality shows",
+    
+    # Promoções, Cupons e Afiliados
+    "cupom de desconto", "código promocional", "código de cupom", "promo code", "promo codes",
+    "coupon code", "coupon codes", "cupom de", "ofertas do dia", "menor preço", "desconto em",
+    "compre com desconto", "comprar com desconto"
 ]
 
 BLACKLIST_WORDS = {
@@ -426,7 +503,13 @@ BLACKLIST_WORDS = {
     "campanha", "debate", "debates", "prefeito", "prefeita", "vereador", "vereadora",
     "governador", "governadora", "senador", "senadora", "bolsonarista", "petista",
     # Cotidiano & Variedades
-    "horóscopo", "signos", "astrologia", "culinária"
+    "horóscopo", "signos", "astrologia", "culinária",
+    
+    # Promoções, Cupons, Afiliados e Varejo de Consumo
+    "cupom", "cupons", "promoção", "promoções", "promocional", "desconto", "descontos", 
+    "oferta", "ofertas", "coupon", "coupons", "promo", "promos", "discount", "discounts", 
+    "deal", "deals", "affiliate", "afiliado", "afiliados", "compre", "comprar", "compras", 
+    "shop", "store", "sale", "liquidação", "queima", "estoque", "outlet"
 }
 
 WHITELIST_WORDS = {
@@ -558,3 +641,73 @@ def process_article(
     )[:255]
 
     return processed_data
+
+
+BAD_SUMMARY_PATTERNS = [
+    "resumo automático indisponível",
+    "coleta executada com sucesso",
+    "notícia de tecnologia relevante reportada",
+    "aqui está o resumo",
+    "resumo executivo",
+    "segue abaixo"
+]
+
+def is_bad_summary(summary: str) -> bool:
+    """Checks if the summary is empty, too short, or contains fallback/preamble patterns."""
+    if not summary:
+        return True
+    s_lower = summary.lower()
+    if len(s_lower.strip()) < 50:
+        return True
+    for pattern in BAD_SUMMARY_PATTERNS:
+        if pattern in s_lower:
+            return True
+    return False
+
+
+def heal_incomplete_summaries(limit: int = 3):
+    """
+    Looks for up to `limit` news items in the database with missing or placeholder summaries,
+    and regenerates them using the AI summary function.
+    """
+    logger.info("Starting maintenance check for incomplete AI summaries...")
+    try:
+        with get_db_session() as session:
+            # Query active sources map to get names
+            sources_map = {s.id: s.name for s in session.query(Source).all()}
+            
+            # Fetch news items (order by created_at desc to heal recent items first)
+            news_items = session.query(News).order_by(News.created_at.desc()).all()
+            
+            bad_articles = []
+            for item in news_items:
+                if is_bad_summary(item.ai_summary):
+                    bad_articles.append(item)
+                    if len(bad_articles) >= limit:
+                        break
+            
+            if not bad_articles:
+                logger.info("All existing database articles have valid AI summaries. No healing needed.")
+                return
+                
+            logger.info(f"Found {len(bad_articles)} articles needing summary healing. Regenerating...")
+            for article in bad_articles:
+                title = article.translated_title or article.original_title
+                source_name = sources_map.get(article.source_id, "Desconhecido")
+                
+                logger.info(f"Healing summary for article: '{title[:45]}...'")
+                
+                try:
+                    new_summary = generate_ai_summary(title=title, source_name=source_name)
+                    # Only save if it's not a fallback / bad summary
+                    if not is_bad_summary(new_summary):
+                        article.ai_summary = new_summary
+                        session.commit()
+                        logger.info(f"✓ Summary healed successfully.")
+                    else:
+                        logger.warning(f"✗ Regenerated summary was still invalid/fallback. Skipping save.")
+                except Exception as e:
+                    logger.error(f"Error during summary healing: {e}")
+    except Exception as e:
+        logger.error(f"Failed during heal_incomplete_summaries run: {e}")
+
