@@ -410,7 +410,8 @@ def is_relevant_article_ai(title: str) -> bool:
         "Tecnologia, Empreendedorismo e Investimentos/Negócios.\n"
         "Sua tarefa é analisar o título da notícia fornecido e determinar se ele é RELEVANTE "
         "para essas áreas ou se é IRRELEVANTE (esportes, política partidária, fofocas, "
-        "crimes comuns, receitas, variedades, etc.).\n"
+        "crimes comuns, receitas, variedades, promoções de produtos, cupons de desconto, "
+        "códigos promocionais, ofertas de compras ou links de afiliados).\n"
         "Responda estritamente com 'SIM' se for relevante, ou 'NÃO' se for irrelevante. "
         "Não escreva nada além de 'SIM' ou 'NÃO'."
     )
