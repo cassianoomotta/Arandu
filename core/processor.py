@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional, Set
 
 from deep_translator import GoogleTranslator
 
+from sqlalchemy import text
 from database.config import settings
 from database.connection import get_db_session
 from database.models import News, Source, SourceType
