@@ -22,6 +22,18 @@ class Settings:
 
     DATABASE_URL = db_url
 
+    # Debug database URL (masked password)
+    try:
+        if "@" in db_url:
+            left, right = db_url.split("@", 1)
+            proto, user_pass = left.split("://", 1)
+            user = user_pass.split(":", 1)[0]
+            print(f"DATABASE_URL_DEBUG: {proto}://{user}:***@{right}")
+        else:
+            print(f"DATABASE_URL_DEBUG: {db_url}")
+    except Exception as e:
+        print(f"DATABASE_URL_DEBUG error: {e}")
+
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GEMINI_DAILY_LIMIT: int = int(os.getenv("GEMINI_DAILY_LIMIT", "1500"))
     JWT_SECRET: str = os.getenv("JWT_SECRET", "super_secret_key_change_me_in_production")
