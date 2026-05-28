@@ -10,7 +10,7 @@ class Settings:
     raw_db_url = os.getenv(
         "DATABASE_URL", 
         "sqlite:///arandu.db"
-    )
+    ).strip()
     if raw_db_url.startswith("postgres://"):
         db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
     else:
@@ -22,17 +22,7 @@ class Settings:
 
     DATABASE_URL = db_url
 
-    # Debug database URL (masked password)
-    try:
-        from sqlalchemy.engine.url import make_url
-        parsed = make_url(db_url)
-        print(f"PARSED_DB_URL: driver={parsed.drivername}, user={parsed.username}, host={parsed.host}, port={parsed.port}, database={parsed.database}")
-        print(f"DEBUG: Password matches 'Arandu2026.'? {parsed.password == 'Arandu2026.'}")
-        # Print first and last characters of the password to help identify it if mismatch
-        if parsed.password:
-            print(f"DEBUG: Password len={len(parsed.password)}, starts={parsed.password[0] if parsed.password else ''}, ends={parsed.password[-1] if parsed.password else ''}")
-    except Exception as e:
-        print(f"PARSED_DB_URL parsing error: {e}")
+    # Cleaned up debug statements
 
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GEMINI_DAILY_LIMIT: int = int(os.getenv("GEMINI_DAILY_LIMIT", "1500"))
