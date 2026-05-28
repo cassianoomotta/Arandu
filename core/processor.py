@@ -508,7 +508,7 @@ BLACKLIST_WORDS = {
     # Promoções, Cupons, Afiliados e Varejo de Consumo
     "cupom", "cupons", "promoção", "promoções", "promocional", "desconto", "descontos", 
     "oferta", "ofertas", "coupon", "coupons", "promo", "promos", "discount", "discounts", 
-    "deal", "deals", "affiliate", "afiliado", "afiliados", "compre", "comprar", "compras", 
+    "affiliate", "afiliado", "afiliados", "compre", "comprar", "compras", 
     "shop", "store", "sale", "liquidação", "queima", "estoque", "outlet"
 }
 
