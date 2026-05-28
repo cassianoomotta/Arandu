@@ -172,11 +172,11 @@
                         <p class="text-gray-400 text-sm font-light mt-1">Monitore os leads de sua landing page e execute rotinas operacionais.</p>
                     </div>
 
-                    <!-- Manual Crawler Trigger -->
+                    <!-- Refresh Dashboard button -->
                     <div class="flex items-center gap-4">
-                        <button id="triggerScraperBtn" onclick="triggerManualCollection()" class="px-6 py-3.5 rounded-xl bg-gold-gradient text-black font-outfit font-extrabold uppercase tracking-wider text-xs flex items-center gap-2 hover:scale-[1.03] transition duration-200">
-                            <i data-lucide="play-circle" class="w-4 h-4"></i>
-                            Forçar Coleta Manual
+                        <button id="triggerScraperBtn" onclick="refreshDashboard()" class="px-6 py-3.5 rounded-xl bg-gold-gradient text-black font-outfit font-extrabold uppercase tracking-wider text-xs flex items-center gap-2 hover:scale-[1.03] transition duration-200">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                            Atualizar Painel
                         </button>
                     </div>
                 </div>
@@ -663,8 +663,8 @@
             });
         }
 
-        // Trigger manual collection pipeline
-        async function triggerManualCollection() {
+        // Refresh dashboard data in real-time
+        async function refreshDashboard() {
             if (!token) return;
             const btn = document.getElementById("triggerScraperBtn");
             btn.disabled = true;
@@ -673,31 +673,24 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span>Executando...</span>
+                <span>Atualizando...</span>
             `;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/admin/coleta-manual`, {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error("Não foi possível acionar a coleta.");
-                }
-
-                const data = await response.json();
-                showToast("Coleta Concluída", "Processamento e notificação concluídos com sucesso!", "success");
-                fetchGeminiUsage();
+                await Promise.all([
+                    checkBackendHealth(),
+                    fetchLeads(),
+                    fetchStatsAndRenderCharts(),
+                    fetchGeminiUsage()
+                ]);
+                showToast("Painel Atualizado", "Todas as métricas e leads foram recarregados com sucesso!", "success");
             } catch (err) {
-                showToast("Erro no Disparo", err.message || "Erro ao conectar com a rota administrativa.", "error");
+                showToast("Erro ao Atualizar", "Não foi possível carregar alguns dados em tempo real.", "error");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `
-                    <i data-lucide="play-circle" class="w-4 h-4"></i>
-                    <span>Forçar Coleta Manual</span>
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    <span>Atualizar Painel</span>
                 `;
                 lucide.createIcons();
             }
