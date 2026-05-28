@@ -234,6 +234,43 @@
                     </div>
                 </div>
 
+                <!-- Pipeline Status Section -->
+                <div class="glass-panel p-6 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6">
+                    <div class="flex items-start gap-4 flex-grow">
+                        <div id="pipelineStatusIconBox" class="p-4 rounded-lg bg-gray-500/10 border border-gray-500/20 text-gray-400 flex items-center justify-center">
+                            <i id="pipelineStatusIcon" data-lucide="play-circle" class="w-8 h-8"></i>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] uppercase font-bold tracking-wider text-gray-500 block">Status do Pipeline de IA</span>
+                                <span id="pipelineStatusBadge" class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-gray-500/15 text-gray-400 border border-gray-500/20">Ocioso</span>
+                            </div>
+                            <h4 id="pipelinePhaseText" class="font-outfit text-lg font-bold text-white mt-1">Aguardando Execução</h4>
+                            <p id="pipelineDetailText" class="text-gray-400 text-xs font-light mt-0.5">O pipeline automático roda a cada 15 minutos ou pode ser disparado manualmente.</p>
+                            
+                            <!-- Detailed last run info -->
+                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[10px] text-gray-500 font-mono">
+                                <span id="pipelineLastRunTime">Último início: Nunca</span>
+                                <span id="pipelineLastSuccessTime">Último sucesso: Nunca</span>
+                                <span id="pipelineLastDuration">Duração: N/A</span>
+                            </div>
+                            
+                            <!-- Error display -->
+                            <div id="pipelineErrorBox" class="hidden mt-2 p-2.5 rounded bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono">
+                                <strong>Erro:</strong> <span id="pipelineErrorText"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col justify-center gap-2 min-w-[200px]">
+                        <button id="triggerPipelineBtn" onclick="triggerManualPipeline()" class="w-full px-6 py-3.5 rounded-xl bg-gold-gradient text-black font-outfit font-extrabold uppercase tracking-wider text-xs flex items-center justify-center gap-2 hover:scale-[1.02] transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i data-lucide="zap" class="w-4 h-4"></i>
+                            <span>Executar Coleta e IA</span>
+                        </button>
+                        <span class="text-[9px] text-center text-gray-500 font-light">Dispara a busca de RSS, filtros, tradução e resumos IA.</span>
+                    </div>
+                </div>
+
                 <!-- Charts Section -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- Chart 1: Leads Growth -->
@@ -341,10 +378,12 @@
                 fetchLeads();
                 fetchStatsAndRenderCharts();
                 fetchGeminiUsage();
+                fetchPipelineStatus();
             } else {
                 loginSec.classList.remove("hidden");
                 dashSec.classList.add("hidden");
                 logoutBtn.classList.add("hidden");
+                stopPipelinePolling();
             }
         }
 
@@ -756,7 +795,8 @@
                     checkBackendHealth(),
                     fetchLeads(),
                     fetchStatsAndRenderCharts(),
-                    fetchGeminiUsage()
+                    fetchGeminiUsage(),
+                    fetchPipelineStatus()
                 ]);
                 showToast("Painel Atualizado", "Todas as métricas e leads foram recarregados com sucesso!", "success");
             } catch (err) {
@@ -799,6 +839,199 @@
                 toast.classList.add("translate-y-20", "opacity-0");
             }, 4000);
         }
+
+        let pipelinePollingInterval = null;
+
+        async function fetchPipelineStatus() {
+            if (!token) return;
+            const badge = document.getElementById("pipelineStatusBadge");
+            const phaseText = document.getElementById("pipelinePhaseText");
+            const detailText = document.getElementById("pipelineDetailText");
+            const iconBox = document.getElementById("pipelineStatusIconBox");
+            const lastRunTime = document.getElementById("pipelineLastRunTime");
+            const lastSuccessTime = document.getElementById("pipelineLastSuccessTime");
+            const lastDuration = document.getElementById("pipelineLastDuration");
+            const errorBox = document.getElementById("pipelineErrorBox");
+            const errorText = document.getElementById("pipelineErrorText");
+            const triggerBtn = document.getElementById("triggerPipelineBtn");
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/pipeline-status`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Set stats/times
+                    lastRunTime.textContent = `Último início: ${formatPipelineDate(data.last_run_at)}`;
+                    lastSuccessTime.textContent = `Último sucesso: ${formatPipelineDate(data.last_success_at)}`;
+                    lastDuration.textContent = `Duração: ${formatDuration(data.last_duration_seconds)}`;
+
+                    if (data.status === "running") {
+                        // Running state
+                        badge.textContent = "Executando";
+                        badge.className = "px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-gold/15 text-gold border border-gold/20 animate-pulse";
+                        iconBox.className = "p-4 rounded-lg bg-gold/10 border border-gold/20 text-gold flex items-center justify-center animate-pulse";
+                        setPipelineIcon("loader-2", true);
+                        
+                        phaseText.textContent = `Fase: ${data.current_phase || "Carregando..."}`;
+                        detailText.textContent = data.current_detail || "Iniciando processos de Inteligência Artificial...";
+                        
+                        // Disable button
+                        triggerBtn.disabled = true;
+                        triggerBtn.innerHTML = `
+                            <svg class="animate-spin h-4 w-4 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Executando...</span>
+                        `;
+                        
+                        // Start polling if not already running
+                        startPipelinePolling();
+                        errorBox.classList.add("hidden");
+                    } else if (data.status === "failed") {
+                        // Failed state
+                        badge.textContent = "Falhou";
+                        badge.className = "px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-red-500/15 text-red-400 border border-red-500/20";
+                        iconBox.className = "p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center";
+                        setPipelineIcon("alert-triangle", false);
+
+                        phaseText.textContent = "Última execução falhou";
+                        detailText.textContent = "Ocorreu um erro crítico durante a coleta ou o processamento de IA.";
+                        
+                        if (data.last_error) {
+                            errorBox.classList.remove("hidden");
+                            errorText.textContent = data.last_error;
+                        } else {
+                            errorBox.classList.add("hidden");
+                        }
+
+                        // Enable button
+                        triggerBtn.disabled = false;
+                        triggerBtn.innerHTML = `
+                            <i data-lucide="zap" class="w-4 h-4"></i>
+                            <span>Executar Coleta e IA</span>
+                        `;
+                        lucide.createIcons();
+                        
+                        // Stop polling if status is failed
+                        stopPipelinePolling();
+                    } else {
+                        // Idle / Success state
+                        badge.textContent = "Ocioso";
+                        badge.className = "px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-gray-500/15 text-gray-400 border border-gray-500/20";
+                        iconBox.className = "p-4 rounded-lg bg-gray-500/10 border border-gray-500/20 text-gray-400 flex items-center justify-center";
+                        setPipelineIcon("play-circle", false);
+
+                        phaseText.textContent = "Pronto";
+                        detailText.textContent = "Aguardando novo ciclo automático de curadoria e IA.";
+                        errorBox.classList.add("hidden");
+
+                        // Enable button
+                        triggerBtn.disabled = false;
+                        triggerBtn.innerHTML = `
+                            <i data-lucide="zap" class="w-4 h-4"></i>
+                            <span>Executar Coleta e IA</span>
+                        `;
+                        lucide.createIcons();
+                        
+                        // Stop polling if status is idle
+                        stopPipelinePolling();
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching pipeline status:", err);
+            }
+        }
+
+        function startPipelinePolling() {
+            if (pipelinePollingInterval) return;
+            pipelinePollingInterval = setInterval(fetchPipelineStatus, 1500);
+        }
+
+        function stopPipelinePolling() {
+            if (pipelinePollingInterval) {
+                clearInterval(pipelinePollingInterval);
+                pipelinePollingInterval = null;
+            }
+        }
+
+        async function triggerManualPipeline() {
+            if (!token) return;
+            const triggerBtn = document.getElementById("triggerPipelineBtn");
+            
+            // Optimistic UI disable
+            triggerBtn.disabled = true;
+            triggerBtn.innerHTML = `
+                <svg class="animate-spin h-4 w-4 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Enviando Comando...</span>
+            `;
+
+            // Start polling immediately so the UI catches the status transition to "running"
+            startPipelinePolling();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/coleta-manual`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    showToast("Pipeline Concluído", "A curadoria de notícias e processamento com IA foi concluído com sucesso!", "success");
+                } else {
+                    const data = await response.json();
+                    showToast("Falha no Pipeline", data.detail || "Erro inesperado ao executar o pipeline.", "error");
+                }
+            } catch (err) {
+                console.error("Error triggering pipeline:", err);
+                showToast("Erro de Conexão", "Não foi possível conectar à API para executar o pipeline.", "error");
+            } finally {
+                // Trigger one last fetch to reflect final state
+                fetchPipelineStatus();
+                // Also refresh the charts and leads since new news might have arrived
+                fetchStatsAndRenderCharts();
+                fetchLeads();
+                fetchGeminiUsage();
+            }
+        }
+
+        function setPipelineIcon(iconName, isSpinning = false) {
+            const iconEl = document.getElementById("pipelineStatusIcon");
+            if (!iconEl) return;
+            iconEl.setAttribute("data-lucide", iconName);
+            if (isSpinning) {
+                iconEl.classList.add("animate-spin");
+            } else {
+                iconEl.classList.remove("animate-spin");
+            }
+            lucide.createIcons();
+        }
+
+        const formatPipelineDate = (isoStr) => {
+            if (!isoStr) return "Nunca";
+            try {
+                return new Date(isoStr).toLocaleString("pt-BR", { timeZone: 'America/Sao_Paulo' });
+            } catch (e) {
+                return "N/A";
+            }
+        };
+
+        const formatDuration = (seconds) => {
+            if (seconds === null || seconds === undefined) return "N/A";
+            const sec = Math.round(seconds);
+            if (sec < 60) return `${sec}s`;
+            const mins = Math.floor(sec / 60);
+            const remainingSecs = sec % 60;
+            return `${mins}m ${remainingSecs}s`;
+        };
 
         // Logout handler
         function handleLogout() {

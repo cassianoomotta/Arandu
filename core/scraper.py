@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from database.connection import get_db_session
 from database.models import Source, News, SendStatus
 from core.processor import get_recent_titles_from_db, process_article, is_similar_to_recent
+from core.status import update_pipeline_status
 
 # Configure logging
 logging.basicConfig(
@@ -209,9 +210,9 @@ async def process_source(
 
 async def main():
     logger.info("Initializing async news scraper...")
-    
-    # 1. Retrieve Active Sources and existing keys from Database
+    update_pipeline_status(is_start=True, phase="Inicialização", detail="Verificando fontes e artigos recentes no banco...")
     try:
+        # 1. Retrieve Active Sources and existing keys from Database
         with get_db_session() as session:
             active_sources = (
                 session.query(Source)
@@ -229,135 +230,160 @@ async def main():
             
             # Load recent titles for deduplication (last 24 hours)
             recent_titles = get_recent_titles_from_db()
-    except Exception as e:
-        logger.critical(f"Database error during initialization: {str(e)}")
-        return
 
-    if not active_sources:
-        logger.warning("No active news sources found in the database. Exiting.")
-        return
+        if not active_sources:
+            logger.warning("No active news sources found in the database. Exiting.")
+            update_pipeline_status(is_end=True, phase="Finalizado", detail="Nenhuma fonte ativa configurada.")
+            return
 
-    logger.info(f"Loaded {len(active_sources)} active sources from database.")
-    
-    # Map sources by ID for quick lookup
-    sources_by_id = {src.id: src for src in active_sources}
-    
-    # Dynamic MAX_ITEMS_PER_FEED: if the DB is empty, use a very small limit
-    # to complete the initial setup quickly. Otherwise use standard limit.
-    current_max_items = 2 if news_count == 0 else MAX_ITEMS_PER_FEED
-    logger.info(f"Setting maximum items to fetch per feed: {current_max_items} (Current DB news count: {news_count})")
-    
-    # 2. Asynchronously fetch all RSS feeds
-    async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
-        # Create tasks to fetch all feeds concurrently
-        feed_tasks = [
-            process_source(client, src, existing_hashes, existing_links, max_items=current_max_items)
-            for src in active_sources
-        ]
+        logger.info(f"Loaded {len(active_sources)} active sources from database.")
         
-        # Await all feeds to finish processing
-        feed_results = await asyncio.gather(*feed_tasks)
+        # Map sources by ID for quick lookup
+        sources_by_id = {src.id: src for src in active_sources}
         
-        # Flatten the list of new articles
-        all_new_articles = [art for sublist in feed_results for art in sublist]
+        # Dynamic MAX_ITEMS_PER_FEED: if the DB is empty, use a very small limit
+        # to complete the initial setup quickly. Otherwise use standard limit.
+        current_max_items = 2 if news_count == 0 else MAX_ITEMS_PER_FEED
+        logger.info(f"Setting maximum items to fetch per feed: {current_max_items} (Current DB news count: {news_count})")
         
-        unique_new_articles = []
-        if all_new_articles:
-            logger.info(
-                f"Discovered a total of {len(all_new_articles)} new articles. "
-                "Filtering duplicates in current batch..."
-            )
+        update_pipeline_status(phase="Busca RSS", detail=f"Buscando feeds em {len(active_sources)} fontes ativas...")
+        
+        # 2. Asynchronously fetch all RSS feeds
+        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+            # Create tasks to fetch all feeds concurrently
+            feed_tasks = [
+                process_source(client, src, existing_hashes, existing_links, max_items=current_max_items)
+                for src in active_sources
+            ]
             
-            # 3. Filter duplicates in the current batch (in-feed deduplication)
-            for art in all_new_articles:
-                current_batch_titles = [u["original_title"] for u in unique_new_articles]
-                if is_similar_to_recent(art["original_title"], current_batch_titles, threshold=0.8):
-                    logger.info(f"In-feed duplicate skipped: '{art['original_title'][:50]}'")
-                    continue
-                unique_new_articles.append(art)
-        else:
-            logger.info("No new articles discovered in this scraping cycle.")
-
-        final_articles = []
-        if unique_new_articles:
-            logger.info(
-                f"Processing and enriching {len(unique_new_articles)} articles concurrently..."
-            )
+            # Await all feeds to finish processing
+            feed_results = await asyncio.gather(*feed_tasks)
             
-            # 4. Asynchronously enrich each article (fetch og:image + process metadata) and save it in real-time
-            async def enrich_item(article: dict) -> dict | None:
-                # A. Fetch og:image asynchronously
-                img_url = await fetch_og_image_with_fallback(client, article["link"])
-                article["image_url"] = img_url
+            # Flatten the list of new articles
+            all_new_articles = [art for sublist in feed_results for art in sublist]
+            
+            unique_new_articles = []
+            if all_new_articles:
+                logger.info(
+                    f"Discovered a total of {len(all_new_articles)} new articles. "
+                    "Filtering duplicates in current batch..."
+                )
+                update_pipeline_status(phase="Deduplicação", detail=f"Filtrando duplicados de {len(all_new_articles)} novos artigos...")
                 
-                # Get matching source model
-                source = sources_by_id[article["source_id"]]
+                # 3. Filter duplicates in the current batch (in-feed deduplication)
+                for art in all_new_articles:
+                    current_batch_titles = [u["original_title"] for u in unique_new_articles]
+                    if is_similar_to_recent(art["original_title"], current_batch_titles, threshold=0.8):
+                        logger.info(f"In-feed duplicate skipped: '{art['original_title'][:50]}'")
+                        continue
+                    unique_new_articles.append(art)
+            else:
+                logger.info("No new articles discovered in this scraping cycle.")
+
+            final_articles = []
+            if unique_new_articles:
+                total_unique = len(unique_new_articles)
+                logger.info(
+                    f"Processing and enriching {total_unique} articles concurrently..."
+                )
+                update_pipeline_status(phase="Processamento IA", detail=f"Preparando processamento de {total_unique} novos artigos...")
                 
-                # B. Run CPU-bound or blocking API operations (translation, similarity against DB, AI summary) in a thread pool (throttled by semaphore)
-                async with processor_sem:
-                    processed = await asyncio.to_thread(process_article, article, source, recent_titles)
+                processed_count = 0
+                status_lock = asyncio.Lock()
+                
+                # 4. Asynchronously enrich each article (fetch og:image + process metadata) and save it in real-time
+                async def enrich_item(article: dict) -> dict | None:
+                    nonlocal processed_count
+                    # A. Fetch og:image asynchronously
+                    img_url = await fetch_og_image_with_fallback(client, article["link"])
+                    article["image_url"] = img_url
                     
-                if processed:
-                    try:
-                        with get_db_session() as session:
-                            news_obj = News(
-                                source_id=processed["source_id"],
-                                original_title=processed["original_title"],
-                                translated_title=processed["translated_title"],
-                                link=processed["link"],
-                                ai_summary=processed["ai_summary"],
-                                image_url=processed["image_url"],
-                                original_published_at=processed["original_published_at"],
-                                hash_title=processed["hash_title"],
-                                reduced_key=processed["reduced_key"],
-                                send_status=SendStatus.PENDENTE
-                            )
-                            session.add(news_obj)
-                        logger.info(f"Saved news article to database: '{processed['original_title'][:50]}...'")
-                    except Exception as e:
-                        logger.error(f"Failed to write news article to database: {str(e)}")
-                return processed
+                    # Get matching source model
+                    source = sources_by_id[article["source_id"]]
+                    
+                    # B. Run CPU-bound or blocking API operations (translation, similarity against DB, AI summary) in a thread pool (throttled by semaphore)
+                    async with processor_sem:
+                        processed = await asyncio.to_thread(process_article, article, source, recent_titles)
+                        
+                    async with status_lock:
+                        processed_count += 1
+                        update_pipeline_status(
+                            phase="Processamento IA", 
+                            detail=f"Artigo {processed_count}/{total_unique}: '{article['original_title'][:40]}...'"
+                        )
+                        
+                    if processed:
+                        try:
+                            with get_db_session() as session:
+                                news_obj = News(
+                                    source_id=processed["source_id"],
+                                    original_title=processed["original_title"],
+                                    translated_title=processed["translated_title"],
+                                    link=processed["link"],
+                                    ai_summary=processed["ai_summary"],
+                                    image_url=processed["image_url"],
+                                    original_published_at=processed["original_published_at"],
+                                    hash_title=processed["hash_title"],
+                                    reduced_key=processed["reduced_key"],
+                                    send_status=SendStatus.PENDENTE
+                                )
+                                session.add(news_obj)
+                            logger.info(f"Saved news article to database: '{processed['original_title'][:50]}...'")
+                        except Exception as e:
+                            logger.error(f"Failed to write news article to database: {str(e)}")
+                    return processed
 
-            # Gather results concurrently
-            enrich_tasks = [enrich_item(art) for art in unique_new_articles]
-            enriched_results = await asyncio.gather(*enrich_tasks)
+                # Gather results concurrently
+                enrich_tasks = [enrich_item(art) for art in unique_new_articles]
+                enriched_results = await asyncio.gather(*enrich_tasks)
+                
+                # Filter out None values (e.g. articles skipped due to similarity to DB articles)
+                final_articles = [art for art in enriched_results if art is not None]
+                logger.info(f"Finished parsing cycle. Successfully processed {len(final_articles)} new news articles.")
+            else:
+                logger.info("No new unique articles to enrich.")
+
+            # 6. Dispatch pending notifications to Telegram
+            logger.info("Scraper Dispatcher: Dispatching pending notifications...")
+            update_pipeline_status(phase="Notificações", detail="Enviando notícias qualificadas ao Telegram...")
+            try:
+                from core.notifier import TelegramNotifier, dispatch_pending_notifications
+                notifier = TelegramNotifier()
+                sent_count = await dispatch_pending_notifications(notifier)
+                logger.info(f"Scraper Dispatcher: Successfully dispatched {sent_count} notifications.")
+            except Exception as e:
+                logger.error(f"Scraper Dispatcher: Notification dispatch failed: {str(e)}")
+
+            # 7. Database news cleanup (purge articles older than 20 days)
+            logger.info("Scraper Cleanup: Starting old news purge (retention: 20 days)...")
+            update_pipeline_status(phase="Limpeza", detail="Limpando notícias antigas (mais de 20 dias)...")
+            try:
+                from datetime import timedelta
+                with get_db_session() as session:
+                    cutoff_date = datetime.utcnow() - timedelta(days=20)
+                    deleted_count = session.query(News).filter(
+                        News.created_at < cutoff_date
+                    ).delete(synchronize_session="fetch")
+                    logger.info(f"Scraper Cleanup: Purged {deleted_count} news articles older than 20 days.")
+            except Exception as e:
+                logger.error(f"Scraper Cleanup: News cleanup failed: {str(e)}")
+
+            # 8. Scraper Maintenance: Heal up to 3 missing or invalid summaries
+            logger.info("Scraper Maintenance: Checking for older news with missing/bad summaries to heal...")
+            update_pipeline_status(phase="Correção de Resumos", detail="Verificando resumos pendentes de correção com IA...")
+            try:
+                from core.processor import heal_incomplete_summaries
+                await asyncio.to_thread(heal_incomplete_summaries, limit=3)
+            except Exception as e:
+                logger.error(f"Scraper Maintenance: Summary healing failed: {str(e)}")
+
+            # Success ending
+            update_pipeline_status(is_end=True)
             
-            # Filter out None values (e.g. articles skipped due to similarity to DB articles)
-            final_articles = [art for art in enriched_results if art is not None]
-            logger.info(f"Finished parsing cycle. Successfully processed {len(final_articles)} new news articles.")
-        else:
-            logger.info("No new unique articles to enrich.")
-
-        # 6. Dispatch pending notifications to Telegram
-        logger.info("Scraper Dispatcher: Dispatching pending notifications...")
-        try:
-            from core.notifier import TelegramNotifier, dispatch_pending_notifications
-            notifier = TelegramNotifier()
-            sent_count = await dispatch_pending_notifications(notifier)
-            logger.info(f"Scraper Dispatcher: Successfully dispatched {sent_count} notifications.")
-        except Exception as e:
-            logger.error(f"Scraper Dispatcher: Notification dispatch failed: {str(e)}")
-
-        # 7. Database news cleanup (purge articles older than 20 days)
-        logger.info("Scraper Cleanup: Starting old news purge (retention: 20 days)...")
-        try:
-            from datetime import timedelta
-            with get_db_session() as session:
-                cutoff_date = datetime.utcnow() - timedelta(days=20)
-                deleted_count = session.query(News).filter(
-                    News.created_at < cutoff_date
-                ).delete(synchronize_session="fetch")
-                logger.info(f"Scraper Cleanup: Purged {deleted_count} news articles older than 20 days.")
-        except Exception as e:
-            logger.error(f"Scraper Cleanup: News cleanup failed: {str(e)}")
-
-        # 8. Scraper Maintenance: Heal up to 3 missing or invalid summaries
-        logger.info("Scraper Maintenance: Checking for older news with missing/bad summaries to heal...")
-        try:
-            from core.processor import heal_incomplete_summaries
-            await asyncio.to_thread(heal_incomplete_summaries, limit=3)
-        except Exception as e:
-            logger.error(f"Scraper Maintenance: Summary healing failed: {str(e)}")
+    except Exception as e:
+        logger.error(f"Pipeline error: {str(e)}")
+        update_pipeline_status(error=str(e))
+        raise e
 
 
 if __name__ == "__main__":

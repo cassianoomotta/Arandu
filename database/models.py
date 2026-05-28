@@ -10,7 +10,8 @@ from sqlalchemy import (
     Index, 
     Enum as SQLEnum, 
     func,
-    JSON
+    JSON,
+    Float
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -183,4 +184,26 @@ class Lead(Base):
 
 # Index on email for fast lead lookups
 Index("ix_leads_email", Lead.email, unique=True)
+
+
+class PipelineStatus(Base):
+    """
+    Tracks the real-time execution status of the background scraper/AI pipeline.
+    """
+    __tablename__ = "pipeline_status"
+
+    id: Mapped[int] = mapped_column(primary_key=True, default=1)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="idle")  # idle, running, failed
+    current_phase: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    current_detail: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    last_run_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    last_success_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    last_duration_seconds: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, 
+        server_default=func.now(), 
+        onupdate=func.now()
+    )
+
 
