@@ -697,46 +697,118 @@
                 <span>Buscando...</span>
             `;
 
-            // Show status bar
-            statusBar.classList.remove('hidden');
-            statusTitle.textContent = 'Pipeline de coleta acionado...';
-            statusMsg.textContent = 'Coletando notícias de todas as fontes configuradas (blogs, universidades e portais).';
-            statusIcon.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>';
-            lucide.createIcons();
-
             try {
-                // Try to trigger the backend collection pipeline (requires admin token)
-                const token = localStorage.getItem('admin_token');
-                let pipelineTriggered = false;
-
-                if (token) {
-                    try {
-                        const pipelineRes = await fetch(`${API_BASE_URL}/api/admin/coleta-manual`, {
-                            method: 'POST',
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        if (pipelineRes.ok) {
-                            pipelineTriggered = true;
-                            statusTitle.textContent = 'Pipeline executando em segundo plano!';
-                            statusMsg.textContent = 'O servidor está coletando, traduzindo e resumindo novas notícias. Aguarde...';
-                        }
-                    } catch (e) {
-                        console.log('Pipeline trigger not available, proceeding with refresh.');
+                // 1. Fetch current status of the pipeline
+                let currentStatus = "idle";
+                let currentPhase = "";
+                let currentDetail = "";
+                
+                try {
+                    const checkRes = await fetch(`${API_BASE_URL}/api/pipeline-status`);
+                    if (checkRes.ok) {
+                        const checkData = await checkRes.json();
+                        currentStatus = checkData.status;
+                        currentPhase = checkData.current_phase;
+                        currentDetail = checkData.current_detail;
                     }
+                } catch (e) {
+                    console.log('Error checking pipeline status:', e);
                 }
 
-                // Wait a moment for the pipeline to process (if triggered)
-                if (pipelineTriggered) {
-                    await new Promise(resolve => setTimeout(resolve, 8000));
+                const token = localStorage.getItem('admin_token');
+                
+                // If it is running, or if we are admin and can trigger it
+                if (currentStatus === "running" || token) {
+                    // Show status bar
+                    statusBar.classList.remove('hidden');
+                    statusIcon.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>';
+                    statusIcon.className = 'p-2 rounded-lg bg-gold/10 text-gold';
+                    statusTitle.textContent = currentStatus === "running" ? `Fase: ${currentPhase || 'Executando...'}` : 'Pipeline de coleta acionado...';
+                    statusMsg.textContent = currentStatus === "running" ? (currentDetail || 'A IA está processando novas pesquisas...') : 'Iniciando pipeline de coleta...';
+                    lucide.createIcons();
+
+                    let pollFinished = false;
+                    
+                    // A. Polling Loop
+                    const pollPromise = (async () => {
+                        let consecutiveErrors = 0;
+                        while (!pollFinished) {
+                            try {
+                                const statusRes = await fetch(`${API_BASE_URL}/api/pipeline-status`);
+                                if (statusRes.ok) {
+                                    consecutiveErrors = 0;
+                                    const data = await statusRes.json();
+                                    if (data.status === 'running') {
+                                        statusTitle.textContent = `Fase: ${data.current_phase || 'Executando...'}`;
+                                        statusMsg.textContent = data.current_detail || 'A IA está processando novas pesquisas...';
+                                    } else if (data.status === 'failed') {
+                                        statusTitle.textContent = 'Erro no Pipeline';
+                                        statusMsg.textContent = data.last_error || 'Falha ao executar o pipeline.';
+                                        break;
+                                    } else { // idle
+                                        statusTitle.textContent = 'Pipeline concluído';
+                                        statusMsg.textContent = 'Atualizando a lista de notícias...';
+                                        break;
+                                    }
+                                } else {
+                                    consecutiveErrors++;
+                                }
+                            } catch (e) {
+                                consecutiveErrors++;
+                                console.log('Error polling status', e);
+                            }
+                            
+                            // Break if backend appears totally down/unreachable repeatedly
+                            if (consecutiveErrors >= 5) {
+                                break;
+                            }
+                            
+                            await new Promise(resolve => setTimeout(resolve, 1500));
+                        }
+                    })();
+
+                    // B. POST trigger if not already running and token is present
+                    let triggerPromise = Promise.resolve();
+                    if (currentStatus !== "running" && token) {
+                        triggerPromise = (async () => {
+                            try {
+                                const pipelineRes = await fetch(`${API_BASE_URL}/api/admin/coleta-manual`, {
+                                    method: 'POST',
+                                    headers: { 'Authorization': `Bearer ${token}` }
+                                });
+                                if (!pipelineRes.ok) {
+                                    const errData = await pipelineRes.json();
+                                    throw new Error(errData.detail || 'Falha ao iniciar o pipeline.');
+                                }
+                            } catch (e) {
+                                console.error('Trigger error', e);
+                                // Check if it started anyway, otherwise stop polling
+                                await new Promise(resolve => setTimeout(resolve, 2000));
+                                const checkRes = await fetch(`${API_BASE_URL}/api/pipeline-status`);
+                                if (checkRes.ok) {
+                                    const checkData = await checkRes.json();
+                                    if (checkData.status !== 'running') {
+                                        pollFinished = true;
+                                        throw e;
+                                    }
+                                }
+                            }
+                        })();
+                    }
+
+                    // Await both trigger and polling to complete
+                    await Promise.all([triggerPromise, pollPromise.finally(() => { pollFinished = true; })]);
                 }
 
-                // Re-fetch news from API
-                statusTitle.textContent = 'Atualizando a lista de notícias...';
-                statusMsg.textContent = 'Carregando os resultados mais recentes do servidor.';
-
+                // C. Fetch final news list
+                if (!statusBar.classList.contains('hidden')) {
+                    statusTitle.textContent = 'Atualizando a lista de notícias...';
+                    statusMsg.textContent = 'Carregando os resultados mais recentes do servidor.';
+                }
+                
                 await fetchNewsList();
 
-                // Success feedback
+                // D. Show feedback
                 statusIcon.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i>';
                 statusIcon.className = 'p-2 rounded-lg bg-green-500/10 text-green-400';
                 statusTitle.textContent = 'Notícias atualizadas com sucesso!';
@@ -746,7 +818,7 @@
                 showNotificationToast('Busca Concluída', `${allNews.length} notícias carregadas com sucesso!`, 'success');
 
             } catch (err) {
-                // Error feedback
+                // E. Error feedback
                 statusIcon.innerHTML = '<i data-lucide="alert-triangle" class="w-5 h-5"></i>';
                 statusIcon.className = 'p-2 rounded-lg bg-red-500/10 text-red-400';
                 statusTitle.textContent = 'Erro na busca';
@@ -755,7 +827,7 @@
 
                 showNotificationToast('Erro na Busca', 'Falha ao conectar. Exibindo notícias em cache.', 'error');
             } finally {
-                // Restore button
+                // Restore button state
                 btn.disabled = false;
                 btn.classList.add('pulse-gold-animation');
                 btn.innerHTML = `
@@ -765,11 +837,13 @@
                 `;
                 lucide.createIcons();
 
-                // Auto-hide status bar after 6 seconds
-                setTimeout(() => {
-                    statusBar.classList.add('hidden');
-                    statusIcon.className = 'p-2 rounded-lg bg-gold/10 text-gold';
-                }, 6000);
+                // Auto-hide status bar after 6 seconds if it was displayed
+                if (!statusBar.classList.contains('hidden')) {
+                    setTimeout(() => {
+                        statusBar.classList.add('hidden');
+                        statusIcon.className = 'p-2 rounded-lg bg-gold/10 text-gold';
+                    }, 6000);
+                }
             }
         }
 

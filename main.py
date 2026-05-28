@@ -657,6 +657,45 @@ def get_pipeline_status(
         )
 
 
+@app.get("/api/pipeline-status", summary="Obter status em tempo real da IA e Scraper (Público)")
+def get_public_pipeline_status():
+    """
+    Returns the real-time status of the news scraper / AI pipeline.
+    Accessible publicly to show what the AI is doing.
+    """
+    try:
+        with get_db_session() as session:
+            status_entry = session.query(PipelineStatus).filter(PipelineStatus.id == 1).first()
+            if not status_entry:
+                return {
+                    "status": "idle",
+                    "current_phase": None,
+                    "current_detail": None,
+                    "last_run_at": None,
+                    "last_success_at": None,
+                    "last_duration_seconds": None,
+                    "last_error": None,
+                    "updated_at": None
+                }
+            
+            return {
+                "status": status_entry.status,
+                "current_phase": status_entry.current_phase,
+                "current_detail": status_entry.current_detail,
+                "last_run_at": status_entry.last_run_at.isoformat() + "Z" if status_entry.last_run_at else None,
+                "last_success_at": status_entry.last_success_at.isoformat() + "Z" if status_entry.last_success_at else None,
+                "last_duration_seconds": status_entry.last_duration_seconds,
+                "last_error": status_entry.last_error,
+                "updated_at": status_entry.updated_at.isoformat() + "Z" if status_entry.updated_at else None
+            }
+    except Exception as e:
+        logger.error(f"Error fetching public pipeline status: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erro ao obter o status do pipeline."
+        )
+
+
 @app.get("/api/debug-gemini", summary="Debug Gemini API Connection")
 def debug_gemini():
     """
