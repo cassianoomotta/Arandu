@@ -341,15 +341,19 @@ def translate_text(text: str, target_lang: str = "pt") -> tuple[str, bool]:
 
 def translate_existing_news_with_gemini(start_time, timeout_limit=7.5):
     """
-    Finds news articles in the database from international sources that have not
-    been translated by Gemini yet (translated_by_gemini is False/None),
-    and translates their titles using Gemini.
+    1. Finds news articles in the database from international sources that have not
+       been translated by Gemini yet, and translates their titles + generates their summaries.
+    2. Finds recent news articles (up to 150) that have missing, truncated, or bad
+       summaries, and regenerates them using Gemini.
     """
     import time
-    logger.info("Checking for existing news in database that need Gemini translation...")
+    logger.info("Starting backlog maintenance pass (translation & summary healing)...")
     try:
         with get_db_session() as session:
-            # Query News join Source where source.type == SourceType.INTERNACIONAL and News.translated_by_gemini != True
+            # Map sources by ID for names
+            sources_map = {src.id: src.name for src in session.query(Source).all()}
+            
+            # --- PHASE A: International Translation ---
             to_translate = (
                 session.query(News)
                 .join(Source)
@@ -359,58 +363,91 @@ def translate_existing_news_with_gemini(start_time, timeout_limit=7.5):
                 .all()
             )
             
-            if not to_translate:
-                logger.info("All existing international news are already translated by Gemini.")
-                return
-                
-            logger.info(f"Found {len(to_translate)} existing news articles needing Gemini translation & AI summaries.")
-            
-            # Map sources by ID for names
-            sources_map = {src.id: src.name for src in session.query(Source).all()}
-            
             from core.status import update_pipeline_status
-            update_pipeline_status(
-                phase="Traduzindo BD e Gerando Resumos", 
-                detail=f"Processando {len(to_translate)} notícias no banco de dados com Gemini..."
-            )
             
-            translated_count = 0
-            for item in to_translate:
-                # Check timeout before calling API
-                elapsed = time.time() - start_time
-                if elapsed > timeout_limit:
-                    logger.warning(f"Timeout approaching ({elapsed:.2f}s). Pausing database translation and summary pass.")
-                    break
-                    
-                logger.info(f"Translating existing news ID {item.id}: '{item.original_title[:40]}...'")
+            if to_translate:
+                logger.info(f"Found {len(to_translate)} existing news articles needing Gemini translation & AI summaries.")
+                update_pipeline_status(
+                    phase="Traduzindo BD e Gerando Resumos", 
+                    detail=f"Processando {len(to_translate)} notícias no banco de dados com Gemini..."
+                )
                 
-                # Call translate_text which uses Gemini
-                translated_title, success = translate_text(item.original_title, target_lang="pt")
-                if success:
-                    item.translated_title = translated_title
-                    item.translated_by_gemini = True
-                    # Also update reduced key based on the new translated title
-                    item.reduced_key = " ".join(
-                        [word.lower() for word in translated_title.split() if len(word) > 3]
-                    )[:255]
+                translated_count = 0
+                for item in to_translate:
+                    # Check timeout before calling API
+                    elapsed = time.time() - start_time
+                    if elapsed > timeout_limit:
+                        logger.warning(f"Timeout approaching ({elapsed:.2f}s). Pausing database translation and summary pass.")
+                        return
+                        
+                    logger.info(f"Translating existing news ID {item.id}: '{item.original_title[:40]}...'")
                     
-                    # Generate fresh 3-bullet executive summary with translated title using Gemini
-                    source_name = sources_map.get(item.source_id, "Desconhecido")
-                    logger.info(f"Generating AI Summary for existing news ID {item.id}")
-                    item.ai_summary = generate_ai_summary(title=translated_title, source_name=source_name)
-                    
-                    # Committing inside the loop so we save progress incrementally
-                    session.commit()
-                    translated_count += 1
-                    
-                    update_pipeline_status(
-                        phase="Traduzindo BD e Gerando Resumos", 
-                        detail=f"Processadas e resumidas {translated_count}/{len(to_translate)} notícias no BD..."
-                    )
+                    # Call translate_text which uses Gemini
+                    translated_title, success = translate_text(item.original_title, target_lang="pt")
+                    if success:
+                        item.translated_title = translated_title
+                        item.translated_by_gemini = True
+                        # Also update reduced key based on the new translated title
+                        item.reduced_key = " ".join(
+                            [word.lower() for word in translated_title.split() if len(word) > 3]
+                        )[:255]
+                        
+                        # Generate fresh 3-bullet executive summary with translated title using Gemini
+                        source_name = sources_map.get(item.source_id, "Desconhecido")
+                        logger.info(f"Generating AI Summary for existing news ID {item.id}")
+                        item.ai_summary = generate_ai_summary(title=translated_title, source_name=source_name)
+                        
+                        # Committing inside the loop so we save progress incrementally
+                        session.commit()
+                        translated_count += 1
+                        
+                        update_pipeline_status(
+                            phase="Traduzindo BD e Gerando Resumos", 
+                            detail=f"Processadas e resumidas {translated_count}/{len(to_translate)} notícias no BD..."
+                        )
             
-            logger.info(f"Database translation and summary pass complete. Processed {translated_count} news.")
+            # --- PHASE B: Summary Healing ---
+            recent_news = session.query(News).order_by(News.created_at.desc()).limit(150).all()
+            to_heal = [item for item in recent_news if is_bad_summary(item.ai_summary)]
+            
+            if to_heal:
+                logger.info(f"Found {len(to_heal)} articles needing summary healing in the recent backlog.")
+                update_pipeline_status(
+                    phase="Corrigindo Resumos BD",
+                    detail=f"Corrigindo {len(to_heal)} resumos antigos no BD..."
+                )
+                
+                healed_count = 0
+                for item in to_heal:
+                    # Check timeout before calling API
+                    elapsed = time.time() - start_time
+                    if elapsed > timeout_limit:
+                        logger.warning(f"Timeout approaching ({elapsed:.2f}s). Pausing database summary healing pass.")
+                        return
+                        
+                    title = item.translated_title or item.original_title
+                    source_name = sources_map.get(item.source_id, "Desconhecido")
+                    logger.info(f"Healing summary for article ID {item.id}: '{title[:40]}...'")
+                    
+                    try:
+                        new_summary = generate_ai_summary(title=title, source_name=source_name)
+                        if not is_bad_summary(new_summary):
+                            item.ai_summary = new_summary
+                            session.commit()
+                            healed_count += 1
+                            
+                            update_pipeline_status(
+                                phase="Corrigindo Resumos BD",
+                                detail=f"Corrigidos {healed_count}/{len(to_heal)} resumos no BD..."
+                            )
+                        else:
+                            logger.warning(f"Regenerated summary for ID {item.id} was still invalid. Skipping.")
+                    except Exception as e:
+                        logger.error(f"Error healing summary for ID {item.id}: {e}")
+            
+            logger.info("Database translation and summary healing backlog checks completed.")
     except Exception as e:
-        logger.error(f"Failed during translate_existing_news_with_gemini: {e}")
+        logger.error(f"Failed during translate_existing_news_with_gemini/healing pass: {e}")
 
 
 def _clean_summary_preamble(text: str) -> str:
@@ -753,11 +790,15 @@ BAD_SUMMARY_PATTERNS = [
 ]
 
 def is_bad_summary(summary: str) -> bool:
-    """Checks if the summary is empty, too short, or contains fallback/preamble patterns."""
+    """Checks if the summary is empty, too short, lacks bullets, or contains fallback/preamble patterns."""
     if not summary:
         return True
     s_lower = summary.lower()
-    if len(s_lower.strip()) < 50:
+    # A proper 3-bullet summary should have a reasonable length (at least 120 characters)
+    if len(s_lower.strip()) < 120:
+        return True
+    # A proper summary must contain at least one bullet symbol
+    if "-" not in summary and "•" not in summary and "*" not in summary:
         return True
     for pattern in BAD_SUMMARY_PATTERNS:
         if pattern in s_lower:
