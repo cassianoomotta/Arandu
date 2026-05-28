@@ -220,16 +220,52 @@ def translate_text(text: str, target_lang: str = "pt") -> str:
         return text
 
 
+def _clean_summary_preamble(text: str) -> str:
+    """
+    Strips any preamble/intro text that Gemini sometimes adds before the actual
+    bullet points (e.g. 'Aqui está o resumo executivo:', 'Segue abaixo:', etc).
+    Returns only the lines starting with '-' or '**'.
+    """
+    lines = text.split('\n')
+    bullet_lines = []
+    found_first_bullet = False
+    
+    for line in lines:
+        stripped = line.strip()
+        # A line is a bullet if it starts with '-' or '- **'
+        if stripped.startswith('-') or stripped.startswith('•') or stripped.startswith('*'):
+            found_first_bullet = True
+            bullet_lines.append(stripped)
+        elif found_first_bullet and stripped:
+            # Continuation of a bullet or blank line after bullets started
+            bullet_lines.append(stripped)
+    
+    if bullet_lines:
+        return '\n'.join(bullet_lines)
+    
+    # If no bullets found at all, return original text as-is
+    return text
+
+
 def generate_ai_summary(title: str, source_name: str) -> str:
     """
     Generates a 3-bullet-point executive summary focusing on business and tech using Gemini.
     If the Gemini API fails or is unconfigured, falls back to a clean mock summary.
     """
     system_prompt = (
-        "Você é um engenheiro de dados e analista de inteligência de negócios. "
-        "Sua tarefa é gerar um resumo executivo curto de no máximo 3 pontos-chave (bullet points), "
-        "focado em tecnologia e oportunidades de negócios, baseado no título da notícia fornecido. "
-        "O formato de saída deve conter estritamente 3 marcadores usando hífen ('-'). Seja claro e objetivo."
+        "Você é um analista de inteligência de negócios. "
+        "Gere EXATAMENTE 3 bullet points de resumo executivo sobre a notícia, "
+        "focados em tecnologia e oportunidades de negócios. "
+        "REGRAS OBRIGATÓRIAS:\n"
+        "1. Comece DIRETAMENTE com o primeiro bullet point usando hífen '-'.\n"
+        "2. NÃO escreva introdução, preâmbulo, saudação ou qualquer texto antes dos bullets.\n"
+        "3. NÃO escreva 'Aqui está', 'Segue', 'Resumo executivo' ou qualquer frase introdutória.\n"
+        "4. Cada bullet deve ter no máximo 2 frases.\n"
+        "5. Use português brasileiro.\n"
+        "EXEMPLO DE FORMATO CORRETO:\n"
+        "- Primeiro ponto sobre o impacto tecnológico.\n"
+        "- Segundo ponto sobre oportunidade de negócio.\n"
+        "- Terceiro ponto sobre tendência ou desafio."
     )
     user_prompt = f"Título da notícia: {title}"
 
@@ -243,7 +279,10 @@ def generate_ai_summary(title: str, source_name: str) -> str:
                 temperature=0.3
             )
             if summary:
-                return summary.strip()
+                # Post-process: strip any preamble lines before the first bullet
+                cleaned = _clean_summary_preamble(summary.strip())
+                if cleaned:
+                    return cleaned
         except Exception as e:
             logger.error(f"Gemini API direct call failed for summary of '{title[:40]}...': {str(e)}")
 

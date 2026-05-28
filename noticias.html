@@ -545,26 +545,62 @@
                 }
 
                 // Parse Bullet Points
-                const summary = item.ai_summary || "";
-                const points = summary.split('\n').filter(p => p.trim() !== '');
+                let summary = item.ai_summary || "";
+                
+                // Strip preamble lines (Gemini sometimes adds "Aqui está o resumo executivo:" before bullets)
+                const preamblePatterns = [
+                    /^aqui est[áa]/i, /^segue/i, /^resumo executivo/i, 
+                    /^veja/i, /^confira/i, /^abaixo/i
+                ];
+                
+                // Filter out fallback placeholder text
+                const fallbackPatterns = [
+                    /Resumo autom[áa]tico indispon[íi]vel/i,
+                    /Coleta executada com sucesso/i,
+                    /Not[íi]cia de tecnologia relevante reportada/i,
+                    /Assunto principal:/i
+                ];
+                
+                const lines = summary.split('\n').filter(p => p.trim() !== '');
+                const cleanLines = [];
+                
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    
+                    // Skip preamble lines
+                    if (preamblePatterns.some(pat => pat.test(trimmed))) continue;
+                    
+                    // Skip fallback placeholder lines
+                    if (fallbackPatterns.some(pat => pat.test(trimmed))) continue;
+                    
+                    // Clean bullet prefix and markdown bold
+                    let clean = trimmed
+                        .replace(/^[-•*]\s*/, '')          // Remove bullet prefix
+                        .replace(/^\d+\.\s*/, '')           // Remove numbered list prefix
+                        .replace(/\*\*([^*]+)\*\*/g, '$1')  // Remove markdown bold
+                        .trim();
+                    
+                    if (clean.length > 5) {
+                        cleanLines.push(clean);
+                    }
+                }
+                
                 let pointsHtml = '';
-                points.forEach(pt => {
-                    const cleanPt = pt.replace(/^-\s*/, '').replace(/^\*\s*/, '').replace(/^\d+\.\s*/, '').trim();
-                    if (cleanPt) {
+                if (cleanLines.length > 0) {
+                    cleanLines.forEach(pt => {
                         pointsHtml += `
                             <li class="flex items-start gap-2.5 leading-snug">
                                 <span class="text-gold mt-1">&bull;</span>
-                                <span>${cleanPt}</span>
+                                <span>${pt}</span>
                             </li>
                         `;
-                    }
-                });
-
-                if (!pointsHtml) {
+                    });
+                } else {
+                    // Fallback when summary is empty, truncated, or only has placeholder text
                     pointsHtml = `
                         <li class="flex items-start gap-2.5 leading-snug">
                             <span class="text-gold mt-1">&bull;</span>
-                            <span>${summary}</span>
+                            <span>Resumo sendo processado pela IA. Clique em "Ler Fonte" para acessar o artigo completo.</span>
                         </li>
                     `;
                 }
