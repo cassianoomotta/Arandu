@@ -22,7 +22,7 @@ logger = logging.getLogger("news_scraper")
 DEFAULT_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=800"
 REQUEST_TIMEOUT = 10.0
 CONCURRENT_REQUESTS_LIMIT = 5
-MAX_ITEMS_PER_FEED = 15  # Limit processing to latest 15 entries per run
+MAX_ITEMS_PER_FEED = 5  # Limit processing to latest 5 entries per run
 
 # Realistic User-Agent header to avoid blockages from Cloudflare or Web Application Firewalls
 USER_HEADERS = {
@@ -68,7 +68,7 @@ def extract_og_image(html_content: str) -> str | None:
         return og_tag["content"].strip()
 
     # 2. Check Twitter Card image tag
-    twitter_tag = soup.find("meta", name="twitter:image")
+    twitter_tag = soup.find("meta", attrs={"name": "twitter:image"})
     if twitter_tag and twitter_tag.get("content"):
         return twitter_tag["content"].strip()
 
@@ -150,7 +150,8 @@ async def process_source(
     client: httpx.AsyncClient, 
     source: Source, 
     existing_hashes: Set[str], 
-    existing_links: Set[str]
+    existing_links: Set[str],
+    max_items: int = 5
 ) -> List[Dict[str, Any]]:
     """
     Fetches and parses a single source feed. Identifies new articles,
@@ -167,7 +168,7 @@ async def process_source(
     new_articles = []
 
     # Limit entries to prevent overloading/duplicate historic runs
-    entries = feed.entries[:MAX_ITEMS_PER_FEED]
+    entries = feed.entries[:max_items]
     
     for entry in entries:
         title = entry.get("title")
@@ -220,6 +221,7 @@ async def main():
             db_news = session.query(News.hash_title, News.link).all()
             existing_hashes = {n.hash_title for n in db_news}
             existing_links = {n.link for n in db_news}
+            news_count = len(existing_hashes)
             
             # Load recent titles for deduplication (last 24 hours)
             recent_titles = get_recent_titles_from_db()
@@ -236,11 +238,16 @@ async def main():
     # Map sources by ID for quick lookup
     sources_by_id = {src.id: src for src in active_sources}
     
+    # Dynamic MAX_ITEMS_PER_FEED: if the DB is empty, use a very small limit
+    # to complete the initial setup quickly. Otherwise use standard limit.
+    current_max_items = 2 if news_count == 0 else MAX_ITEMS_PER_FEED
+    logger.info(f"Setting maximum items to fetch per feed: {current_max_items} (Current DB news count: {news_count})")
+    
     # 2. Asynchronously fetch all RSS feeds
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
         # Create tasks to fetch all feeds concurrently
         feed_tasks = [
-            process_source(client, src, existing_hashes, existing_links)
+            process_source(client, src, existing_hashes, existing_links, max_items=current_max_items)
             for src in active_sources
         ]
         
@@ -276,7 +283,7 @@ async def main():
             f"Processing and enriching {len(unique_new_articles)} articles concurrently..."
         )
         
-        # 4. Asynchronously enrich each article (fetch og:image + process metadata)
+        # 4. Asynchronously enrich each article (fetch og:image + process metadata) and save it in real-time
         async def enrich_item(article: dict) -> dict | None:
             # A. Fetch og:image asynchronously
             img_url = await fetch_og_image_with_fallback(client, article["link"])
@@ -288,6 +295,26 @@ async def main():
             # B. Run CPU-bound or blocking API operations (translation, similarity against DB, AI summary) in a thread pool (throttled by semaphore)
             async with processor_sem:
                 processed = await asyncio.to_thread(process_article, article, source, recent_titles)
+                
+            if processed:
+                try:
+                    with get_db_session() as session:
+                        news_obj = News(
+                            source_id=processed["source_id"],
+                            original_title=processed["original_title"],
+                            translated_title=processed["translated_title"],
+                            link=processed["link"],
+                            ai_summary=processed["ai_summary"],
+                            image_url=processed["image_url"],
+                            original_published_at=processed["original_published_at"],
+                            hash_title=processed["hash_title"],
+                            reduced_key=processed["reduced_key"],
+                            send_status=SendStatus.PENDENTE
+                        )
+                        session.add(news_obj)
+                    logger.info(f"Saved news article to database: '{processed['original_title'][:50]}...'")
+                except Exception as e:
+                    logger.error(f"Failed to write news article to database: {str(e)}")
             return processed
 
         # Gather results concurrently
@@ -301,34 +328,7 @@ async def main():
             logger.info("No new articles remained after processing and similarity checks.")
             return
 
-        # 5. Insert processed articles into database in a single transaction
-        try:
-            with get_db_session() as session:
-                news_objects = []
-                for art in final_articles:
-                    # Construct SQLAlchemy model instance
-                    news_obj = News(
-                        source_id=art["source_id"],
-                        original_title=art["original_title"],
-                        translated_title=art["translated_title"],
-                        link=art["link"],
-                        ai_summary=art["ai_summary"],
-                        image_url=art["image_url"],
-                        original_published_at=art["original_published_at"],
-                        hash_title=art["hash_title"],
-                        reduced_key=art["reduced_key"],
-                        send_status=SendStatus.PENDENTE
-                    )
-                    news_objects.append(news_obj)
-                
-                session.add_all(news_objects)
-                # Commit is executed automatically upon exiting the context manager
-                
-            logger.info(
-                f"Successfully processed and saved {len(final_articles)} new news articles to the database."
-            )
-        except Exception as e:
-            logger.error(f"Failed to bulk write news to database: {str(e)}")
+        logger.info(f"Finished parsing cycle. Successfully processed {len(final_articles)} new news articles.")
 
         # 6. Dispatch pending notifications to Telegram
         logger.info("Scraper Dispatcher: Dispatching pending notifications...")
