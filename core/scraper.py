@@ -128,9 +128,13 @@ async def fetch_rss_feed(
     Fetches the raw XML/RSS content from a feed URL asynchronously.
     """
     try:
+        # Avoid sending HTML Accept header for RSS feeds to prevent WordPress redirection to HTML pages
+        rss_headers = USER_HEADERS.copy()
+        rss_headers["Accept"] = "application/rss+xml, application/xml, text/xml, */*"
+        
         response = await client.get(
             rss_url, 
-            headers=USER_HEADERS, 
+            headers=rss_headers, 
             timeout=REQUEST_TIMEOUT,
             follow_redirects=True
         )
