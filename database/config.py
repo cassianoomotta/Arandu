@@ -24,15 +24,11 @@ class Settings:
 
     # Debug database URL (masked password)
     try:
-        if "@" in db_url:
-            left, right = db_url.split("@", 1)
-            proto, user_pass = left.split("://", 1)
-            user = user_pass.split(":", 1)[0]
-            print(f"DATABASE_URL_DEBUG: {proto}://{user}:***@{right}")
-        else:
-            print(f"DATABASE_URL_DEBUG: {db_url}")
+        from sqlalchemy.engine.url import make_url
+        parsed = make_url(db_url)
+        print(f"PARSED_DB_URL: driver={parsed.drivername}, user={parsed.username}, host={parsed.host}, port={parsed.port}, database={parsed.database}")
     except Exception as e:
-        print(f"DATABASE_URL_DEBUG error: {e}")
+        print(f"PARSED_DB_URL parsing error: {e}")
 
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GEMINI_DAILY_LIMIT: int = int(os.getenv("GEMINI_DAILY_LIMIT", "1500"))
