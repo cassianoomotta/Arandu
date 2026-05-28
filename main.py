@@ -583,6 +583,52 @@ def get_news_categories_stats(
         )
 
 
+@app.get("/api/debug-gemini", summary="Debug Gemini API Connection")
+def debug_gemini():
+    """
+    Temporary debug endpoint to test Gemini API key and connection.
+    """
+    key = settings.GEMINI_API_KEY
+    if not key:
+        return {
+            "status": "error",
+            "message": "GEMINI_API_KEY is not defined in environment variables."
+        }
+    
+    # Mask key for security
+    masked_key = key[:6] + "..." + key[-4:] if len(key) > 10 else "too short"
+    
+    try:
+        from openai import OpenAI
+        client = OpenAI(
+            api_key=key,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+        )
+        response = client.chat.completions.create(
+            model="gemini-1.5-flash",
+            messages=[
+                {"role": "user", "content": "Hello. Response with 'API Key is working' if you see this."}
+            ],
+            max_tokens=30,
+            temperature=0.0
+        )
+        content = response.choices[0].message.content
+        return {
+            "status": "success",
+            "masked_key": masked_key,
+            "response": content.strip() if content else None
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "status": "error",
+            "masked_key": masked_key,
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "traceback": traceback.format_exc()
+        }
+
+
 @app.get("/api/health", summary="Health Check")
 def health_check():
     """
