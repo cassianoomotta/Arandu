@@ -19,29 +19,57 @@ logging.basicConfig(
 )
 logger = logging.getLogger("news_processor")
 
-# Initialize AI client: Gemini with OpenAI-compatible endpoint, or OpenAI fallback
-ai_client = None
-ai_model = "gpt-4o-mini"
-is_gemini = False
+import httpx
 
-if settings.GEMINI_API_KEY:
+# Initialize AI client: OpenAI fallback
+openai_client = None
+if settings.OPENAI_API_KEY:
     try:
-        ai_client = OpenAI(
-            api_key=settings.GEMINI_API_KEY,
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-        )
-        ai_model = "gemini-1.5-flash"
-        is_gemini = True
-        logger.info("AI Client initialized using Google Gemini (gemini-1.5-flash)")
-    except Exception as e:
-        logger.error(f"Failed to initialize Google Gemini client: {str(e)}")
-elif settings.OPENAI_API_KEY:
-    try:
-        ai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        ai_model = settings.OPENAI_MODEL
-        logger.info(f"AI Client initialized using OpenAI ({ai_model})")
+        openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        logger.info(f"OpenAI Client initialized using {settings.OPENAI_MODEL}")
     except Exception as e:
         logger.error(f"Failed to initialize OpenAI client: {str(e)}")
+
+
+def call_gemini_api(prompt: str, system_instruction: str = None, max_tokens: int = 150, temperature: float = 0.3) -> str:
+    """
+    Direct HTTP request to Google Gemini API (bypassing OpenAI compatibility layer to avoid version/v1main errors).
+    """
+    key = settings.GEMINI_API_KEY
+    if not key:
+        raise ValueError("GEMINI_API_KEY is not configured.")
+        
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}"
+    
+    payload = {
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }]
+    }
+    
+    if system_instruction:
+        payload["systemInstruction"] = {
+            "parts": [{"text": system_instruction}]
+        }
+        
+    payload["generationConfig"] = {
+        "temperature": temperature,
+        "maxOutputTokens": max_tokens
+    }
+    
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    with httpx.Client(timeout=30.0) as client:
+        response = client.post(url, json=payload, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        
+        try:
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+        except (KeyError, IndexError) as e:
+            raise ValueError(f"Unexpected response format from Gemini API: {data}")
 
 
 def get_recent_titles_from_db(hours_limit: int = 24) -> List[str]:
@@ -115,39 +143,54 @@ def generate_ai_summary(title: str, source_name: str) -> str:
     Generates a 3-bullet-point executive summary focusing on business and tech using Gemini or OpenAI.
     If the AI API fails or is unconfigured, falls back to a clean mock summary.
     """
-    # 1. Check if client is initialized
-    if not ai_client:
-        logger.warning("AI client is missing. Using fallback summary generator.")
-        return (
-            f"- Notícia originada do portal {source_name}.\n"
-            f"- Requer análise manual devido à ausência de chaves de API de IA.\n"
-            f"- Título do Artigo: {title}"
-        )
-
-    # Prompt Engineering for curation
     system_prompt = (
         "Você é um engenheiro de dados e analista de inteligência de negócios. "
         "Sua tarefa é gerar um resumo executivo curto de no máximo 3 pontos-chave (bullet points), "
         "focado em tecnologia e oportunidades de negócios, baseado no título da notícia fornecido. "
         "O formato de saída deve conter estritamente 3 marcadores usando hífen ('-'). Seja claro e objetivo."
     )
-    
-    try:
-        response = ai_client.chat.completions.create(
-            model=ai_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Título da notícia: {title}"}
-            ],
-            max_tokens=150,
-            temperature=0.3
+    user_prompt = f"Título da notícia: {title}"
+
+    # 1. Try Gemini first if key is present
+    if settings.GEMINI_API_KEY:
+        try:
+            summary = call_gemini_api(
+                prompt=user_prompt,
+                system_instruction=system_prompt,
+                max_tokens=150,
+                temperature=0.3
+            )
+            if summary:
+                return summary.strip()
+        except Exception as e:
+            logger.error(f"Gemini API direct call failed for summary of '{title[:40]}...': {str(e)}")
+
+    # 2. Try OpenAI fallback if client is initialized
+    elif openai_client:
+        try:
+            response = openai_client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=150,
+                temperature=0.3
+            )
+            summary = response.choices[0].message.content
+            if summary:
+                return summary.strip()
+        except Exception as e:
+            logger.error(f"OpenAI API call failed for summary of '{title[:40]}...': {str(e)}")
+
+    # 3. No AI config fallback
+    if not settings.GEMINI_API_KEY and not openai_client:
+        logger.warning("No AI providers configured. Using static fallback summary.")
+        return (
+            f"- Notícia originada do portal {source_name}.\n"
+            f"- Requer análise manual devido à ausência de chaves de API de IA.\n"
+            f"- Título do Artigo: {title}"
         )
-        summary = response.choices[0].message.content
-        if summary:
-            return summary.strip()
-            
-    except Exception as e:
-        logger.error(f"AI API call failed for summary of '{title[:40]}...': {str(e)}")
         
     # Fallback in case of call errors (rate limit, credit expiration, connection issues)
     return (
@@ -163,10 +206,6 @@ def is_relevant_article_ai(title: str) -> bool:
     Returns True if the article is relevant to Tech, Entrepreneurship, or Investments/Business.
     Returns False otherwise.
     """
-    if not ai_client:
-        # If AI client is not available, default to True (rely solely on the heuristic filters)
-        return True
-
     system_prompt = (
         "Você é um classificador de notícias para um portal focado estritamente em "
         "Tecnologia, Empreendedorismo e Investimentos/Negócios.\n"
@@ -176,25 +215,44 @@ def is_relevant_article_ai(title: str) -> bool:
         "Responda estritamente com 'SIM' se for relevante, ou 'NÃO' se for irrelevante. "
         "Não escreva nada além de 'SIM' ou 'NÃO'."
     )
+    user_prompt = f"Título: {title}"
 
-    try:
-        response = ai_client.chat.completions.create(
-            model=ai_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Título: {title}"}
-            ],
-            max_tokens=5,
-            temperature=0.0
-        )
-        answer = response.choices[0].message.content
-        if answer:
-            clean_answer = answer.strip().upper()
-            logger.info(f"AI classification for '{title[:40]}...': {clean_answer}")
-            return "SIM" in clean_answer
-    except Exception as e:
-        logger.error(f"AI relevance check failed for '{title[:40]}...': {str(e)}")
-        
+    # 1. Try Gemini first if key is present
+    if settings.GEMINI_API_KEY:
+        try:
+            answer = call_gemini_api(
+                prompt=user_prompt,
+                system_instruction=system_prompt,
+                max_tokens=5,
+                temperature=0.0
+            )
+            if answer:
+                clean_answer = answer.strip().upper()
+                logger.info(f"Gemini classification for '{title[:40]}...': {clean_answer}")
+                return "SIM" in clean_answer
+        except Exception as e:
+            logger.error(f"Gemini relevance check failed for '{title[:40]}...': {str(e)}")
+
+    # 2. Try OpenAI fallback if client is initialized
+    elif openai_client:
+        try:
+            response = openai_client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=5,
+                temperature=0.0
+            )
+            answer = response.choices[0].message.content
+            if answer:
+                clean_answer = answer.strip().upper()
+                logger.info(f"OpenAI classification for '{title[:40]}...': {clean_answer}")
+                return "SIM" in clean_answer
+        except Exception as e:
+            logger.error(f"OpenAI relevance check failed for '{title[:40]}...': {str(e)}")
+
     # Fallback to True in case of API failure so we don't drop legitimate articles
     return True
 

@@ -599,24 +599,16 @@ def debug_gemini():
     masked_key = key[:6] + "..." + key[-4:] if len(key) > 10 else "too short"
     
     try:
-        from openai import OpenAI
-        client = OpenAI(
-            api_key=key,
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-        )
-        response = client.chat.completions.create(
-            model="gemini-1.5-flash",
-            messages=[
-                {"role": "user", "content": "Hello. Response with 'API Key is working' if you see this."}
-            ],
+        from core.processor import call_gemini_api
+        response_text = call_gemini_api(
+            prompt="Hello. Respond with 'API Key is working' if you see this.",
             max_tokens=30,
             temperature=0.0
         )
-        content = response.choices[0].message.content
         return {
             "status": "success",
             "masked_key": masked_key,
-            "response": content.strip() if content else None
+            "response": response_text.strip() if response_text else None
         }
     except Exception as e:
         import traceback
