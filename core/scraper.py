@@ -38,6 +38,10 @@ USER_HEADERS = {
 # Semaphore to restrict the number of concurrent outgoing HTTP requests
 sem = asyncio.Semaphore(CONCURRENT_REQUESTS_LIMIT)
 
+# Semaphore to restrict the number of concurrent Gemini API processing operations
+PROCESSOR_CONCURRENT_LIMIT = 2
+processor_sem = asyncio.Semaphore(PROCESSOR_CONCURRENT_LIMIT)
+
 
 def generate_title_hash(title: str) -> str:
     """
@@ -281,8 +285,9 @@ async def main():
             # Get matching source model
             source = sources_by_id[article["source_id"]]
             
-            # B. Run CPU-bound or blocking API operations (translation, similarity against DB, AI summary) in a thread pool
-            processed = await asyncio.to_thread(process_article, article, source, recent_titles)
+            # B. Run CPU-bound or blocking API operations (translation, similarity against DB, AI summary) in a thread pool (throttled by semaphore)
+            async with processor_sem:
+                processed = await asyncio.to_thread(process_article, article, source, recent_titles)
             return processed
 
         # Gather results concurrently

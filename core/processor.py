@@ -34,42 +34,74 @@ if settings.OPENAI_API_KEY:
 def call_gemini_api(prompt: str, system_instruction: str = None, max_tokens: int = 150, temperature: float = 0.3) -> str:
     """
     Direct HTTP request to Google Gemini API (bypassing OpenAI compatibility layer to avoid version/v1main errors).
+    Tries multiple active models (gemini-3.5-flash, gemini-2.5-flash-lite) to avoid deprecation/quota failures,
+    with exponential backoff for rate limits (HTTP 429).
     """
+    import time
     key = settings.GEMINI_API_KEY
     if not key:
         raise ValueError("GEMINI_API_KEY is not configured.")
         
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={key}"
+    models = ["gemini-3.5-flash", "gemini-2.5-flash-lite"]
+    last_error = None
     
-    payload = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }]
-    }
-    
-    if system_instruction:
-        payload["systemInstruction"] = {
-            "parts": [{"text": system_instruction}]
+    for model in models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+        
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }]
         }
         
-    payload["generationConfig"] = {
-        "temperature": temperature,
-        "maxOutputTokens": max_tokens
-    }
-    
-    headers = {
-        "Content-Type": "application/json"
-    }
-    
-    with httpx.Client(timeout=30.0) as client:
-        response = client.post(url, json=payload, headers=headers)
-        response.raise_for_status()
-        data = response.json()
+        if system_instruction:
+            payload["systemInstruction"] = {
+                "parts": [{"text": system_instruction}]
+            }
+            
+        payload["generationConfig"] = {
+            "temperature": temperature,
+            "maxOutputTokens": max_tokens
+        }
         
-        try:
-            return data["candidates"][0]["content"]["parts"][0]["text"]
-        except (KeyError, IndexError) as e:
-            raise ValueError(f"Unexpected response format from Gemini API: {data}")
+        headers = {
+            "Content-Type": "application/json"
+        }
+        
+        max_attempts = 4
+        base_delay = 3.0
+        
+        for attempt in range(max_attempts):
+            try:
+                with httpx.Client(timeout=30.0) as client:
+                    response = client.post(url, json=payload, headers=headers)
+                    
+                    if response.status_code == 429:
+                        delay = base_delay * (2 ** attempt)
+                        logger.warning(f"Gemini API rate limit (429) hit for model {model}. Retrying in {delay:.1f}s...")
+                        if attempt == max_attempts - 1:
+                            last_error = httpx.HTTPStatusError(
+                                "Rate limit exceeded (429)", 
+                                request=response.request, 
+                                response=response
+                            )
+                        else:
+                            time.sleep(delay)
+                        continue
+                        
+                    response.raise_for_status()
+                    data = response.json()
+                    return data["candidates"][0]["content"]["parts"][0]["text"]
+            except Exception as e:
+                if attempt == max_attempts - 1:
+                    logger.warning(f"Failed to call Gemini using model {model} after {max_attempts} attempts: {str(e)}")
+                    last_error = e
+                else:
+                    time.sleep(1.0)
+                    
+    if last_error is None:
+        raise ValueError("All Gemini models were rate limited or failed to respond.")
+    raise last_error
 
 
 def get_recent_titles_from_db(hours_limit: int = 24) -> List[str]:
@@ -166,7 +198,7 @@ def generate_ai_summary(title: str, source_name: str) -> str:
             logger.error(f"Gemini API direct call failed for summary of '{title[:40]}...': {str(e)}")
 
     # 2. Try OpenAI fallback if client is initialized
-    elif openai_client:
+    if openai_client:
         try:
             response = openai_client.chat.completions.create(
                 model=settings.OPENAI_MODEL,
@@ -234,7 +266,7 @@ def is_relevant_article_ai(title: str) -> bool:
             logger.error(f"Gemini relevance check failed for '{title[:40]}...': {str(e)}")
 
     # 2. Try OpenAI fallback if client is initialized
-    elif openai_client:
+    if openai_client:
         try:
             response = openai_client.chat.completions.create(
                 model=settings.OPENAI_MODEL,
