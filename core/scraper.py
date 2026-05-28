@@ -208,7 +208,7 @@ async def process_source(
     return new_articles
 
 
-async def main():
+async def main(is_manual: bool = False):
     import time
     start_time = time.time()
     logger.info("Initializing async news scraper...")
@@ -232,12 +232,12 @@ async def main():
             
             # Load recent titles for deduplication (last 24 hours)
             recent_titles = get_recent_titles_from_db()
-
+ 
         if not active_sources:
             logger.warning("No active news sources found in the database. Exiting.")
             update_pipeline_status(is_end=True, phase="Finalizado", detail="Nenhuma fonte ativa configurada.")
             return
-
+ 
         logger.info(f"Loaded {len(active_sources)} active sources from database.")
         
         # Map sources by ID for quick lookup
@@ -250,11 +250,12 @@ async def main():
         
         # 1.5 Translate existing news articles in the database using Gemini before searching/scraping for new ones
         from core.processor import translate_existing_news_with_gemini
-        await asyncio.to_thread(translate_existing_news_with_gemini, start_time, 7.5)
+        timeout_limit = 25.0 if is_manual else 7.5
+        await asyncio.to_thread(translate_existing_news_with_gemini, start_time, timeout_limit)
         
         # Check timeout after DB translation
         elapsed = time.time() - start_time
-        if elapsed > 7.5:
+        if elapsed > timeout_limit:
             logger.warning(f"Timeout limit reached during database translation pass ({elapsed:.2f}s). Skipping RSS scraping for this run.")
             update_pipeline_status(is_end=True, phase="Pausa", detail="Pausa para evitar timeout (tradução do BD concluída parcialmente).")
             return

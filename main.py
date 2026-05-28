@@ -373,7 +373,7 @@ async def force_manual_collection(
     async def run_manual_pipeline():
         try:
             logger.info("Manual Pipeline: Starting execution...")
-            await run_scraper()
+            await run_scraper(is_manual=True)
             notifier = TelegramNotifier()
             await dispatch_pending_notifications(notifier)
             logger.info("Manual Pipeline: Finished successfully.")

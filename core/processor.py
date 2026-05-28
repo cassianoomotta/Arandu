@@ -174,7 +174,7 @@ def call_gemini_api(prompt: str, system_instruction: str = None, max_tokens: int
     with _gemini_api_lock:
         now = time.time()
         elapsed = now - _last_gemini_call_time
-        required_gap = 6.0  # 10 RPM max
+        required_gap = 4.0  # 15 RPM max
         if elapsed < required_gap:
             sleep_needed = required_gap - elapsed
             logger.info(f"Rate limiting: sleeping for {sleep_needed:.2f}s to respect Gemini API RPM limits.")
@@ -187,7 +187,7 @@ def call_gemini_api(prompt: str, system_instruction: str = None, max_tokens: int
     except Exception as e:
         logger.error(f"Failed to increment Gemini usage log: {e}")
         
-    models = ["gemini-3.5-flash", "gemini-2.5-flash-lite"]
+    models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash"]
     last_error = None
     
     for model in models:
@@ -321,7 +321,7 @@ def translate_text(text: str, target_lang: str = "pt") -> tuple[str, bool]:
             translated = call_gemini_api(
                 prompt=text,
                 system_instruction=system_prompt,
-                max_tokens=100,
+                max_tokens=800,
                 temperature=0.1
             )
             if translated:
@@ -353,7 +353,50 @@ def translate_existing_news_with_gemini(start_time, timeout_limit=7.5):
             # Map sources by ID for names
             sources_map = {src.id: src.name for src in session.query(Source).all()}
             
-            # --- PHASE A: International Translation ---
+            # --- PHASE A: Summary Healing ---
+            recent_news = session.query(News).order_by(News.created_at.desc()).limit(150).all()
+            to_heal = [item for item in recent_news if is_bad_summary(item.ai_summary)]
+            
+            from core.status import update_pipeline_status
+
+            if to_heal:
+                # Limit Phase A healing to at most 3 articles per run to keep execution fast and stable
+                to_heal = to_heal[:3]
+                logger.info(f"Found articles needing summary healing in the recent backlog. Healing limit: {len(to_heal)}.")
+                update_pipeline_status(
+                    phase="Corrigindo Resumos BD",
+                    detail=f"Corrigindo {len(to_heal)} resumos antigos no BD..."
+                )
+                
+                healed_count = 0
+                for item in to_heal:
+                    # Check timeout before calling API
+                    elapsed = time.time() - start_time
+                    if elapsed > timeout_limit:
+                        logger.warning(f"Timeout approaching ({elapsed:.2f}s). Pausing database summary healing pass.")
+                        return
+                        
+                    title = item.translated_title or item.original_title
+                    source_name = sources_map.get(item.source_id, "Desconhecido")
+                    logger.info(f"Healing summary for article ID {item.id}: '{title[:40]}...'")
+                    
+                    try:
+                        new_summary = generate_ai_summary(title=title, source_name=source_name)
+                        if not is_bad_summary(new_summary):
+                            item.ai_summary = new_summary
+                            session.commit()
+                            healed_count += 1
+                            
+                            update_pipeline_status(
+                                phase="Corrigindo Resumos BD",
+                                detail=f"Corrigidos {healed_count}/{len(to_heal)} resumos no BD..."
+                            )
+                        else:
+                            logger.warning(f"Regenerated summary for ID {item.id} was still invalid. Skipping.")
+                    except Exception as e:
+                        logger.error(f"Error healing summary for ID {item.id}: {e}")
+
+            # --- PHASE B: International Translation ---
             to_translate = (
                 session.query(News)
                 .join(Source)
@@ -363,10 +406,10 @@ def translate_existing_news_with_gemini(start_time, timeout_limit=7.5):
                 .all()
             )
             
-            from core.status import update_pipeline_status
-            
             if to_translate:
-                logger.info(f"Found {len(to_translate)} existing news articles needing Gemini translation & AI summaries.")
+                # Limit Phase B translation to at most 2 articles per run to leave budget
+                to_translate = to_translate[:2]
+                logger.info(f"Found existing news articles needing Gemini translation & AI summaries. Processing limit: {len(to_translate)}.")
                 update_pipeline_status(
                     phase="Traduzindo BD e Gerando Resumos", 
                     detail=f"Processando {len(to_translate)} notícias no banco de dados com Gemini..."
@@ -405,45 +448,6 @@ def translate_existing_news_with_gemini(start_time, timeout_limit=7.5):
                             phase="Traduzindo BD e Gerando Resumos", 
                             detail=f"Processadas e resumidas {translated_count}/{len(to_translate)} notícias no BD..."
                         )
-            
-            # --- PHASE B: Summary Healing ---
-            recent_news = session.query(News).order_by(News.created_at.desc()).limit(150).all()
-            to_heal = [item for item in recent_news if is_bad_summary(item.ai_summary)]
-            
-            if to_heal:
-                logger.info(f"Found {len(to_heal)} articles needing summary healing in the recent backlog.")
-                update_pipeline_status(
-                    phase="Corrigindo Resumos BD",
-                    detail=f"Corrigindo {len(to_heal)} resumos antigos no BD..."
-                )
-                
-                healed_count = 0
-                for item in to_heal:
-                    # Check timeout before calling API
-                    elapsed = time.time() - start_time
-                    if elapsed > timeout_limit:
-                        logger.warning(f"Timeout approaching ({elapsed:.2f}s). Pausing database summary healing pass.")
-                        return
-                        
-                    title = item.translated_title or item.original_title
-                    source_name = sources_map.get(item.source_id, "Desconhecido")
-                    logger.info(f"Healing summary for article ID {item.id}: '{title[:40]}...'")
-                    
-                    try:
-                        new_summary = generate_ai_summary(title=title, source_name=source_name)
-                        if not is_bad_summary(new_summary):
-                            item.ai_summary = new_summary
-                            session.commit()
-                            healed_count += 1
-                            
-                            update_pipeline_status(
-                                phase="Corrigindo Resumos BD",
-                                detail=f"Corrigidos {healed_count}/{len(to_heal)} resumos no BD..."
-                            )
-                        else:
-                            logger.warning(f"Regenerated summary for ID {item.id} was still invalid. Skipping.")
-                    except Exception as e:
-                        logger.error(f"Error healing summary for ID {item.id}: {e}")
             
             logger.info("Database translation and summary healing backlog checks completed.")
     except Exception as e:
@@ -505,7 +509,7 @@ def generate_ai_summary(title: str, source_name: str) -> str:
             summary = call_gemini_api(
                 prompt=user_prompt,
                 system_instruction=system_prompt,
-                max_tokens=350,
+                max_tokens=2048,
                 temperature=0.3
             )
             if summary:
@@ -557,7 +561,7 @@ def is_relevant_article_ai(title: str) -> bool:
             answer = call_gemini_api(
                 prompt=user_prompt,
                 system_instruction=system_prompt,
-                max_tokens=5,
+                max_tokens=800,
                 temperature=0.0
             )
             if answer:
