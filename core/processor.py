@@ -31,6 +31,49 @@ if settings.OPENAI_API_KEY:
         logger.error(f"Failed to initialize OpenAI client: {str(e)}")
 
 
+from sqlalchemy import text
+
+def check_and_create_usage_table(session):
+    try:
+        session.execute(text("CREATE TABLE IF NOT EXISTS gemini_usage_log (called_at TIMESTAMP)"))
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Failed to create gemini_usage_log table: {e}")
+
+def get_gemini_usage_today() -> int:
+    from datetime import datetime, timedelta
+    from database.connection import get_db_session
+    
+    cutoff = datetime.utcnow() - timedelta(hours=24)
+    try:
+        with get_db_session() as session:
+            check_and_create_usage_table(session)
+            result = session.execute(
+                text("SELECT COUNT(*) FROM gemini_usage_log WHERE called_at >= :cutoff"),
+                {"cutoff": cutoff}
+            ).scalar()
+            return int(result or 0)
+    except Exception as e:
+        logger.error(f"Error counting Gemini usage: {e}")
+        return 0
+
+def increment_gemini_usage():
+    from datetime import datetime
+    from database.connection import get_db_session
+    try:
+        with get_db_session() as session:
+            check_and_create_usage_table(session)
+            session.execute(
+                text("INSERT INTO gemini_usage_log (called_at) VALUES (:now)"),
+                {"now": datetime.utcnow()}
+            )
+            session.commit()
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error incrementing Gemini usage: {e}")
+
+
 def call_gemini_api(prompt: str, system_instruction: str = None, max_tokens: int = 150, temperature: float = 0.3) -> str:
     """
     Direct HTTP request to Google Gemini API (bypassing OpenAI compatibility layer to avoid version/v1main errors).
@@ -41,6 +84,23 @@ def call_gemini_api(prompt: str, system_instruction: str = None, max_tokens: int
     key = settings.GEMINI_API_KEY
     if not key:
         raise ValueError("GEMINI_API_KEY is not configured.")
+        
+    # Check daily limit
+    try:
+        usage = get_gemini_usage_today()
+        if usage >= settings.GEMINI_DAILY_LIMIT:
+            logger.warning(f"Gemini API daily usage limit ({settings.GEMINI_DAILY_LIMIT}) reached. Current count: {usage}. Falling back.")
+            raise ValueError(f"Gemini API daily quota limit of {settings.GEMINI_DAILY_LIMIT} requests has been reached. (Count: {usage})")
+    except ValueError:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to verify Gemini daily usage limits: {e}")
+
+    # Log/track call
+    try:
+        increment_gemini_usage()
+    except Exception as e:
+        logger.error(f"Failed to increment Gemini usage log: {e}")
         
     models = ["gemini-3.5-flash", "gemini-2.5-flash-lite"]
     last_error = None
