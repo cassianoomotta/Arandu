@@ -27,6 +27,10 @@ class Settings:
         from sqlalchemy.engine.url import make_url
         parsed = make_url(db_url)
         print(f"PARSED_DB_URL: driver={parsed.drivername}, user={parsed.username}, host={parsed.host}, port={parsed.port}, database={parsed.database}")
+        print(f"DEBUG: Password matches 'Arandu2026.'? {parsed.password == 'Arandu2026.'}")
+        # Print first and last characters of the password to help identify it if mismatch
+        if parsed.password:
+            print(f"DEBUG: Password len={len(parsed.password)}, starts={parsed.password[0] if parsed.password else ''}, ends={parsed.password[-1] if parsed.password else ''}")
     except Exception as e:
         print(f"PARSED_DB_URL parsing error: {e}")
 
