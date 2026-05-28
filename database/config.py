@@ -11,6 +11,7 @@ class Settings:
         "DATABASE_URL", 
         "sqlite:///arandu.db"
     )
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     JWT_SECRET: str = os.getenv("JWT_SECRET", "super_secret_key_change_me_in_production")

@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
@@ -18,11 +19,27 @@ logging.basicConfig(
 )
 logger = logging.getLogger("news_processor")
 
-# Initialize OpenAI client if API key is provided
-openai_client = None
-if settings.OPENAI_API_KEY:
+# Initialize AI client: Gemini with OpenAI-compatible endpoint, or OpenAI fallback
+ai_client = None
+ai_model = "gpt-4o-mini"
+is_gemini = False
+
+if settings.GEMINI_API_KEY:
     try:
-        openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        ai_client = OpenAI(
+            api_key=settings.GEMINI_API_KEY,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+        )
+        ai_model = "gemini-1.5-flash"
+        is_gemini = True
+        logger.info("AI Client initialized using Google Gemini (gemini-1.5-flash)")
+    except Exception as e:
+        logger.error(f"Failed to initialize Google Gemini client: {str(e)}")
+elif settings.OPENAI_API_KEY:
+    try:
+        ai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        ai_model = settings.OPENAI_MODEL
+        logger.info(f"AI Client initialized using OpenAI ({ai_model})")
     except Exception as e:
         logger.error(f"Failed to initialize OpenAI client: {str(e)}")
 
@@ -95,12 +112,12 @@ def translate_text(text: str, target_lang: str = "pt") -> str:
 
 def generate_ai_summary(title: str, source_name: str) -> str:
     """
-    Generates a 3-bullet-point executive summary focusing on business and tech using OpenAI LLM.
-    If the OpenAI API fails or is unconfigured, falls back to a clean mock summary.
+    Generates a 3-bullet-point executive summary focusing on business and tech using Gemini or OpenAI.
+    If the AI API fails or is unconfigured, falls back to a clean mock summary.
     """
     # 1. Check if client is initialized
-    if not openai_client:
-        logger.warning("OpenAI API key is missing. Using fallback summary generator.")
+    if not ai_client:
+        logger.warning("AI client is missing. Using fallback summary generator.")
         return (
             f"- Notícia originada do portal {source_name}.\n"
             f"- Requer análise manual devido à ausência de chaves de API de IA.\n"
@@ -116,8 +133,8 @@ def generate_ai_summary(title: str, source_name: str) -> str:
     )
     
     try:
-        response = openai_client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
+        response = ai_client.chat.completions.create(
+            model=ai_model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Título da notícia: {title}"}
@@ -130,7 +147,7 @@ def generate_ai_summary(title: str, source_name: str) -> str:
             return summary.strip()
             
     except Exception as e:
-        logger.error(f"OpenAI API call failed for '{title[:40]}...': {str(e)}")
+        logger.error(f"AI API call failed for summary of '{title[:40]}...': {str(e)}")
         
     # Fallback in case of call errors (rate limit, credit expiration, connection issues)
     return (
@@ -138,6 +155,48 @@ def generate_ai_summary(title: str, source_name: str) -> str:
         f"- Coleta executada com sucesso. Resumo automático indisponível (limite de API/Timeout).\n"
         f"- Assunto principal: {title}"
     )
+
+
+def is_relevant_article_ai(title: str) -> bool:
+    """
+    Uses the configured AI client (Gemini or OpenAI) to perform a context-aware relevance check.
+    Returns True if the article is relevant to Tech, Entrepreneurship, or Investments/Business.
+    Returns False otherwise.
+    """
+    if not ai_client:
+        # If AI client is not available, default to True (rely solely on the heuristic filters)
+        return True
+
+    system_prompt = (
+        "Você é um classificador de notícias para um portal focado estritamente em "
+        "Tecnologia, Empreendedorismo e Investimentos/Negócios.\n"
+        "Sua tarefa é analisar o título da notícia fornecido e determinar se ele é RELEVANTE "
+        "para essas áreas ou se é IRRELEVANTE (esportes, política partidária, fofocas, "
+        "crimes comuns, receitas, variedades, etc.).\n"
+        "Responda estritamente com 'SIM' se for relevante, ou 'NÃO' se for irrelevante. "
+        "Não escreva nada além de 'SIM' ou 'NÃO'."
+    )
+
+    try:
+        response = ai_client.chat.completions.create(
+            model=ai_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Título: {title}"}
+            ],
+            max_tokens=5,
+            temperature=0.0
+        )
+        answer = response.choices[0].message.content
+        if answer:
+            clean_answer = answer.strip().upper()
+            logger.info(f"AI classification for '{title[:40]}...': {clean_answer}")
+            return "SIM" in clean_answer
+    except Exception as e:
+        logger.error(f"AI relevance check failed for '{title[:40]}...': {str(e)}")
+        
+    # Fallback to True in case of API failure so we don't drop legitimate articles
+    return True
 
 
 # --- Intelligent Relevance Filter Configuration ---
@@ -292,7 +351,12 @@ def process_article(
     
     # 0. Relevance Heuristic Filter (skip off-topic/gossip/sports)
     if not is_relevant_article(title, source.name):
-        logger.info(f"Skipping article (irrelevant content): '{title[:50]}'")
+        logger.info(f"Skipping article (heuristic irrelevant): '{title[:50]}'")
+        return None
+        
+    # 0.1. AI-powered Relevance Filter (smarter check using Gemini/OpenAI)
+    if not is_relevant_article_ai(title):
+        logger.info(f"Skipping article (AI classified as irrelevant): '{title[:50]}'")
         return None
         
     # 1. Deduplication check (Similarity > 80%)
