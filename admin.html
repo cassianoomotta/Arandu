@@ -358,6 +358,7 @@
         let token = localStorage.getItem("admin_token");
         let leadsChartInstance = null;
         let categoriesChartInstance = null;
+        let generalRefreshInterval = null;
 
         // App life-cycle hook
         window.addEventListener("DOMContentLoaded", () => {
@@ -379,11 +380,23 @@
                 fetchStatsAndRenderCharts();
                 fetchGeminiUsage();
                 fetchPipelineStatus();
+
+                // Periodic refresh of Gemini usage and pipeline status (every 10s)
+                if (!generalRefreshInterval) {
+                    generalRefreshInterval = setInterval(() => {
+                        fetchPipelineStatus();
+                        fetchGeminiUsage();
+                    }, 10000);
+                }
             } else {
                 loginSec.classList.remove("hidden");
                 dashSec.classList.add("hidden");
                 logoutBtn.classList.add("hidden");
                 stopPipelinePolling();
+                if (generalRefreshInterval) {
+                    clearInterval(generalRefreshInterval);
+                    generalRefreshInterval = null;
+                }
             }
         }
 
@@ -844,6 +857,10 @@
 
         async function fetchPipelineStatus() {
             if (!token) return;
+            
+            // Sync Gemini usage card inside the pipeline status polling loop
+            fetchGeminiUsage();
+
             const badge = document.getElementById("pipelineStatusBadge");
             const phaseText = document.getElementById("pipelinePhaseText");
             const detailText = document.getElementById("pipelineDetailText");
