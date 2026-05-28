@@ -78,6 +78,12 @@ def seed_database():
             type=SourceType.NACIONAL,
             active=True
         ),
+        Source(
+            name="TI Inside",
+            rss_url="https://tiinside.com.br/feed/",
+            type=SourceType.NACIONAL,
+            active=True
+        ),
         # --- Internacionais & Referências Globais ---
         Source(
             name="TechCrunch",

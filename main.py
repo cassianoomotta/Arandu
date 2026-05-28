@@ -541,6 +541,7 @@ def get_news_categories_stats(
             # Hardcoded source to category map matching the frontend mapping
             source_map = {
                 "Canaltech": "tecnologia",
+                "TI Inside": "tecnologia",
                 "Olhar Digital": "tecnologia",
                 "Tecmundo": "tecnologia",
                 "Tecnoblog": "tecnologia",

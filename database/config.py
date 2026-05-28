@@ -13,8 +13,6 @@ class Settings:
     )
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GEMINI_DAILY_LIMIT: int = int(os.getenv("GEMINI_DAILY_LIMIT", "1500"))
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     JWT_SECRET: str = os.getenv("JWT_SECRET", "super_secret_key_change_me_in_production")
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")

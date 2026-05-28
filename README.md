@@ -22,7 +22,7 @@ Arandu/
 │   └── index.py            # Entrypoint Vercel Serverless (WSGI/ASGI wrapper)
 ├── core/
 │   ├── notifier.py         # Mecanismos de notificações via Telegram Bot
-│   ├── processor.py        # Integração OpenAI (Tradução e Geração de Resumos)
+│   ├── processor.py        # Integração Gemini (Tradução e Geração de Resumos)
 │   └── scraper.py          # Crawler e parser de RSS feeds nacionais/internacionais
 ├── database/
 │   ├── config.py           # Gerenciador de configurações e variáveis de ambiente
@@ -56,7 +56,7 @@ pip install -r requirements.txt
 Crie um arquivo `.env` na raiz do projeto contendo as credenciais de banco de dados e APIs (veja o `.env.example` para referência):
 ```ini
 DATABASE_URL=sqlite:///arandu.db
-OPENAI_API_KEY=sua-chave-openai-aqui
+GEMINI_API_KEY=sua-chave-gemini-aqui
 TELEGRAM_BOT_TOKEN=seu-token-de-bot-aqui
 TELEGRAM_CHAT_ID=seu-id-de-chat-aqui
 ```

@@ -6,7 +6,6 @@ from difflib import SequenceMatcher
 from typing import List, Dict, Any, Optional, Set
 
 from deep_translator import GoogleTranslator
-from openai import OpenAI
 
 from database.config import settings
 from database.connection import get_db_session
@@ -20,15 +19,6 @@ logging.basicConfig(
 logger = logging.getLogger("news_processor")
 
 import httpx
-
-# Initialize AI client: OpenAI fallback
-openai_client = None
-if settings.OPENAI_API_KEY:
-    try:
-        openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        logger.info(f"OpenAI Client initialized using {settings.OPENAI_MODEL}")
-    except Exception as e:
-        logger.error(f"Failed to initialize OpenAI client: {str(e)}")
 
 
 from sqlalchemy import text
@@ -232,8 +222,8 @@ def translate_text(text: str, target_lang: str = "pt") -> str:
 
 def generate_ai_summary(title: str, source_name: str) -> str:
     """
-    Generates a 3-bullet-point executive summary focusing on business and tech using Gemini or OpenAI.
-    If the AI API fails or is unconfigured, falls back to a clean mock summary.
+    Generates a 3-bullet-point executive summary focusing on business and tech using Gemini.
+    If the Gemini API fails or is unconfigured, falls back to a clean mock summary.
     """
     system_prompt = (
         "Você é um engenheiro de dados e analista de inteligência de negócios. "
@@ -257,27 +247,9 @@ def generate_ai_summary(title: str, source_name: str) -> str:
         except Exception as e:
             logger.error(f"Gemini API direct call failed for summary of '{title[:40]}...': {str(e)}")
 
-    # 2. Try OpenAI fallback if client is initialized
-    if openai_client:
-        try:
-            response = openai_client.chat.completions.create(
-                model=settings.OPENAI_MODEL,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                max_tokens=150,
-                temperature=0.3
-            )
-            summary = response.choices[0].message.content
-            if summary:
-                return summary.strip()
-        except Exception as e:
-            logger.error(f"OpenAI API call failed for summary of '{title[:40]}...': {str(e)}")
-
-    # 3. No AI config fallback
-    if not settings.GEMINI_API_KEY and not openai_client:
-        logger.warning("No AI providers configured. Using static fallback summary.")
+    # 2. No AI config fallback
+    if not settings.GEMINI_API_KEY:
+        logger.warning("No Gemini API key configured. Using static fallback summary.")
         return (
             f"- Notícia originada do portal {source_name}.\n"
             f"- Requer análise manual devido à ausência de chaves de API de IA.\n"
@@ -294,7 +266,7 @@ def generate_ai_summary(title: str, source_name: str) -> str:
 
 def is_relevant_article_ai(title: str) -> bool:
     """
-    Uses the configured AI client (Gemini or OpenAI) to perform a context-aware relevance check.
+    Uses Gemini to perform a context-aware relevance check.
     Returns True if the article is relevant to Tech, Entrepreneurship, or Investments/Business.
     Returns False otherwise.
     """
@@ -309,7 +281,7 @@ def is_relevant_article_ai(title: str) -> bool:
     )
     user_prompt = f"Título: {title}"
 
-    # 1. Try Gemini first if key is present
+    # 1. Try Gemini if key is present
     if settings.GEMINI_API_KEY:
         try:
             answer = call_gemini_api(
@@ -324,26 +296,6 @@ def is_relevant_article_ai(title: str) -> bool:
                 return "SIM" in clean_answer
         except Exception as e:
             logger.error(f"Gemini relevance check failed for '{title[:40]}...': {str(e)}")
-
-    # 2. Try OpenAI fallback if client is initialized
-    if openai_client:
-        try:
-            response = openai_client.chat.completions.create(
-                model=settings.OPENAI_MODEL,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                max_tokens=5,
-                temperature=0.0
-            )
-            answer = response.choices[0].message.content
-            if answer:
-                clean_answer = answer.strip().upper()
-                logger.info(f"OpenAI classification for '{title[:40]}...': {clean_answer}")
-                return "SIM" in clean_answer
-        except Exception as e:
-            logger.error(f"OpenAI relevance check failed for '{title[:40]}...': {str(e)}")
 
     # Fallback to True in case of API failure so we don't drop legitimate articles
     return True
