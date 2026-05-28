@@ -363,12 +363,15 @@ def translate_existing_news_with_gemini(start_time, timeout_limit=7.5):
                 logger.info("All existing international news are already translated by Gemini.")
                 return
                 
-            logger.info(f"Found {len(to_translate)} existing news articles needing Gemini translation.")
+            logger.info(f"Found {len(to_translate)} existing news articles needing Gemini translation & AI summaries.")
+            
+            # Map sources by ID for names
+            sources_map = {src.id: src.name for src in session.query(Source).all()}
             
             from core.status import update_pipeline_status
             update_pipeline_status(
-                phase="Tradução BD", 
-                detail=f"Traduzindo {len(to_translate)} notícias existentes no banco com Gemini..."
+                phase="Traduzindo BD e Gerando Resumos", 
+                detail=f"Processando {len(to_translate)} notícias no banco de dados com Gemini..."
             )
             
             translated_count = 0
@@ -376,7 +379,7 @@ def translate_existing_news_with_gemini(start_time, timeout_limit=7.5):
                 # Check timeout before calling API
                 elapsed = time.time() - start_time
                 if elapsed > timeout_limit:
-                    logger.warning(f"Timeout approaching ({elapsed:.2f}s). Pausing database translation pass.")
+                    logger.warning(f"Timeout approaching ({elapsed:.2f}s). Pausing database translation and summary pass.")
                     break
                     
                 logger.info(f"Translating existing news ID {item.id}: '{item.original_title[:40]}...'")
@@ -391,16 +394,21 @@ def translate_existing_news_with_gemini(start_time, timeout_limit=7.5):
                         [word.lower() for word in translated_title.split() if len(word) > 3]
                     )[:255]
                     
+                    # Generate fresh 3-bullet executive summary with translated title using Gemini
+                    source_name = sources_map.get(item.source_id, "Desconhecido")
+                    logger.info(f"Generating AI Summary for existing news ID {item.id}")
+                    item.ai_summary = generate_ai_summary(title=translated_title, source_name=source_name)
+                    
                     # Committing inside the loop so we save progress incrementally
                     session.commit()
                     translated_count += 1
                     
                     update_pipeline_status(
-                        phase="Tradução BD", 
-                        detail=f"Traduzidas {translated_count}/{len(to_translate)} notícias no BD..."
+                        phase="Traduzindo BD e Gerando Resumos", 
+                        detail=f"Processadas e resumidas {translated_count}/{len(to_translate)} notícias no BD..."
                     )
             
-            logger.info(f"Database translation pass complete. Translated {translated_count} news.")
+            logger.info(f"Database translation and summary pass complete. Processed {translated_count} news.")
     except Exception as e:
         logger.error(f"Failed during translate_existing_news_with_gemini: {e}")
 
