@@ -239,7 +239,7 @@ def generate_ai_summary(title: str, source_name: str) -> str:
             summary = call_gemini_api(
                 prompt=user_prompt,
                 system_instruction=system_prompt,
-                max_tokens=150,
+                max_tokens=350,
                 temperature=0.3
             )
             if summary:
@@ -404,7 +404,14 @@ WHITELIST_WORDS = {
     "orçamento", "público", "pública", "estado", "tcu", "stf"
 }
 
-GENERALIST_SOURCES = {"InfoMoney", "G1 Tecnologia"}
+GENERALIST_SOURCES = {
+    "InfoMoney", 
+    "G1 Tecnologia", 
+    "Governo Brasileiro", 
+    "Governo Chinês", 
+    "Governo Americano", 
+    "Governo Russo"
+}
 
 def tokenize_and_normalize(text: str) -> Set[str]:
     # Replace non-alphanumeric characters (including hyphens) with spaces and split
@@ -442,51 +449,49 @@ def process_article(
 ) -> Dict[str, Any] | None:
     """
     Applies the full processing pipeline to a newly scraped news item:
-    0. Heuristic relevance check.
-    1. Check for similarity deduplication.
-    2. Check source type; translate title if SourceType.INTERNACIONAL.
-    3. Generate executive summary using LLM.
+    1. Check source type; translate title if SourceType.INTERNACIONAL.
+    2. Heuristic relevance check on translated title.
+    3. AI-powered Relevance Filter on translated title.
+    4. Check for similarity deduplication.
+    5. Generate executive summary using LLM.
     
     Returns the processed dictionary ready for DB save, or None if skipped.
     """
     title = article_data["original_title"]
     
-    # 0. Relevance Heuristic Filter (skip off-topic/gossip/sports)
-    if not is_relevant_article(title, source.name):
-        logger.info(f"Skipping article (heuristic irrelevant): '{title[:50]}'")
+    # 1. Translate first if the source is international
+    if source.type == SourceType.INTERNACIONAL:
+        translated_title = translate_text(title, target_lang="pt")
+    else:
+        translated_title = title
+
+    # 2. Relevance Heuristic Filter on the Portuguese translated title
+    if not is_relevant_article(translated_title, source.name):
+        logger.info(f"Skipping article (heuristic irrelevant): '{translated_title[:50]}'")
         return None
         
-    # 0.1. AI-powered Relevance Filter (smarter check using Gemini/OpenAI)
-    if not is_relevant_article_ai(title):
-        logger.info(f"Skipping article (AI classified as irrelevant): '{title[:50]}'")
+    # 3. AI-powered Relevance Filter on the Portuguese translated title
+    if not is_relevant_article_ai(translated_title):
+        logger.info(f"Skipping article (AI classified as irrelevant): '{translated_title[:50]}'")
         return None
         
-    # 1. Deduplication check (Similarity > 80%)
-    if is_similar_to_recent(title, recent_titles, threshold=0.8):
-        logger.info(f"Skipping article (similar news exists): '{title[:50]}'")
+    # 4. Deduplication check on the Portuguese translated title
+    if is_similar_to_recent(translated_title, recent_titles, threshold=0.8):
+        logger.info(f"Skipping article (similar news exists): '{translated_title[:50]}'")
         return None
 
     processed_data = article_data.copy()
-    
-    # 2. Translation logic
-    if source.type == SourceType.INTERNACIONAL:
-        translated_title = translate_text(title, target_lang="pt")
-        processed_data["translated_title"] = translated_title
-    else:
-        # For national news, translated title can be the original or empty
-        processed_data["translated_title"] = title
+    processed_data["translated_title"] = translated_title
 
-    # 3. AI Summary Generation
-    # Uses translated title for better prompt context if available
-    summary_seed_title = processed_data.get("translated_title") or title
+    # 5. AI Summary Generation
     processed_data["ai_summary"] = generate_ai_summary(
-        title=summary_seed_title, 
+        title=translated_title, 
         source_name=source.name
     )
     
     # Define placeholder reduced key for search terms
     processed_data["reduced_key"] = " ".join(
-        [word.lower() for word in summary_seed_title.split() if len(word) > 3]
+        [word.lower() for word in translated_title.split() if len(word) > 3]
     )[:255]
 
     return processed_data

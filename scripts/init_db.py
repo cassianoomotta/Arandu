@@ -147,6 +147,37 @@ def seed_database():
             rss_url="https://blogs.lse.ac.uk/businessreview/feed/",
             type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
             active=True
+        ),
+        # --- Governos & Instituições ---
+        Source(
+            name="Sebrae",
+            rss_url="https://agenciasebrae.com.br/feed/",
+            type=SourceType.NACIONAL,
+            active=True
+        ),
+        Source(
+            name="Governo Brasileiro",
+            rss_url="https://www.gov.br/pt-br/noticias/feed",
+            type=SourceType.NACIONAL,
+            active=True
+        ),
+        Source(
+            name="Governo Chinês",
+            rss_url="http://www.china.org.cn/english/rss/201724.xml",
+            type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
+            active=True
+        ),
+        Source(
+            name="Governo Americano",
+            rss_url="https://www.whitehouse.gov/feed/",
+            type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
+            active=True
+        ),
+        Source(
+            name="Governo Russo",
+            rss_url="http://en.kremlin.ru/feed.xml",
+            type=SourceType.INTERNICIONAL if hasattr(SourceType, 'INTERNICIONAL') else SourceType.INTERNACIONAL,
+            active=True
         )
     ]
     
