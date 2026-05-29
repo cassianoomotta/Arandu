@@ -214,8 +214,8 @@ def call_gemini_api(prompt: str, system_instruction: str = None, max_tokens: int
             "Content-Type": "application/json"
         }
         
-        max_attempts = 4
-        base_delay = 3.0
+        max_attempts = 2
+        base_delay = 5.0
         
         for attempt in range(max_attempts):
             try:

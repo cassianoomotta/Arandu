@@ -90,8 +90,8 @@ class GeminiGateway:
             }
             
             headers = {"Content-Type": "application/json"}
-            max_attempts = 6
-            base_delay = 15.0
+            max_attempts = 2
+            base_delay = 5.0
             
             for attempt in range(max_attempts):
                 try:
@@ -109,10 +109,23 @@ class GeminiGateway:
                         data = response.json()
                         raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
                         
-                        # Validate that it is valid JSON
-                        parsed_json = json.loads(raw_text.strip())
-                        logger.info(f"Successfully received and parsed structured output using model: {model}")
-                        return parsed_json
+                        # Clean markdown formatting if model returned it
+                        cleaned_text = raw_text.strip()
+                        if cleaned_text.startswith("```json"):
+                            cleaned_text = cleaned_text[7:]
+                        elif cleaned_text.startswith("```"):
+                            cleaned_text = cleaned_text[3:]
+                        if cleaned_text.endswith("```"):
+                            cleaned_text = cleaned_text[:-3]
+                        cleaned_text = cleaned_text.strip()
+                        
+                        try:
+                            parsed_json = json.loads(cleaned_text, strict=False)
+                            logger.info(f"Successfully received and parsed structured output using model: {model}")
+                            return parsed_json
+                        except Exception as json_err:
+                            logger.error(f"JSON parsing failed for model {model}. Raw text was:\n{raw_text}")
+                            raise json_err
                         
                 except Exception as e:
                     logger.warning(f"Attempt {attempt + 1} failed for model {model}: {e}")

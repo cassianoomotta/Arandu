@@ -2,8 +2,8 @@ class EditorSettings:
     DEFAULT_MODELS: list[str] = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
     
     # Text compression constraints
-    MIN_COMPRESSION_WORDS: int = 800
-    MAX_COMPRESSION_WORDS: int = 1200
+    MIN_COMPRESSION_WORDS: int = 300
+    MAX_COMPRESSION_WORDS: int = 500
     
     # Approved editorial categories
     CATEGORIES: list[str] = [
