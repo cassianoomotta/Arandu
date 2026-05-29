@@ -211,6 +211,11 @@
             <!-- Populated via JavaScript -->
         </div>
 
+        <!-- Pagination Controls -->
+        <div id="pagination-controls" class="flex items-center justify-center gap-2 mt-12 mb-8">
+            <!-- Populated via JavaScript -->
+        </div>
+
         <!-- Empty state placeholder -->
         <div id="empty-state" class="hidden text-center py-20">
             <i data-lucide="alert-circle" class="w-12 h-12 text-gold/40 mx-auto mb-4"></i>
@@ -427,33 +432,12 @@
             "LSE Business Review": "empreendedorismo"
         };
 
-        // Initialize Page
-        document.addEventListener('DOMContentLoaded', () => {
-            // Read category from URL params (e.g. ?categoria=tecnologia)
-            const urlParams = new URLSearchParams(window.location.search);
-            const categoriaParam = urlParams.get('categoria');
-            if (categoriaParam && ['tecnologia', 'empreendedorismo', 'investimentos'].includes(categoriaParam)) {
-                activeCategory = categoriaParam;
-                // Update tab styles immediately
-                const tabs = ['all', 'tecnologia', 'empreendedorismo', 'investimentos'];
-                tabs.forEach(tab => {
-                    const el = document.getElementById(`tab-${tab}`);
-                    if (el) {
-                        el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white";
-                    }
-                });
-                const activeEl = document.getElementById(`tab-${categoriaParam}`);
-                if (activeEl) {
-                    activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black";
-                }
-            }
-            fetchNewsList();
-            lucide.createIcons();
-        });
-
         const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
             ? "http://localhost:8000"
             : "";
+
+        let currentPage = 1;
+        const pageSize = 20;
 
         // Fetch list of news
         async function fetchNewsList() {
@@ -503,16 +487,27 @@
                 return true;
             });
 
+            const totalFiltered = filtered.length;
+            const totalPages = Math.ceil(totalFiltered / pageSize);
+
+            if (currentPage > totalPages) {
+                currentPage = Math.max(1, totalPages);
+            }
+
             if (filtered.length === 0) {
                 emptyState.classList.remove('hidden');
                 container.classList.add('hidden');
+                const paginationContainer = document.getElementById('pagination-controls');
+                if (paginationContainer) paginationContainer.classList.add('hidden');
                 return;
             }
 
             emptyState.classList.add('hidden');
             container.classList.remove('hidden');
 
-            filtered.forEach((item, index) => {
+            const paginatedItems = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+            paginatedItems.forEach((item, index) => {
                 const title = item.translated_title || item.original_title;
                 const category = sourceMap[item.source_name] || 'tecnologia';
                 const formattedCategory = category.toUpperCase();
@@ -800,6 +795,118 @@
                 container.appendChild(card);
             });
 
+            renderPagination(totalFiltered);
+        }
+
+        // Render pagination controls
+        function renderPagination(totalFiltered) {
+            const paginationContainer = document.getElementById('pagination-controls');
+            if (!paginationContainer) return;
+            
+            const totalPages = Math.ceil(totalFiltered / pageSize);
+            paginationContainer.innerHTML = '';
+            
+            if (totalPages <= 1) {
+                paginationContainer.classList.add('hidden');
+                return;
+            }
+            
+            paginationContainer.classList.remove('hidden');
+            
+            // Previous button
+            const prevBtn = document.createElement('button');
+            prevBtn.className = `px-4 py-2 rounded-lg text-xs font-bold uppercase transition border ${
+                currentPage === 1 
+                    ? 'border-white/5 bg-white/[0.02] text-gray-500 cursor-not-allowed' 
+                    : 'border-white/10 bg-white/5 text-white hover:border-gold hover:text-gold cursor-pointer'
+            }`;
+            prevBtn.textContent = 'Anterior';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderFeed();
+                    window.scrollTo({ top: document.getElementById('news-grid-container').offsetTop - 120, behavior: 'smooth' });
+                }
+            };
+            paginationContainer.appendChild(prevBtn);
+            
+            // Page numbers
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+            
+            if (startPage > 1) {
+                const firstBtn = document.createElement('button');
+                firstBtn.className = 'px-3.5 py-2 rounded-lg text-xs font-bold border border-white/10 bg-white/5 text-white hover:border-gold hover:text-gold transition cursor-pointer';
+                firstBtn.textContent = '1';
+                firstBtn.onclick = () => {
+                    currentPage = 1;
+                    renderFeed();
+                    window.scrollTo({ top: document.getElementById('news-grid-container').offsetTop - 120, behavior: 'smooth' });
+                };
+                paginationContainer.appendChild(firstBtn);
+                
+                if (startPage > 2) {
+                    const dots = document.createElement('span');
+                    dots.className = 'text-gray-500 px-1 self-center';
+                    dots.textContent = '...';
+                    paginationContainer.appendChild(dots);
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = document.createElement('button');
+                if (i === currentPage) {
+                    pageBtn.className = 'px-3.5 py-2 rounded-lg text-xs font-bold bg-gold text-black border border-gold';
+                } else {
+                    pageBtn.className = 'px-3.5 py-2 rounded-lg text-xs font-bold border border-white/10 bg-white/5 text-white hover:border-gold hover:text-gold transition cursor-pointer';
+                }
+                pageBtn.textContent = i;
+                pageBtn.onclick = () => {
+                    currentPage = i;
+                    renderFeed();
+                    window.scrollTo({ top: document.getElementById('news-grid-container').offsetTop - 120, behavior: 'smooth' });
+                };
+                paginationContainer.appendChild(pageBtn);
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    const dots = document.createElement('span');
+                    dots.className = 'text-gray-500 px-1 self-center';
+                    dots.textContent = '...';
+                    paginationContainer.appendChild(dots);
+                }
+                
+                const lastBtn = document.createElement('button');
+                lastBtn.className = 'px-3.5 py-2 rounded-lg text-xs font-bold border border-white/10 bg-white/5 text-white hover:border-gold hover:text-gold transition cursor-pointer';
+                lastBtn.textContent = totalPages;
+                lastBtn.onclick = () => {
+                    currentPage = totalPages;
+                    renderFeed();
+                    window.scrollTo({ top: document.getElementById('news-grid-container').offsetTop - 120, behavior: 'smooth' });
+                };
+                paginationContainer.appendChild(lastBtn);
+            }
+            
+            // Next button
+            const nextBtn = document.createElement('button');
+            nextBtn.className = `px-4 py-2 rounded-lg text-xs font-bold uppercase transition border ${
+                currentPage === totalPages 
+                    ? 'border-white/5 bg-white/[0.02] text-gray-500 cursor-not-allowed' 
+                    : 'border-white/10 bg-white/5 text-white hover:border-gold hover:text-gold cursor-pointer'
+            }`;
+            nextBtn.textContent = 'Próxima';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderFeed();
+                    window.scrollTo({ top: document.getElementById('news-grid-container').offsetTop - 120, behavior: 'smooth' });
+                }
+            };
+            paginationContainer.appendChild(nextBtn);
+            lucide.createIcons();
         }
 
         function toggleAccordion(event, id) {
@@ -820,6 +927,7 @@
         // Category tab navigation controller
         function setCategoryFilter(category) {
             activeCategory = category;
+            currentPage = 1; // Reset to page 1
 
             // Remove active classes from all tabs
             const tabs = ['all', 'tecnologia', 'empreendedorismo', 'investimentos'];
@@ -841,6 +949,7 @@
 
         // Live text filter
         function handleSearch() {
+            currentPage = 1; // Reset to page 1
             renderFeed();
         }
 
@@ -1045,6 +1154,34 @@
                 toast.classList.remove('show');
                 setTimeout(() => toast.remove(), 400);
             }, 4000);
+        }
+
+        // Initialize Page
+        function initializeNewsPage() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const categoriaParam = urlParams.get('categoria');
+            if (categoriaParam && ['tecnologia', 'empreendedorismo', 'investimentos'].includes(categoriaParam)) {
+                activeCategory = categoriaParam;
+                const tabs = ['all', 'tecnologia', 'empreendedorismo', 'investimentos'];
+                tabs.forEach(tab => {
+                    const el = document.getElementById(`tab-${tab}`);
+                    if (el) {
+                        el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white";
+                    }
+                });
+                const activeEl = document.getElementById(`tab-${categoriaParam}`);
+                if (activeEl) {
+                    activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black";
+                }
+            }
+            fetchNewsList();
+            lucide.createIcons();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeNewsPage);
+        } else {
+            initializeNewsPage();
         }
     </script>
 </body>
