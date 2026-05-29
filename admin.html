@@ -209,7 +209,7 @@
                         </div>
                         <div>
                             <span class="text-[10px] uppercase font-bold tracking-wider text-gray-500 block">Intervalo do Pipeline</span>
-                            <span class="text-base font-bold text-white tracking-wide">A cada 15 Minutos</span>
+                            <span class="text-base font-bold text-white tracking-wide">A cada 1 Hora</span>
                         </div>
                     </div>
 
@@ -246,7 +246,7 @@
                                 <span id="pipelineStatusBadge" class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-gray-500/15 text-gray-400 border border-gray-500/20">Ocioso</span>
                             </div>
                             <h4 id="pipelinePhaseText" class="font-outfit text-lg font-bold text-white mt-1">Aguardando Execução</h4>
-                            <p id="pipelineDetailText" class="text-gray-400 text-xs font-light mt-0.5">O pipeline automático roda a cada 15 minutos ou pode ser disparado manualmente.</p>
+                            <p id="pipelineDetailText" class="text-gray-400 text-xs font-light mt-0.5">O pipeline automático roda a cada 1 hora ou pode ser disparado manualmente.</p>
                             
                             <!-- Detailed last run info -->
                             <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[10px] text-gray-500 font-mono">
@@ -363,7 +363,7 @@
                                         <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400">Notícia / Fonte</th>
                                         <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400 text-center">Score (Relevância)</th>
                                         <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400">Prioridade / Nicho</th>
-                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400">Telegram Status</th>
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400">Status Operacional</th>
                                         <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400 text-center">Ações</th>
                                     </tr>
                                 </thead>
@@ -1185,14 +1185,29 @@
                     
                     // Telegram Status styling
                     const status = news.send_status || "pendente";
-                    let statusClass = "text-yellow-500 bg-yellow-500/5 border-yellow-500/20";
-                    let statusText = "Pendente";
+                    let statusClass = "text-yellow-500 border-yellow-500/20 bg-yellow-500/5";
+                    let statusText = "Telegram: Pendente";
                     if (status === "enviado_telegram") {
-                        statusClass = "text-green-400 bg-green-500/5 border-green-500/20";
-                        statusText = "Enviado";
+                        statusClass = "text-green-400 border-green-500/20 bg-green-500/5";
+                        statusText = "Telegram: OK";
                     } else if (status === "falha") {
-                        statusClass = "text-red-400 bg-red-500/5 border-red-500/20";
-                        statusText = "Falha";
+                        statusClass = "text-red-400 border-red-500/20 bg-red-500/5";
+                        statusText = "Telegram: Falha";
+                    }
+
+                    // Editorial Status styling
+                    const editStatus = news.editorial_status || "pendente";
+                    let editClass = "text-yellow-500 border-yellow-500/20 bg-yellow-500/5";
+                    let editText = "Editorial: Pendente";
+                    if (editStatus === "publicado") {
+                        editClass = "text-green-400 border-green-500/20 bg-green-500/5";
+                        editText = "Editorial: OK";
+                    } else if (editStatus === "falha") {
+                        editClass = "text-red-400 border-red-500/20 bg-red-500/5";
+                        editText = "Editorial: Falhou";
+                    } else if (editStatus === "processando") {
+                        editClass = "text-amber-400 border-amber-500/20 bg-amber-500/5 animate-pulse";
+                        editText = "Editorial: Processando";
                     }
 
                     const row = document.createElement("tr");
@@ -1218,9 +1233,14 @@
                             </div>
                         </td>
                         <td class="p-4">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${statusClass}">
-                                ${statusText}
-                            </span>
+                            <div class="flex flex-col gap-1.5 items-start">
+                                <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${editClass}">
+                                    ${editText}
+                                </span>
+                                <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${statusClass}">
+                                    ${statusText}
+                                </span>
+                            </div>
                         </td>
                         <td class="p-4 text-center">
                             <button onclick="openNewsModal(${idx})" class="px-3.5 py-1.5 rounded-lg bg-gold/10 hover:bg-gold/20 text-gold hover:text-gold-light text-xs font-bold uppercase tracking-wider transition flex items-center gap-1 mx-auto focus:outline-none">
@@ -1278,6 +1298,34 @@
             } else {
                 statusEl.textContent = "AGUARDANDO ENVIO";
                 statusEl.className = "text-xs font-bold text-yellow-500 mt-2 uppercase tracking-wide";
+            }
+
+            const editStatusEl = document.getElementById("modalEditorialStatus");
+            const editStatus = news.editorial_status || "pendente";
+            if (editStatus === "publicado") {
+                editStatusEl.textContent = "Publicado";
+                editStatusEl.className = "text-xs font-bold text-green-400 mt-2 uppercase tracking-wide";
+            } else if (editStatus === "falha") {
+                editStatusEl.textContent = "Falha";
+                editStatusEl.className = "text-xs font-bold text-red-400 mt-2 uppercase tracking-wide";
+            } else if (editStatus === "processando") {
+                editStatusEl.textContent = "Processando";
+                editStatusEl.className = "text-xs font-bold text-yellow-500 mt-2 uppercase tracking-wide animate-pulse";
+            } else {
+                editStatusEl.textContent = "Pendente";
+                editStatusEl.className = "text-xs font-bold text-gray-400 mt-2 uppercase tracking-wide";
+            }
+
+            // Editorial Executivo Fields in modal
+            const editorialSec = document.getElementById("modalEditorialSection");
+            if (editStatus === "publicado" && news.editorial_title) {
+                editorialSec.classList.remove("hidden");
+                document.getElementById("modalEditorialTitle").textContent = news.editorial_title;
+                document.getElementById("modalEditorialSummary").textContent = news.editorial_summary;
+                document.getElementById("modalEditorialCategory").textContent = news.editorial_category || "N/A";
+                document.getElementById("modalEditorialTags").textContent = news.editorial_tags || "Nenhuma";
+            } else {
+                editorialSec.classList.add("hidden");
             }
 
             document.getElementById("modalJustificationText").textContent = news.ai_justification || "Nenhuma justificativa fornecida pelo agente de IA.";
@@ -1368,7 +1416,7 @@
                 </div>
                 
                 <!-- Metrics -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div class="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col">
                         <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Pontuação (Score)</span>
                         <div class="flex items-baseline gap-1 mt-1">
@@ -1381,7 +1429,11 @@
                         <span id="modalPriority" class="text-lg font-bold text-white mt-1.5 uppercase tracking-wide">N/A</span>
                     </div>
                     <div class="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col">
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Status de Envio</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Status Editorial</span>
+                        <span id="modalEditorialStatus" class="text-xs font-bold text-white mt-2 uppercase tracking-wide">N/A</span>
+                    </div>
+                    <div class="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Status Telegram</span>
                         <span id="modalSendStatus" class="text-xs font-bold text-white mt-2 uppercase tracking-wide">N/A</span>
                     </div>
                 </div>
@@ -1403,6 +1455,34 @@
                     </span>
                     <ul id="modalSummaryList" class="space-y-2.5 text-gray-300 font-light leading-relaxed">
                     </ul>
+                </div>
+
+                <!-- Editorial Executivo Summary (if available) -->
+                <div id="modalEditorialSection" class="hidden border-t border-white/10 pt-6 space-y-4">
+                    <span class="text-xs font-bold uppercase tracking-wider text-gold-light block mb-2 flex items-center gap-1.5">
+                        <i data-lucide="award" class="w-4 h-4 text-gold"></i>
+                        Conteúdo Premium do Editor Executivo
+                    </span>
+                    <div class="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-3">
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 block">Título Editorial</span>
+                            <p id="modalEditorialTitle" class="text-white font-semibold text-base mt-0.5 leading-snug"></p>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 block">Resumo Executivo (Conteúdo Premium)</span>
+                            <p id="modalEditorialSummary" class="text-gray-300 leading-relaxed font-light mt-1 whitespace-pre-wrap"></p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 pt-2">
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 block">Categoria Editorial</span>
+                                <span id="modalEditorialCategory" class="px-2.5 py-1 rounded text-xs bg-gold/15 text-gold border border-gold/20 font-bold uppercase tracking-wider inline-block mt-1">N/A</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 block">Tags Editoriais</span>
+                                <p id="modalEditorialTags" class="text-gray-400 text-xs font-light mt-1"></p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
