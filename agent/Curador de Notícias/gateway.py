@@ -90,8 +90,8 @@ class GeminiGateway:
             }
             
             headers = {"Content-Type": "application/json"}
-            max_attempts = 4
-            base_delay = 3.0
+            max_attempts = 6
+            base_delay = 15.0
             
             for attempt in range(max_attempts):
                 try:
