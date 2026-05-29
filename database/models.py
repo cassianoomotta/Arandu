@@ -11,7 +11,8 @@ from sqlalchemy import (
     Enum as SQLEnum, 
     func,
     JSON,
-    Float
+    Float,
+    Integer
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -113,6 +114,14 @@ class News(Base):
         default=SendStatus.PENDENTE
     )
 
+    # AI Classification and Curation fields
+    relevance_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    ai_justification: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    priority: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    is_curated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    curated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
     # Metadata audit columns
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -128,15 +137,12 @@ class News(Base):
         return f"<News(id={self.id}, original_title='{self.original_title[:30]}...', status='{self.send_status.value}')>"
 
 # Explicitly defining indexes on the news table for optimal performance
-# 1. Index on hash_title for duplicate checks (SQLAlchemy automatically creates unique index for unique=True, but we explicitly note it here)
-# 2. Index on send_status for polling pending news
-# 3. Index on source_id for relational joins
-# 4. Index on original_published_at DESC for fetching latest news fast
-# 5. Index on link (automatically unique)
 Index("ix_news_hash_title", News.hash_title, unique=True)
 Index("ix_news_send_status", News.send_status)
 Index("ix_news_source_id", News.source_id)
 Index("ix_news_original_published_at_desc", News.original_published_at.desc())
+Index("ix_news_is_curated", News.is_curated)
+Index("ix_news_relevance_score", News.relevance_score)
 
 
 class User(Base):

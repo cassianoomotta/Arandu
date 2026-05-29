@@ -7,6 +7,7 @@ import feedparser
 import httpx
 from bs4 import BeautifulSoup
 
+from database.config import settings
 from database.connection import get_db_session
 from database.models import Source, News, SendStatus
 from core.processor import get_recent_titles_from_db, process_article, is_similar_to_recent
@@ -250,12 +251,12 @@ async def main(is_manual: bool = False):
         
         # 1.5 Translate existing news articles in the database using Gemini before searching/scraping for new ones
         from core.processor import translate_existing_news_with_gemini
-        timeout_limit = 25.0 if is_manual else 7.5
+        timeout_limit = 3600.0 if settings.DISABLE_TIMEOUTS else (25.0 if is_manual else 7.5)
         await asyncio.to_thread(translate_existing_news_with_gemini, start_time, timeout_limit)
         
         # Check timeout after DB translation
         elapsed = time.time() - start_time
-        if elapsed > timeout_limit:
+        if not settings.DISABLE_TIMEOUTS and elapsed > timeout_limit:
             logger.warning(f"Timeout limit reached during database translation pass ({elapsed:.2f}s). Skipping RSS scraping for this run.")
             update_pipeline_status(is_end=True, phase="Pausa", detail="Pausa para evitar timeout (tradução do BD concluída parcialmente).")
             return
@@ -311,7 +312,7 @@ async def main(is_manual: bool = False):
                     
                     # Pre-processing timeout check
                     elapsed = time.time() - start_time
-                    if elapsed > 7.5:
+                    if not settings.DISABLE_TIMEOUTS and elapsed > 7.5:
                         logger.warning(f"Timeout approaching ({elapsed:.2f}s). Skipping: '{article['original_title'][:30]}...'")
                         return None
                         
@@ -325,13 +326,13 @@ async def main(is_manual: bool = False):
                     # B. Run CPU-bound or blocking API operations (translation, similarity against DB, AI summary) in a thread pool (throttled by semaphore)
                     # Check timeout before acquiring semaphore
                     elapsed = time.time() - start_time
-                    if elapsed > 7.5:
+                    if not settings.DISABLE_TIMEOUTS and elapsed > 7.5:
                         return None
                         
                     async with processor_sem:
                         # Check timeout after acquiring semaphore before calling API
                         elapsed = time.time() - start_time
-                        if elapsed > 7.5:
+                        if not settings.DISABLE_TIMEOUTS and elapsed > 7.5:
                             return None
                         processed = await asyncio.to_thread(process_article, article, source, recent_titles)
                         
@@ -373,10 +374,21 @@ async def main(is_manual: bool = False):
                 logger.info(f"Finished parsing cycle. Successfully processed {len(final_articles)} new news articles.")
             else:
                 logger.info("No new unique articles to enrich.")
+            elapsed = time.time() - start_time
+            if settings.DISABLE_TIMEOUTS or elapsed < 8.0:
+                logger.info("Scraper: Running Curation Agent pipeline...")
+                update_pipeline_status(phase="Curadoria IA", detail="Executando curadoria de notícias em duas passagens...")
+                try:
+                    from agent.orchestrator import AgentOrchestrator
+                    orchestrator = AgentOrchestrator()
+                    report = await asyncio.to_thread(orchestrator.run_curation_pipeline)
+                    logger.info(f"Curation Agent report:\n{report}")
+                except Exception as e:
+                    logger.error(f"Curation Agent pipeline failed: {str(e)}")
 
             # 6. Dispatch pending notifications to Telegram
             elapsed = time.time() - start_time
-            if elapsed < 8.0:
+            if settings.DISABLE_TIMEOUTS or elapsed < 8.0:
                 logger.info("Scraper Dispatcher: Dispatching pending notifications...")
                 update_pipeline_status(phase="Notificações", detail="Enviando notícias qualificadas ao Telegram...")
                 try:
@@ -388,10 +400,10 @@ async def main(is_manual: bool = False):
                     logger.error(f"Scraper Dispatcher: Notification dispatch failed: {str(e)}")
             else:
                 logger.warning(f"Skipping Telegram notification dispatch to avoid Vercel timeout (elapsed: {elapsed:.2f}s)")
-
+ 
             # 7. Database news cleanup (purge articles older than 20 days)
             elapsed = time.time() - start_time
-            if elapsed < 8.3:
+            if settings.DISABLE_TIMEOUTS or elapsed < 8.3:
                 logger.info("Scraper Cleanup: Starting old news purge (retention: 20 days)...")
                 update_pipeline_status(phase="Limpeza", detail="Limpando notícias antigas (mais de 20 dias)...")
                 try:
@@ -406,10 +418,10 @@ async def main(is_manual: bool = False):
                     logger.error(f"Scraper Cleanup: News cleanup failed: {str(e)}")
             else:
                 logger.warning(f"Skipping old news purge to avoid Vercel timeout (elapsed: {elapsed:.2f}s)")
-
+ 
             # 8. Scraper Maintenance: Heal up to 3 missing or invalid summaries
             elapsed = time.time() - start_time
-            if elapsed < 8.5:
+            if settings.DISABLE_TIMEOUTS or elapsed < 8.5:
                 logger.info("Scraper Maintenance: Checking for older news with missing/bad summaries to heal...")
                 update_pipeline_status(phase="Correção de Resumos", detail="Verificando resumos pendentes de correção com IA...")
                 try:

@@ -296,8 +296,18 @@
                     </div>
                 </div>
 
-                <!-- Captured Leads Table -->
-                <div class="flex flex-col gap-4">
+                <!-- Navigation Tabs -->
+                <div class="flex border-b border-white/5 gap-6 mb-2">
+                    <button id="tabLeadsBtn" onclick="switchAdminTab('leads')" class="pb-4 text-sm font-bold uppercase tracking-wider border-b-2 border-gold text-white focus:outline-none transition duration-200">
+                        Leads Capturados
+                    </button>
+                    <button id="tabNewsBtn" onclick="switchAdminTab('news')" class="pb-4 text-sm font-bold uppercase tracking-wider border-b-2 border-transparent text-gray-400 hover:text-white focus:outline-none transition duration-200">
+                        Histórico de Curadoria (Agente IA)
+                    </button>
+                </div>
+
+                <!-- Tab: Leads -->
+                <div id="leadsTabContent" class="flex flex-col gap-4">
                     <div class="flex items-center justify-between">
                         <h3 class="font-outfit text-xl font-bold text-white flex items-center gap-2">
                             <i data-lucide="database" class="w-5 h-5 text-gold"></i>
@@ -324,6 +334,43 @@
                                     <tr>
                                         <td colspan="4" class="p-8 text-center text-gray-500 font-light">
                                             Carregando lista de leads...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: News Curation History -->
+                <div id="newsTabContent" class="flex flex-col gap-4 hidden">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-outfit text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="newspaper" class="w-5 h-5 text-gold"></i>
+                            Histórico de Curadoria & Relevância (IA)
+                        </h3>
+                        <button onclick="fetchAdminNews();" class="text-xs font-bold uppercase tracking-wider text-gold hover:text-gold-light transition duration-200 flex items-center gap-1.5 focus:outline-none">
+                            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                            Atualizar Notícias
+                        </button>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="border-b border-white/5 bg-white/[0.01]">
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400">Notícia / Fonte</th>
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400 text-center">Score (Relevância)</th>
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400">Prioridade / Nicho</th>
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400">Telegram Status</th>
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="newsTableBody">
+                                    <tr>
+                                        <td colspan="5" class="p-8 text-center text-gray-500 font-light">
+                                            Carregando histórico de notícias...
                                         </td>
                                     </tr>
                                 </tbody>
@@ -377,6 +424,7 @@
                 dashSec.classList.remove("hidden");
                 logoutBtn.classList.remove("hidden");
                 fetchLeads();
+                fetchAdminNews();
                 fetchStatsAndRenderCharts();
                 fetchGeminiUsage();
                 fetchPipelineStatus();
@@ -1050,6 +1098,222 @@
             return `${mins}m ${remainingSecs}s`;
         };
 
+        // Tab switcher
+        function switchAdminTab(tab) {
+            const tabLeads = document.getElementById("tabLeadsBtn");
+            const tabNews = document.getElementById("tabNewsBtn");
+            const leadsContent = document.getElementById("leadsTabContent");
+            const newsContent = document.getElementById("newsTabContent");
+
+            if (tab === 'leads') {
+                tabLeads.className = "pb-4 text-sm font-bold uppercase tracking-wider border-b-2 border-gold text-white focus:outline-none transition duration-200";
+                tabNews.className = "pb-4 text-sm font-bold uppercase tracking-wider border-b-2 border-transparent text-gray-400 hover:text-white focus:outline-none transition duration-200";
+                leadsContent.classList.remove("hidden");
+                newsContent.classList.add("hidden");
+            } else {
+                tabNews.className = "pb-4 text-sm font-bold uppercase tracking-wider border-b-2 border-gold text-white focus:outline-none transition duration-200";
+                tabLeads.className = "pb-4 text-sm font-bold uppercase tracking-wider border-b-2 border-transparent text-gray-400 hover:text-white focus:outline-none transition duration-200";
+                leadsContent.classList.add("hidden");
+                newsContent.classList.remove("hidden");
+                fetchAdminNews();
+            }
+        }
+
+        // Global list of news for admin panel
+        let adminNews = [];
+
+        // Fetch news for admin
+        async function fetchAdminNews() {
+            if (!token) return;
+            const tableBody = document.getElementById("newsTableBody");
+            
+            try {
+                // Fetch 100 recent articles
+                const response = await fetch(`${API_BASE_URL}/api/noticias?page=1&size=100`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    handleLogout();
+                    showToast("Sessão Expirada", "Por favor, faça login novamente.", "error");
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error("Erro ao obter notícias.");
+                }
+
+                const data = await response.json();
+                adminNews = data.results || [];
+
+                if (adminNews.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="p-8 text-center text-gray-500 font-light">
+                                Nenhuma notícia curada no banco de dados.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tableBody.innerHTML = "";
+                adminNews.forEach((news, idx) => {
+                    // Title formatting
+                    const title = news.translated_title || news.original_title;
+                    
+                    // Score styling
+                    const score = news.relevance_score !== null && news.relevance_score !== undefined ? news.relevance_score : "N/A";
+                    let scoreClass = "text-gray-400 bg-white/5 border border-white/10";
+                    if (typeof score === 'number') {
+                        if (score >= 12) scoreClass = "text-green-400 bg-green-500/10 border border-green-500/20 font-extrabold";
+                        else if (score >= 8) scoreClass = "text-gold bg-gold/10 border border-gold/20 font-bold";
+                        else if (score >= 5) scoreClass = "text-yellow-500 bg-yellow-500/10 border border-yellow-500/20";
+                        else scoreClass = "text-red-400 bg-red-500/10 border border-red-500/20";
+                    }
+
+                    // Priority & Category badge styling
+                    const priority = news.priority || "N/A";
+                    let prioClass = "text-gray-500 border-gray-500/20 bg-gray-500/5";
+                    if (priority.toUpperCase() === "ALTA") prioClass = "text-red-400 border-red-500/30 bg-red-500/10 font-bold";
+                    else if (priority.toUpperCase() === "MÉDIA") prioClass = "text-gold border-gold/30 bg-gold/10 font-medium";
+                    else if (priority.toUpperCase() === "BAIXA") prioClass = "text-gray-400 border-white/10 bg-white/5";
+
+                    const category = news.category || "N/A";
+                    
+                    // Telegram Status styling
+                    const status = news.send_status || "pendente";
+                    let statusClass = "text-yellow-500 bg-yellow-500/5 border-yellow-500/20";
+                    let statusText = "Pendente";
+                    if (status === "enviado_telegram") {
+                        statusClass = "text-green-400 bg-green-500/5 border-green-500/20";
+                        statusText = "Enviado";
+                    } else if (status === "falha") {
+                        statusClass = "text-red-400 bg-red-500/5 border-red-500/20";
+                        statusText = "Falha";
+                    }
+
+                    const row = document.createElement("tr");
+                    row.className = "border-b border-white/5 hover:bg-white/[0.02] transition duration-150";
+                    row.innerHTML = `
+                        <td class="p-4 max-w-sm md:max-w-md">
+                            <div class="font-semibold text-white truncate hover:text-gold-light transition">
+                                <a href="${news.link}" target="_blank" class="hover:underline">${title}</a>
+                            </div>
+                            <div class="text-[10px] text-gray-500 font-mono mt-0.5">Fonte: ${news.source_name || "Desconhecida"}</div>
+                        </td>
+                        <td class="p-4 text-center">
+                            <span class="px-2.5 py-1 rounded text-xs font-mono ${scoreClass}">
+                                ${score}
+                            </span>
+                        </td>
+                        <td class="p-4">
+                            <div class="flex flex-col gap-1 items-start">
+                                <span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider border ${prioClass}">
+                                    Prio: ${priority}
+                                </span>
+                                <span class="text-[10px] text-gray-400 font-light">Nicho: ${category}</span>
+                            </div>
+                        </td>
+                        <td class="p-4">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${statusClass}">
+                                ${statusText}
+                            </span>
+                        </td>
+                        <td class="p-4 text-center">
+                            <button onclick="openNewsModal(${idx})" class="px-3.5 py-1.5 rounded-lg bg-gold/10 hover:bg-gold/20 text-gold hover:text-gold-light text-xs font-bold uppercase tracking-wider transition flex items-center gap-1 mx-auto focus:outline-none">
+                                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                Detalhes
+                            </button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+                lucide.createIcons();
+
+            } catch (err) {
+                console.error("Error fetching news:", err);
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="p-8 text-center text-red-400 font-light">
+                            Erro ao carregar histórico de notícias da API.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Modal triggers
+        function openNewsModal(idx) {
+            const news = adminNews[idx];
+            if (!news) return;
+
+            document.getElementById("modalOriginalTitle").textContent = news.original_title;
+            document.getElementById("modalTranslatedTitle").textContent = news.translated_title ? `Tradução: ${news.translated_title}` : "";
+            
+            const linkEl = document.getElementById("modalArticleLink");
+            linkEl.href = news.link;
+            
+            document.getElementById("modalRelevanceScore").textContent = news.relevance_score !== null ? news.relevance_score : "0";
+            
+            const prioEl = document.getElementById("modalPriority");
+            prioEl.textContent = news.priority || "N/A";
+            if (news.priority && news.priority.toUpperCase() === "ALTA") prioEl.className = "text-lg font-black text-red-400 mt-1.5 uppercase tracking-wide";
+            else if (news.priority && news.priority.toUpperCase() === "MÉDIA") prioEl.className = "text-lg font-bold text-gold mt-1.5 uppercase tracking-wide";
+            else prioEl.className = "text-lg font-semibold text-gray-400 mt-1.5 uppercase tracking-wide";
+
+            document.getElementById("modalCategoryBadge").textContent = `NICHO: ${news.category || "N/A"}`;
+            
+            const statusEl = document.getElementById("modalSendStatus");
+            const status = news.send_status || "pendente";
+            if (status === "enviado_telegram") {
+                statusEl.textContent = "ENVIADO TELEGRAM";
+                statusEl.className = "text-xs font-bold text-green-400 mt-2 uppercase tracking-wide";
+            } else if (status === "falha") {
+                statusEl.textContent = "FALHA NO ENVIO";
+                statusEl.className = "text-xs font-bold text-red-400 mt-2 uppercase tracking-wide";
+            } else {
+                statusEl.textContent = "AGUARDANDO ENVIO";
+                statusEl.className = "text-xs font-bold text-yellow-500 mt-2 uppercase tracking-wide";
+            }
+
+            document.getElementById("modalJustificationText").textContent = news.ai_justification || "Nenhuma justificativa fornecida pelo agente de IA.";
+
+            // Render AI Summary bullet points
+            const summaryList = document.getElementById("modalSummaryList");
+            summaryList.innerHTML = "";
+            const summaryText = news.ai_summary || "";
+            const lines = summaryText.split('\n').filter(l => l.trim() !== "");
+            
+            if (lines.length > 0) {
+                lines.forEach(line => {
+                    const clean = line.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+                    if (clean) {
+                        const li = document.createElement("li");
+                        li.className = "flex items-start gap-2 leading-snug";
+                        li.innerHTML = `<span class="text-gold mt-1">&bull;</span> <span>${clean}</span>`;
+                        summaryList.appendChild(li);
+                    }
+                });
+            } else {
+                summaryList.innerHTML = `<li class="text-gray-500 italic">Nenhum resumo em marcadores disponível.</li>`;
+            }
+
+            const modal = document.getElementById("aiModal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            const modal = document.getElementById("aiModal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
         // Logout handler
         async function handleLogout() {
             if (token) {
@@ -1070,5 +1334,85 @@
             showToast("Log Out", "Você foi desconectado.", "success");
         }
     </script>
+
+    <!-- AI JUSTIFICATION MODAL -->
+    <div id="aiModal" class="fixed inset-0 z-[300] hidden items-center justify-center p-4 bg-black/85 backdrop-blur-sm transition-all duration-300">
+        <div class="glass-panel rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-6 border-b border-white/10 bg-white/[0.02]">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 rounded bg-gold/15 border border-gold/30 text-gold">
+                        <i data-lucide="brain-circuit" class="w-5 h-5 animate-pulse"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-outfit text-lg font-bold text-white">Análise e Decisão do Agente IA</h3>
+                        <span id="modalCategoryBadge" class="text-[10px] uppercase font-bold tracking-widest text-gold mt-0.5 block">N/A</span>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="p-1 text-gray-400 hover:text-white transition focus:outline-none">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="p-6 md:p-8 overflow-y-auto space-y-6 text-sm">
+                <!-- Title & Link -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Título do Artigo</h4>
+                    <p id="modalOriginalTitle" class="text-white font-medium text-base mb-1.5 leading-snug"></p>
+                    <p id="modalTranslatedTitle" class="text-gray-400 font-light text-sm italic mb-3"></p>
+                    <a id="modalArticleLink" href="#" target="_blank" class="inline-flex items-center gap-1.5 text-xs text-gold hover:text-gold-light hover:underline font-bold uppercase tracking-wider">
+                        Acessar Link Original
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+                
+                <!-- Metrics -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Pontuação (Score)</span>
+                        <div class="flex items-baseline gap-1 mt-1">
+                            <span id="modalRelevanceScore" class="text-3xl font-extrabold text-white">0</span>
+                            <span class="text-xs text-gray-500 font-mono">/ 15</span>
+                        </div>
+                    </div>
+                    <div class="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Prioridade</span>
+                        <span id="modalPriority" class="text-lg font-bold text-white mt-1.5 uppercase tracking-wide">N/A</span>
+                    </div>
+                    <div class="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Status de Envio</span>
+                        <span id="modalSendStatus" class="text-xs font-bold text-white mt-2 uppercase tracking-wide">N/A</span>
+                    </div>
+                </div>
+                
+                <!-- Justification -->
+                <div class="p-5 rounded-2xl bg-gold/5 border border-gold/10">
+                    <span class="text-xs font-bold uppercase tracking-wider text-gold-light block mb-2 flex items-center gap-1.5">
+                        <i data-lucide="message-square" class="w-4 h-4 text-gold"></i>
+                        Justificativa do Agente
+                    </span>
+                    <p id="modalJustificationText" class="text-gray-200 leading-relaxed font-light whitespace-pre-wrap"></p>
+                </div>
+                
+                <!-- AI Summary -->
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-gray-500 block mb-2 flex items-center gap-1.5">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-gold"></i>
+                        Resumo Gerado (Marcadores)
+                    </span>
+                    <ul id="modalSummaryList" class="space-y-2.5 text-gray-300 font-light leading-relaxed">
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="p-6 border-t border-white/10 bg-white/[0.01] flex justify-end">
+                <button onclick="closeModal()" class="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white text-xs font-bold uppercase tracking-wider transition">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

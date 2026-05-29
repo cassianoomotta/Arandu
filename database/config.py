@@ -30,5 +30,12 @@ class Settings:
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
     TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
+    
+    # Disable time-capping if not running on Vercel (local execution)
+    DISABLE_TIMEOUTS: bool = os.getenv(
+        "DISABLE_TIMEOUTS", 
+        "true" if "VERCEL" not in os.environ else "false"
+    ).lower() == "true"
 
 settings = Settings()
+

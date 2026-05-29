@@ -269,6 +269,12 @@ class NewsItemResponse(BaseModel):
     hash_title: str
     send_status: str
     created_at: datetime
+    relevance_score: Optional[int] = None
+    ai_justification: Optional[str] = None
+    category: Optional[str] = None
+    priority: Optional[str] = None
+    is_curated: Optional[bool] = False
+    curated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
