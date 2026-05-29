@@ -1,5 +1,5 @@
 class EditorSettings:
-    DEFAULT_MODELS: list[str] = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-1.5-flash"]
+    DEFAULT_MODELS: list[str] = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
     
     # Text compression constraints
     MIN_COMPRESSION_WORDS: int = 800

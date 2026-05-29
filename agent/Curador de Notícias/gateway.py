@@ -18,7 +18,7 @@ logger = logging.getLogger("news_agent.gateway")
 class GeminiGateway:
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
-        self.default_models = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-1.5-flash"]
+        self.default_models = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
         
     def _verify_quota(self):
         """Verifies if the daily token/request cota has been reached."""
@@ -35,12 +35,12 @@ class GeminiGateway:
             logger.error(f"Failed to check daily quota: {e}")
 
     def _enforce_rate_limit(self):
-        """Enforces a strict 6-second delay between calls for the free tier."""
+        """Enforces a strict 12-second delay between calls for the free tier."""
         global _last_gemini_call_time
         with _gemini_api_lock:
             now = time.time()
             elapsed = now - _last_gemini_call_time
-            required_gap = 6.0
+            required_gap = 12.0
             if elapsed < required_gap:
                 sleep_needed = required_gap - elapsed
                 logger.info(f"Rate limiter: sleeping for {sleep_needed:.2f}s to respect RPM...")

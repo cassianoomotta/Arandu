@@ -19,6 +19,7 @@ from database.connection import get_db_session, engine
 from database.models import Base, News, Source, User, UserRole, SendStatus, Lead, PipelineStatus, ActiveSession
 from core.scraper import main as run_scraper
 from core.notifier import TelegramNotifier, dispatch_pending_notifications
+from agent import AgentOrchestrator, EditorExecutivoOrchestrator
 
 # Setup Logger
 logging.basicConfig(
@@ -32,14 +33,36 @@ scheduler = AsyncIOScheduler()
 
 async def execute_scheduled_ingestion():
     """
-    Background job that runs the full news ingestion and notification dispatch pipeline.
+    Background job that runs the full news ingestion pipeline:
+    1. Scraper: RSS fetching, translation, AI summary
+    2. Curador de Notícias: 2-phase Gemini classification & scoring
+    3. Editor Executivo: Full-text scraping, editorial synthesis
+    4. Notification Dispatch: Telegram delivery of published articles
     """
     logger.info("Background Scheduler: Starting full news curation cycle...")
     try:
         # 1. Run scraping, translation, and AI summarization
         await run_scraper()
         
-        # 2. Dispatch pending notifications via TelegramNotifier strategy
+        # 2. Run Curador de Notícias (Agent-based curation pipeline)
+        try:
+            logger.info("Background Scheduler: Running Curador de Notícias agent...")
+            curator = AgentOrchestrator()
+            curation_report = curator.run_curation_pipeline()
+            logger.info(f"Background Scheduler: Curador finished. {curation_report}")
+        except Exception as e:
+            logger.error(f"Background Scheduler: Curador de Notícias failed: {str(e)}")
+        
+        # 3. Run Editor Executivo (Editorial synthesis pipeline)
+        try:
+            logger.info("Background Scheduler: Running Editor Executivo agent...")
+            editor = EditorExecutivoOrchestrator()
+            editorial_report = editor.run_editorial_pipeline()
+            logger.info(f"Background Scheduler: Editor Executivo finished. {editorial_report}")
+        except Exception as e:
+            logger.error(f"Background Scheduler: Editor Executivo failed: {str(e)}")
+        
+        # 4. Dispatch pending notifications via TelegramNotifier strategy
         notifier = TelegramNotifier()
         await dispatch_pending_notifications(notifier)
         
@@ -123,11 +146,11 @@ async def lifespan(app: FastAPI):
         
     logger.info("Initializing application lifespan with background scheduler...")
     
-    # 1. Register the ingestion task (every 15 minutes)
+    # 1. Register the ingestion task (every 1 hour)
     scheduler.add_job(
         execute_scheduled_ingestion, 
         trigger="interval", 
-        minutes=15,
+        hours=1,
         id="ingestion_pipeline_job",
         replace_existing=True
     )
@@ -474,6 +497,23 @@ async def force_manual_collection(
         try:
             logger.info("Manual Pipeline: Starting execution...")
             await run_scraper(is_manual=True)
+            
+            # Run Curador de Notícias agent
+            try:
+                logger.info("Manual Pipeline: Running Curador de Notícias...")
+                curator = AgentOrchestrator()
+                curator.run_curation_pipeline()
+            except Exception as e:
+                logger.error(f"Manual Pipeline: Curador failed: {str(e)}")
+            
+            # Run Editor Executivo agent
+            try:
+                logger.info("Manual Pipeline: Running Editor Executivo...")
+                editor = EditorExecutivoOrchestrator()
+                editor.run_editorial_pipeline()
+            except Exception as e:
+                logger.error(f"Manual Pipeline: Editor Executivo failed: {str(e)}")
+            
             notifier = TelegramNotifier()
             await dispatch_pending_notifications(notifier)
             logger.info("Manual Pipeline: Finished successfully.")
@@ -524,6 +564,23 @@ async def vercel_cron_collection(
         try:
             logger.info("Cron Pipeline: Starting execution...")
             await run_scraper()
+            
+            # Run Curador de Notícias agent
+            try:
+                logger.info("Cron Pipeline: Running Curador de Notícias...")
+                curator = AgentOrchestrator()
+                curator.run_curation_pipeline()
+            except Exception as e:
+                logger.error(f"Cron Pipeline: Curador failed: {str(e)}")
+            
+            # Run Editor Executivo agent
+            try:
+                logger.info("Cron Pipeline: Running Editor Executivo...")
+                editor = EditorExecutivoOrchestrator()
+                editor.run_editorial_pipeline()
+            except Exception as e:
+                logger.error(f"Cron Pipeline: Editor Executivo failed: {str(e)}")
+            
             notifier = TelegramNotifier()
             await dispatch_pending_notifications(notifier)
             logger.info("Cron Pipeline: Finished successfully.")
