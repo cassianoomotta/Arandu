@@ -122,6 +122,15 @@ class News(Base):
     is_curated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     curated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
+    # Editorial Executivo fields
+    editorial_status: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, default="pendente")
+    editorial_title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    editorial_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    editorial_category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    editorial_tags: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    meta_description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    editorial_scores: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
     # Metadata audit columns
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -134,7 +143,7 @@ class News(Base):
     source: Mapped["Source"] = relationship("Source", back_populates="news")
 
     def __repr__(self) -> str:
-        return f"<News(id={self.id}, original_title='{self.original_title[:30]}...', status='{self.send_status.value}')>"
+        return f"<News(id={self.id}, original_title='{self.original_title[:30]}...', status='{self.send_status.value}', editorial_status='{self.editorial_status}')>"
 
 # Explicitly defining indexes on the news table for optimal performance
 Index("ix_news_hash_title", News.hash_title, unique=True)
@@ -143,6 +152,7 @@ Index("ix_news_source_id", News.source_id)
 Index("ix_news_original_published_at_desc", News.original_published_at.desc())
 Index("ix_news_is_curated", News.is_curated)
 Index("ix_news_relevance_score", News.relevance_score)
+Index("ix_news_editorial_status", News.editorial_status)
 
 
 class User(Base):

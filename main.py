@@ -84,8 +84,33 @@ async def lifespan(app: FastAPI):
                 conn.commit()
                 logger.info("Lifespan Database Migration: Added column 'translated_by_gemini' to news table.")
             except Exception as e:
-                # Column likely already exists or database type doesn't support the syntax
+                try:
+                    conn.rollback()
+                except:
+                    pass
                 logger.info(f"Lifespan Database Migration: Column 'translated_by_gemini' check: {str(e)}")
+            
+            # Migration for Editor Executivo columns
+            editorial_cols = [
+                ("editorial_status", "VARCHAR(50) DEFAULT 'pendente'"),
+                ("editorial_title", "VARCHAR(255)"),
+                ("editorial_summary", "TEXT"),
+                ("editorial_category", "VARCHAR(100)"),
+                ("editorial_tags", "TEXT"),
+                ("meta_description", "TEXT"),
+                ("editorial_scores", "JSON")
+            ]
+            for col_name, col_type in editorial_cols:
+                try:
+                    conn.execute(text(f"ALTER TABLE news ADD COLUMN {col_name} {col_type}"))
+                    conn.commit()
+                    logger.info(f"Lifespan Database Migration: Added column '{col_name}' to news table.")
+                except Exception as e:
+                    try:
+                        conn.rollback()
+                    except:
+                        pass
+                    logger.info(f"Lifespan Database Migration: Column '{col_name}' check: {str(e)}")
     except Exception as e:
         logger.error(f"Lifespan: Failed to create database tables: {e}")
 
@@ -275,6 +300,15 @@ class NewsItemResponse(BaseModel):
     priority: Optional[str] = None
     is_curated: Optional[bool] = False
     curated_at: Optional[datetime] = None
+    
+    # Editorial Executivo fields
+    editorial_status: Optional[str] = "pendente"
+    editorial_title: Optional[str] = None
+    editorial_summary: Optional[str] = None
+    editorial_category: Optional[str] = None
+    editorial_tags: Optional[str] = None
+    meta_description: Optional[str] = None
+    editorial_scores: Optional[dict] = None
 
     class Config:
         from_attributes = True

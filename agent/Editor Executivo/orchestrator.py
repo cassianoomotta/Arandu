@@ -1,0 +1,249 @@
+import logging
+import importlib
+import json
+from datetime import datetime, timedelta
+from typing import List, Dict, Any
+from sqlalchemy import or_
+from difflib import SequenceMatcher
+
+from database.connection import get_db_session
+from database.models import News
+from .config import editor_settings
+from .scraper_cleaner import fetch_and_clean_content
+from .compressor import compress_text
+from .schemas import EditorialResponse
+from .prompts import EDITORIAL_SYSTEM_PROMPT
+
+logger = logging.getLogger("news_agent.editor.orchestrator")
+
+# Dynamically import GeminiGateway to handle the folder name space
+try:
+    curador_gateway_mod = importlib.import_module("agent.Curador de Notícias.gateway")
+    GeminiGateway = curador_gateway_mod.GeminiGateway
+except Exception as e:
+    logger.error(f"Failed to dynamically import Curador GeminiGateway: {e}")
+    # Local fallback/stub if not found
+    class GeminiGateway:
+        def call_structured_api(self, *args, **kwargs):
+            raise NotImplementedError("GeminiGateway not loaded.")
+
+class EditorExecutivoOrchestrator:
+    def __init__(self):
+        self.gateway = GeminiGateway()
+
+    def run_editorial_pipeline(self) -> str:
+        """
+        Runs the full editorial processing pipeline synchronously.
+        Can be wrapped in a thread pool for async execution.
+        """
+        import asyncio
+        # Create a new event loop or use the existing one to run the async scraping
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        return loop.run_until_complete(self.run_editorial_pipeline_async())
+
+    async def run_editorial_pipeline_async(self) -> str:
+        logger.info("Initializing Editorial Agent (Editor Executivo) Pipeline...")
+        
+        try:
+            with get_db_session() as session:
+                # 1. Fetch news articles that are curated and pending editorial processing
+                pending_news = (
+                    session.query(News)
+                    .filter(
+                        News.is_curated == True,
+                        or_(
+                            News.editorial_status == "pendente",
+                            News.editorial_status == None
+                        )
+                    )
+                    .all()
+                )
+                
+                if not pending_news:
+                    logger.info("No pending news articles for editorial processing.")
+                    return "No articles processed."
+                
+                # Fetch recently published articles for theme deduplication (last 48 hours)
+                recent_published = (
+                    session.query(News)
+                    .filter(
+                        News.editorial_status == "publicado",
+                        News.created_at >= datetime.utcnow() - timedelta(days=2)
+                    )
+                    .all()
+                )
+                
+                # Copy properties into simple dicts to avoid DetachedInstanceError outside session
+                pending_data = []
+                for item in pending_news:
+                    pending_data.append({
+                        "id": item.id,
+                        "title": item.translated_title or item.original_title,
+                        "link": item.link,
+                        "ai_summary": item.ai_summary,
+                        "source_name": item.source.name if item.source else "Desconhecida"
+                    })
+                
+                recent_published_data = []
+                for pub in recent_published:
+                    recent_published_data.append({
+                        "id": pub.id,
+                        "title": pub.editorial_title or pub.translated_title or pub.original_title
+                    })
+                
+                logger.info(f"Found {len(pending_data)} articles pending editorial processing.")
+                
+            processed_count = 0
+            duplicate_count = 0
+            failed_count = 0
+            
+            for news_item in pending_data:
+                news_id = news_item["id"]
+                # Update status to processando to prevent concurrent execution picking it up
+                with get_db_session() as session:
+                    db_item = session.query(News).filter(News.id == news_id).first()
+                    if db_item:
+                        db_item.editorial_status = "processando"
+                        session.commit()
+                
+                title = news_item["title"]
+                logger.info(f"Processing editorial for: '{title[:50]}...'")
+                
+                # A. Theme Deduplication Check
+                is_duplicate = False
+                for pub in recent_published_data:
+                    pub_title = pub["title"]
+                    similarity = SequenceMatcher(None, title.lower(), pub_title.lower()).ratio()
+                    if similarity >= editor_settings.THEME_SIMILARITY_THRESHOLD:
+                        logger.warning(
+                            f"Skipping article ID {news_id} - detected high similarity "
+                            f"({similarity:.2f}) with published article ID {pub['id']}: '{pub_title[:40]}'"
+                        )
+                        is_duplicate = True
+                        break
+                        
+                if is_duplicate:
+                    with get_db_session() as session:
+                        db_item = session.query(News).filter(News.id == news_id).first()
+                        if db_item:
+                            db_item.editorial_status = "duplicado"
+                            db_item.send_status = "falha"  # Skip Telegram notifications
+                            session.commit()
+                    duplicate_count += 1
+                    continue
+
+                # B. Scraping and Cleaning
+                logger.info(f"Scraping full-text content from: {news_item['link']}")
+                clean_content = await fetch_and_clean_content(news_item["link"])
+                
+                # If scraping returns empty content, fall back to title + short RSS summary
+                if not clean_content or len(clean_content.strip()) < 200:
+                    logger.warning(f"Scraping returned insufficient text. Falling back to RSS metadata.")
+                    clean_content = (
+                        f"Título: {title}\n\n"
+                        f"Resumo do RSS: {news_item['ai_summary'] or ''}"
+                    )
+                
+                # C. Local Semantic Compression
+                compressed = compress_text(
+                    clean_content, 
+                    min_words=editor_settings.MIN_COMPRESSION_WORDS, 
+                    max_words=editor_settings.MAX_COMPRESSION_WORDS
+                )
+                logger.info(f"Compressed content to {len(compressed.split())} words.")
+
+                # D. Gemini Call
+                prompt = (
+                    f"Notícia Original para Processamento Editorial:\n\n"
+                    f"Fonte original: {news_item['source_name']}\n"
+                    f"Título da notícia: {title}\n\n"
+                    f"Conteúdo do Artigo:\n{compressed}"
+                )
+                
+                try:
+                    logger.info("Calling Gemini API for editorial synthesis...")
+                    response = self.gateway.call_structured_api(
+                        prompt=prompt,
+                        system_instruction=EDITORIAL_SYSTEM_PROMPT,
+                        response_model=EditorialResponse
+                    )
+                    
+                    # E. Database Persistence
+                    headline = response.get("headline", title)
+                    summary_dict = response.get("summary", {})
+                    category = response.get("category", "Tecnologia")
+                    tags = response.get("tags", [])
+                    meta_desc = response.get("meta_description", "")
+                    scores = response.get("scores", {})
+                    
+                    # Format markdown summary for fallback and existing layouts
+                    formatted_summary = self._format_summary_as_markdown(summary_dict)
+                    
+                    with get_db_session() as session:
+                        db_item = session.query(News).filter(News.id == news_id).first()
+                        if db_item:
+                            # Update specific premium fields
+                            db_item.editorial_title = headline
+                            db_item.editorial_summary = json.dumps(summary_dict, ensure_ascii=False)
+                            db_item.editorial_category = category
+                            db_item.editorial_tags = json.dumps(tags, ensure_ascii=False)
+                            db_item.meta_description = meta_desc
+                            db_item.editorial_scores = scores
+                            db_item.editorial_status = "publicado"
+                            
+                            # Overwrite standard fields so the existing UI/Telegram gets the premium version
+                            db_item.translated_title = headline
+                            db_item.ai_summary = formatted_summary
+                            db_item.category = category
+                            
+                            session.commit()
+                            
+                    logger.info(f"Successfully published premium editorial for article ID {news_id}")
+                    processed_count += 1
+                    
+                except Exception as e:
+                    logger.error(f"Failed to generate editorial for article ID {news_id}: {e}")
+                    with get_db_session() as session:
+                        db_item = session.query(News).filter(News.id == news_id).first()
+                        if db_item:
+                            db_item.editorial_status = "falha"
+                            session.commit()
+                    failed_count += 1
+                    
+            report = (
+                f"Editorial processing completed: "
+                f"{processed_count} published, "
+                f"{duplicate_count} duplicates skipped, "
+                f"{failed_count} failures."
+            )
+            logger.info(report)
+            return report
+            
+        except Exception as e:
+            logger.exception(f"Critical error in editorial pipeline: {e}")
+            return f"Critical failure: {e}"
+
+    def _format_summary_as_markdown(self, summary_dict: Dict[str, Any]) -> str:
+        """Formats the structured executive summary dict into a clean Markdown block."""
+        what_happened = summary_dict.get("what_happened", "").strip()
+        why_it_matters = summary_dict.get("why_it_matters", "").strip()
+        possible_impacts = summary_dict.get("possible_impacts", "").strip()
+        key_points = summary_dict.get("key_points", [])
+        
+        md_parts = []
+        if what_happened:
+            md_parts.append(f"🔍 **O que aconteceu?**\n{what_happened}")
+        if why_it_matters:
+            md_parts.append(f"💡 **Por que isso importa?**\n{why_it_matters}")
+        if possible_impacts:
+            md_parts.append(f"⚡ **Possíveis impactos**\n{possible_impacts}")
+        if key_points:
+            points_str = "\n".join([f"- {kp}" for kp in key_points if kp.strip()])
+            md_parts.append(f"📌 **Pontos-chave**\n{points_str}")
+            
+        return "\n\n".join(md_parts)

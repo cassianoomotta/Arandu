@@ -11,9 +11,14 @@ agent_settings = _config.agent_settings
 LocalFilter = _filters.LocalFilter
 calculate_local_heuristic_score = _utils.calculate_local_heuristic_score
 
+# Dynamic import for "Editor Executivo" agent
+_editor_orch = importlib.import_module("agent.Editor Executivo.orchestrator")
+EditorExecutivoOrchestrator = _editor_orch.EditorExecutivoOrchestrator
+
 __all__ = [
     "AgentOrchestrator",
     "agent_settings",
     "LocalFilter",
-    "calculate_local_heuristic_score"
+    "calculate_local_heuristic_score",
+    "EditorExecutivoOrchestrator"
 ]

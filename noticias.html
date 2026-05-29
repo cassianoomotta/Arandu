@@ -610,6 +610,161 @@
                 if (category === "empreendedorismo") iconName = "bar-chart-3";
                 else if (category === "investimentos") iconName = "trending-up";
 
+                // Check for editorial / premium additions
+                let premiumBadgeHtml = '';
+                let scoresHtml = '';
+                let tagsHtml = '';
+
+                if (item.editorial_status === "publicado") {
+                    premiumBadgeHtml = `
+                        <span class="absolute top-4 right-4 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-black text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded shadow-[0_0_12px_rgba(245,158,11,0.5)]">
+                            Análise Premium ★
+                        </span>
+                    `;
+
+                    const scores = item.editorial_scores || {};
+                    const clarity = scores.clarity_score || 0;
+                    const impact = scores.impact_score || 0;
+                    const innovation = scores.innovation_score || 0;
+
+                    scoresHtml = `
+                        <div class="grid grid-cols-3 gap-2 border-t border-white/5 pt-3 mt-3 text-center">
+                            <div>
+                                <span class="block text-[8px] text-gray-500 uppercase tracking-wider font-bold">Clareza</span>
+                                <span class="text-[11px] font-bold text-emerald-400 font-mono">${clarity}%</span>
+                            </div>
+                            <div>
+                                <span class="block text-[8px] text-gray-500 uppercase tracking-wider font-bold">Impacto</span>
+                                <span class="text-[11px] font-bold text-amber-400 font-mono">${impact}%</span>
+                            </div>
+                            <div>
+                                <span class="block text-[8px] text-gray-500 uppercase tracking-wider font-bold">Inovação</span>
+                                <span class="text-[11px] font-bold text-cyan-400 font-mono">${innovation}%</span>
+                            </div>
+                        </div>
+                    `;
+
+                    let parsedTags = [];
+                    if (item.editorial_tags) {
+                        try {
+                            parsedTags = typeof item.editorial_tags === 'string' ? JSON.parse(item.editorial_tags) : item.editorial_tags;
+                        } catch (e) {
+                            parsedTags = [];
+                        }
+                    }
+                    if (parsedTags && parsedTags.length > 0) {
+                        const tagsList = parsedTags.map(tag => `<span class="bg-white/5 text-gray-400 text-[8px] px-1.5 py-0.5 rounded border border-white/5 font-mono">#${tag}</span>`).join('');
+                        tagsHtml = `
+                            <div class="flex flex-wrap gap-1 mt-3">
+                                ${tagsList}
+                            </div>
+                        `;
+                    }
+                }
+
+                let summaryContainerHtml = '';
+                let summaryObj = null;
+                if (item.editorial_status === "publicado" && item.editorial_summary) {
+                    try {
+                        summaryObj = typeof item.editorial_summary === 'string' ? JSON.parse(item.editorial_summary) : item.editorial_summary;
+                    } catch (e) {
+                        console.error("Error parsing editorial summary:", e);
+                    }
+                }
+
+                if (item.editorial_status === "publicado" && summaryObj) {
+                    const whatHappened = summaryObj.what_happened || "";
+                    const whyItMatters = summaryObj.why_it_matters || "";
+                    const possibleImpacts = summaryObj.possible_impacts || "";
+                    const keyPoints = summaryObj.key_points || [];
+
+                    summaryContainerHtml = `
+                        <div class="flex-grow flex flex-col mb-3">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-2 flex items-center gap-1.5">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-gold animate-pulse"></i>
+                                Análise Editorial Premium
+                            </span>
+                            <div class="space-y-1 bg-white/[0.01] border border-white/5 rounded-xl p-3">
+                                <!-- O que aconteceu -->
+                                <div class="border-b border-white/5 pb-1">
+                                    <button onclick="toggleAccordion(event, 'acc-${item.id}-what')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">🔍</span>
+                                            O que aconteceu?
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${item.id}-what" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <p class="text-[11px] text-gray-400 font-light pl-5 pt-0.5 leading-relaxed pb-1.5">
+                                            ${whatHappened}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Por que importa -->
+                                <div class="border-b border-white/5 pb-1 pt-1">
+                                    <button onclick="toggleAccordion(event, 'acc-${item.id}-why')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">💡</span>
+                                            Por que isso importa?
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${item.id}-why" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <p class="text-[11px] text-gray-400 font-light pl-5 pt-0.5 leading-relaxed pb-1.5">
+                                            ${whyItMatters}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Impactos -->
+                                <div class="border-b border-white/5 pb-1 pt-1">
+                                    <button onclick="toggleAccordion(event, 'acc-${item.id}-impact')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">⚡</span>
+                                            Possíveis impactos
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${item.id}-impact" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <p class="text-[11px] text-gray-400 font-light pl-5 pt-0.5 leading-relaxed pb-1.5">
+                                            ${possibleImpacts}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Pontos chave -->
+                                <div class="pt-1">
+                                    <button onclick="toggleAccordion(event, 'acc-${item.id}-points')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">📌</span>
+                                            Pontos-chave
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${item.id}-points" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <ul class="list-disc list-outside pl-9 pr-2 pt-0.5 text-[11px] text-gray-400 font-light leading-relaxed space-y-1 pb-1.5">
+                                            ${keyPoints.map(pt => `<li>${pt}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    summaryContainerHtml = `
+                        <div class="flex-grow flex flex-col mb-3">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-2 flex items-center gap-1.5">
+                                <i data-lucide="${iconName}" class="w-3.5 h-3.5 text-gold"></i>
+                                Resumo Executivo (IA)
+                            </span>
+                            <ul class="space-y-2.5 text-sm text-gray-400 flex-grow">
+                                ${pointsHtml}
+                            </ul>
+                        </div>
+                    `;
+                }
+
                 const card = document.createElement('div');
                 card.className = "glass-panel rounded-2xl overflow-hidden hover:border-gold/30 hover:bg-white/[0.04] transition-all duration-500 flex flex-col h-full group";
                 card.innerHTML = `
@@ -618,6 +773,7 @@
                         <span class="absolute top-4 left-4 bg-gold/95 backdrop-blur text-black text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded">
                             ${formattedCategory}
                         </span>
+                        ${premiumBadgeHtml}
                         <span class="absolute bottom-4 right-4 bg-black/60 backdrop-blur text-[10px] text-gray-300 px-2 py-0.5 rounded font-mono">
                             ${dateStr}
                         </span>
@@ -628,14 +784,10 @@
                         </h3>
                         
                         <div class="border-t border-white/5 pt-4 flex-grow flex flex-col">
-                            <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-3 flex items-center gap-1.5">
-                                <i data-lucide="${iconName}" class="w-3.5 h-3.5 text-gold"></i>
-                                Resumo Executivo (IA)
-                            </span>
-                            <ul class="space-y-2.5 text-sm text-gray-400 mb-6 flex-grow">
-                                ${pointsHtml}
-                            </ul>
-                            <div class="flex items-center justify-between pt-2 border-t border-white/5 mt-auto">
+                            ${summaryContainerHtml}
+                            ${tagsHtml}
+                            ${scoresHtml}
+                            <div class="flex items-center justify-between pt-4 border-t border-white/5 mt-4">
                                 <span class="text-[10px] text-gray-500 font-medium">Fonte: ${domain}</span>
                                 <a href="${item.link}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold hover:text-gold-light transition duration-300">
                                     Ler Fonte
@@ -648,7 +800,21 @@
                 container.appendChild(card);
             });
 
-            lucide.createIcons();
+        }
+
+        function toggleAccordion(event, id) {
+            event.stopPropagation();
+            const content = document.getElementById(id);
+            const button = event.currentTarget;
+            const icon = button.querySelector('.accordion-icon');
+
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+                icon.style.transform = 'rotate(180deg)';
+            }
         }
 
         // Category tab navigation controller

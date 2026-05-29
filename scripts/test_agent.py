@@ -13,10 +13,7 @@ if project_root not in sys.path:
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from agent.config import agent_settings
-from agent.filters import LocalFilter
-from agent.utils import calculate_local_heuristic_score
-from agent.orchestrator import AgentOrchestrator
+from agent import agent_settings, LocalFilter, calculate_local_heuristic_score, AgentOrchestrator
 from database.models import Base, News, Source, SendStatus
 
 # Create in-memory SQLite database for testing
@@ -35,6 +32,8 @@ def mock_get_db_session():
         raise
     finally:
         session.close()
+
+curador_orch_mod = sys.modules["agent.Curador de Notícias.orchestrator"]
 
 class TestCurationAgent(unittest.TestCase):
     
@@ -81,8 +80,8 @@ class TestCurationAgent(unittest.TestCase):
         self.assertEqual(len(filtered), 1)
         self.assertEqual(filtered[0]["id"], 3)
 
-    @patch("agent.orchestrator.GeminiGateway")
-    @patch("agent.orchestrator.get_db_session", new=mock_get_db_session)
+    @patch.object(curador_orch_mod, "GeminiGateway")
+    @patch.object(curador_orch_mod, "get_db_session", new=mock_get_db_session)
     def test_orchestrator_pipeline(self, mock_gateway_cls):
         """Test full orchestration with in-memory SQLite and mocked gateway."""
         # Setup mock gateway

@@ -386,6 +386,19 @@ async def main(is_manual: bool = False):
                 except Exception as e:
                     logger.error(f"Curation Agent pipeline failed: {str(e)}")
 
+            # Running Editorial Agent (Editor Executivo) pipeline
+            elapsed = time.time() - start_time
+            if settings.DISABLE_TIMEOUTS or elapsed < 8.0:
+                logger.info("Scraper: Running Editorial Agent (Editor Executivo) pipeline...")
+                update_pipeline_status(phase="Redação IA", detail="Gerando resumos premium executivos e pontuações...")
+                try:
+                    from agent import EditorExecutivoOrchestrator
+                    editor = EditorExecutivoOrchestrator()
+                    editorial_report = await asyncio.to_thread(editor.run_editorial_pipeline)
+                    logger.info(f"Editorial Agent report:\n{editorial_report}")
+                except Exception as e:
+                    logger.error(f"Editorial Agent pipeline failed: {str(e)}")
+
             # 6. Dispatch pending notifications to Telegram
             elapsed = time.time() - start_time
             if settings.DISABLE_TIMEOUTS or elapsed < 8.0:
