@@ -385,6 +385,7 @@ async def main(is_manual: bool = False):
                     logger.info(f"Curation Agent report:\n{report}")
                 except Exception as e:
                     logger.error(f"Curation Agent pipeline failed: {str(e)}")
+                    raise e
 
             # Running Editorial Agent (Editor Executivo) pipeline
             elapsed = time.time() - start_time
@@ -398,6 +399,21 @@ async def main(is_manual: bool = False):
                     logger.info(f"Editorial Agent report:\n{editorial_report}")
                 except Exception as e:
                     logger.error(f"Editorial Agent pipeline failed: {str(e)}")
+                    raise e
+
+            # Running website publication phase (Divulgação no Site)
+            elapsed = time.time() - start_time
+            if settings.DISABLE_TIMEOUTS or elapsed < 8.0:
+                logger.info("Scraper: Publishing news on website...")
+                update_pipeline_status(phase="Divulgação no Site", detail="Divulgando notícias qualificadas no portal...")
+                try:
+                    with get_db_session() as session:
+                        published_count = session.query(News).filter(News.editorial_status == "publicado").count()
+                    logger.info(f"Divulgação no Site: {published_count} articles currently published on site.")
+                    update_pipeline_status(phase="Divulgação no Site", detail=f"Divulgação concluída. Total de {published_count} notícias ativas no portal.")
+                except Exception as e:
+                    logger.error(f"Divulgação no Site failed: {str(e)}")
+                    raise e
 
             # 6. Dispatch pending notifications to Telegram
             elapsed = time.time() - start_time
@@ -411,6 +427,7 @@ async def main(is_manual: bool = False):
                     logger.info(f"Scraper Dispatcher: Successfully dispatched {sent_count} notifications.")
                 except Exception as e:
                     logger.error(f"Scraper Dispatcher: Notification dispatch failed: {str(e)}")
+                    raise e
             else:
                 logger.warning(f"Skipping Telegram notification dispatch to avoid Vercel timeout (elapsed: {elapsed:.2f}s)")
  
@@ -429,6 +446,7 @@ async def main(is_manual: bool = False):
                         logger.info(f"Scraper Cleanup: Purged {deleted_count} news articles older than 20 days.")
                 except Exception as e:
                     logger.error(f"Scraper Cleanup: News cleanup failed: {str(e)}")
+                    raise e
             else:
                 logger.warning(f"Skipping old news purge to avoid Vercel timeout (elapsed: {elapsed:.2f}s)")
  
@@ -442,6 +460,7 @@ async def main(is_manual: bool = False):
                     await asyncio.to_thread(heal_incomplete_summaries, limit=3)
                 except Exception as e:
                     logger.error(f"Scraper Maintenance: Summary healing failed: {str(e)}")
+                    raise e
             else:
                 logger.warning(f"Skipping summary healing to avoid Vercel timeout (elapsed: {elapsed:.2f}s)")
 

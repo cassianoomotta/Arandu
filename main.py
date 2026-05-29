@@ -39,6 +39,7 @@ async def execute_scheduled_ingestion():
     3. Editor Executivo: Full-text scraping, editorial synthesis
     4. Notification Dispatch: Telegram delivery of published articles
     """
+    from core.status import update_pipeline_status
     logger.info("Background Scheduler: Starting full news curation cycle...")
     try:
         # 1. Run scraping, translation, and AI summarization
@@ -52,6 +53,8 @@ async def execute_scheduled_ingestion():
             logger.info(f"Background Scheduler: Curador finished. {curation_report}")
         except Exception as e:
             logger.error(f"Background Scheduler: Curador de Notícias failed: {str(e)}")
+            update_pipeline_status(phase="Curadoria IA", error=str(e))
+            raise e
         
         # 3. Run Editor Executivo (Editorial synthesis pipeline)
         try:
@@ -61,14 +64,35 @@ async def execute_scheduled_ingestion():
             logger.info(f"Background Scheduler: Editor Executivo finished. {editorial_report}")
         except Exception as e:
             logger.error(f"Background Scheduler: Editor Executivo failed: {str(e)}")
+            update_pipeline_status(phase="Redação IA", error=str(e))
+            raise e
         
+        # 3.5. Divulgação no Site
+        try:
+            logger.info("Background Scheduler: Divulgando no Site...")
+            update_pipeline_status(phase="Divulgação no Site", detail="Divulgando notícias qualificadas no portal...")
+            with get_db_session() as session:
+                published_count = session.query(News).filter(News.editorial_status == "publicado").count()
+            update_pipeline_status(phase="Divulgação no Site", detail=f"Divulgação concluída. Total de {published_count} notícias ativas.")
+        except Exception as e:
+            logger.error(f"Background Scheduler: Divulgação failed: {str(e)}")
+            update_pipeline_status(phase="Divulgação no Site", error=str(e))
+            raise e
+
         # 4. Dispatch pending notifications via TelegramNotifier strategy
-        notifier = TelegramNotifier()
-        await dispatch_pending_notifications(notifier)
+        try:
+            notifier = TelegramNotifier()
+            await dispatch_pending_notifications(notifier)
+        except Exception as e:
+            logger.error(f"Background Scheduler: Notificações failed: {str(e)}")
+            update_pipeline_status(phase="Notificações", error=str(e))
+            raise e
         
+        update_pipeline_status(is_end=True)
         logger.info("Background Scheduler: Full news curation cycle completed successfully.")
     except Exception as e:
         logger.error(f"Background Scheduler: News curation cycle failed: {str(e)}")
+        update_pipeline_status(error=str(e))
 
 
 async def execute_news_cleanup():
@@ -494,6 +518,7 @@ async def force_manual_collection(
     logger.info(f"Admin '{admin_claims.get('email')}' triggered manual collection.")
     
     async def run_manual_pipeline():
+        from core.status import update_pipeline_status
         try:
             logger.info("Manual Pipeline: Starting execution...")
             await run_scraper(is_manual=True)
@@ -505,6 +530,8 @@ async def force_manual_collection(
                 curator.run_curation_pipeline()
             except Exception as e:
                 logger.error(f"Manual Pipeline: Curador failed: {str(e)}")
+                update_pipeline_status(phase="Curadoria IA", error=str(e))
+                raise e
             
             # Run Editor Executivo agent
             try:
@@ -513,12 +540,37 @@ async def force_manual_collection(
                 editor.run_editorial_pipeline()
             except Exception as e:
                 logger.error(f"Manual Pipeline: Editor Executivo failed: {str(e)}")
+                update_pipeline_status(phase="Redação IA", error=str(e))
+                raise e
             
-            notifier = TelegramNotifier()
-            await dispatch_pending_notifications(notifier)
+            # Run Divulgação no Site
+            try:
+                logger.info("Manual Pipeline: Divulgando no Site...")
+                update_pipeline_status(phase="Divulgação no Site", detail="Divulgando notícias qualificadas no portal...")
+                with get_db_session() as session:
+                    published_count = session.query(News).filter(News.editorial_status == "publicado").count()
+                update_pipeline_status(phase="Divulgação no Site", detail=f"Divulgação concluída. Total de {published_count} notícias ativas.")
+            except Exception as e:
+                logger.error(f"Manual Pipeline: Divulgação failed: {str(e)}")
+                update_pipeline_status(phase="Divulgação no Site", error=str(e))
+                raise e
+            
+            # Run Notificações
+            try:
+                logger.info("Manual Pipeline: Enviando Notificações...")
+                notifier = TelegramNotifier()
+                await dispatch_pending_notifications(notifier)
+            except Exception as e:
+                logger.error(f"Manual Pipeline: Notificações failed: {str(e)}")
+                update_pipeline_status(phase="Notificações", error=str(e))
+                raise e
+            
+            update_pipeline_status(is_end=True)
             logger.info("Manual Pipeline: Finished successfully.")
         except Exception as e:
             logger.error(f"Manual Pipeline: Execution failed: {str(e)}")
+            update_pipeline_status(error=str(e))
+            raise e
 
     try:
         # Await the pipeline execution directly so that serverless functions (like Vercel)
@@ -561,6 +613,7 @@ async def vercel_cron_collection(
     logger.info("Vercel Cron triggered scheduled news collection.")
     
     async def run_cron_pipeline():
+        from core.status import update_pipeline_status
         try:
             logger.info("Cron Pipeline: Starting execution...")
             await run_scraper()
@@ -572,6 +625,8 @@ async def vercel_cron_collection(
                 curator.run_curation_pipeline()
             except Exception as e:
                 logger.error(f"Cron Pipeline: Curador failed: {str(e)}")
+                update_pipeline_status(phase="Curadoria IA", error=str(e))
+                raise e
             
             # Run Editor Executivo agent
             try:
@@ -580,12 +635,37 @@ async def vercel_cron_collection(
                 editor.run_editorial_pipeline()
             except Exception as e:
                 logger.error(f"Cron Pipeline: Editor Executivo failed: {str(e)}")
+                update_pipeline_status(phase="Redação IA", error=str(e))
+                raise e
             
-            notifier = TelegramNotifier()
-            await dispatch_pending_notifications(notifier)
+            # Run Divulgação no Site
+            try:
+                logger.info("Cron Pipeline: Divulgando no Site...")
+                update_pipeline_status(phase="Divulgação no Site", detail="Divulgando notícias qualificadas no portal...")
+                with get_db_session() as session:
+                    published_count = session.query(News).filter(News.editorial_status == "publicado").count()
+                update_pipeline_status(phase="Divulgação no Site", detail=f"Divulgação concluída. Total de {published_count} notícias ativas.")
+            except Exception as e:
+                logger.error(f"Cron Pipeline: Divulgação failed: {str(e)}")
+                update_pipeline_status(phase="Divulgação no Site", error=str(e))
+                raise e
+            
+            # Run Notificações
+            try:
+                logger.info("Cron Pipeline: Enviando Notificações...")
+                notifier = TelegramNotifier()
+                await dispatch_pending_notifications(notifier)
+            except Exception as e:
+                logger.error(f"Cron Pipeline: Notificações failed: {str(e)}")
+                update_pipeline_status(phase="Notificações", error=str(e))
+                raise e
+            
+            update_pipeline_status(is_end=True)
             logger.info("Cron Pipeline: Finished successfully.")
         except Exception as e:
             logger.error(f"Cron Pipeline: Execution failed: {str(e)}")
+            update_pipeline_status(error=str(e))
+            raise e
 
     try:
         # Await the pipeline execution directly so that serverless functions (like Vercel)

@@ -41,8 +41,7 @@ def update_pipeline_status(
                 state.last_error = None
             elif error:
                 state.status = "failed"
-                state.current_phase = None
-                state.current_detail = None
+                # Keep state.current_phase to show which phase failed on the frontend
                 state.last_error = error
                 if _run_start_time:
                     state.last_duration_seconds = time.time() - _run_start_time
