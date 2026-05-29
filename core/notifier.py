@@ -187,8 +187,28 @@ async def dispatch_pending_notifications(notifier: BaseNotifier) -> int:
     sent_count = 0
 
     for news in pending_items:
-        title = news.translated_title or news.original_title
+        title = news.editorial_title or news.translated_title or news.original_title
         summary = news.ai_summary or "Resumo não disponível."
+        
+        # If processed by Editor Executivo, format premium summary for Telegram
+        if news.editorial_status == "publicado" and news.editorial_summary:
+            import json
+            try:
+                summary_dict = json.loads(news.editorial_summary) if isinstance(news.editorial_summary, str) else news.editorial_summary
+                if isinstance(summary_dict, dict):
+                    what_happened = summary_dict.get("what_happened", "")
+                    why_it_matters = summary_dict.get("why_it_matters", "")
+                    key_points = summary_dict.get("key_points", [])
+                    
+                    bullets = "\n".join([f"• {pt}" for pt in key_points])
+                    summary = (
+                        f"🔍 <b>O que aconteceu:</b> {what_happened}\n\n"
+                        f"💡 <b>Por que importa:</b> {why_it_matters}\n\n"
+                        f"📌 <b>Pontos-chave:</b>\n{bullets}"
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to parse editorial_summary for Telegram: {str(e)}")
+                
         link = news.link
         image_url = news.image_url
         
