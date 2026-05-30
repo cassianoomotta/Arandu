@@ -379,7 +379,7 @@ async def main(is_manual: bool = False):
                 logger.info("Scraper: Running Curation Agent pipeline...")
                 update_pipeline_status(phase="Curadoria IA", detail="Executando curadoria de notícias em duas passagens...")
                 try:
-                    from agent.orchestrator import AgentOrchestrator
+                    from agent import AgentOrchestrator
                     orchestrator = AgentOrchestrator()
                     report = await asyncio.to_thread(orchestrator.run_curation_pipeline)
                     logger.info(f"Curation Agent report:\n{report}")
