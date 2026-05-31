@@ -50,6 +50,21 @@ class EditorExecutivoOrchestrator:
         logger.info("Initializing Editorial Agent (Editor Executivo) Pipeline...")
         
         try:
+            # Clean up stuck 'processando' statuses from crashed runs (older than 2 hours)
+            with get_db_session() as session:
+                stuck_cutoff = datetime.utcnow() - timedelta(hours=2)
+                stuck_count = (
+                    session.query(News)
+                    .filter(
+                        News.editorial_status == "processando",
+                        News.updated_at < stuck_cutoff
+                    )
+                    .update({"editorial_status": "pendente"}, synchronize_session=False)
+                )
+                if stuck_count > 0:
+                    logger.info(f"Reset {stuck_count} stuck articles in 'processando' state back to 'pendente'.")
+                    session.commit()
+
             with get_db_session() as session:
                 # 1. Fetch news articles that are curated and pending editorial processing
                 pending_news = (
@@ -61,6 +76,7 @@ class EditorExecutivoOrchestrator:
                             News.editorial_status == None
                         )
                     )
+                    .limit(10)
                     .all()
                 )
                 
@@ -104,12 +120,16 @@ class EditorExecutivoOrchestrator:
             
             for news_item in pending_data:
                 news_id = news_item["id"]
-                # Update status to processando to prevent concurrent execution picking it up
+                # Update status to processando to prevent concurrent execution picking it up.
+                # Only proceed if the editorial_status is still 'pendente' or None.
                 with get_db_session() as session:
                     db_item = session.query(News).filter(News.id == news_id).first()
-                    if db_item:
+                    if db_item and db_item.editorial_status in ["pendente", None]:
                         db_item.editorial_status = "processando"
                         session.commit()
+                    else:
+                        logger.info(f"Article ID {news_id} already being processed or completed elsewhere. Skipping.")
+                        continue
                 
                 title = news_item["title"]
                 logger.info(f"Processing editorial for: '{title[:50]}...'")
@@ -214,6 +234,11 @@ class EditorExecutivoOrchestrator:
                             db_item.editorial_status = "falha"
                             session.commit()
                     failed_count += 1
+                    
+                    # Stop processing further items if the daily API limit is reached
+                    if "daily limit" in str(e).lower() or "cota diária" in str(e).lower() or "quota" in str(e).lower():
+                        logger.warning("Gemini daily API limit reached. Stopping further editorial processing.")
+                        break
                     
             report = (
                 f"Editorial processing completed: "
