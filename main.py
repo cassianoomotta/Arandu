@@ -45,6 +45,11 @@ async def execute_scheduled_ingestion():
         # 1. Run scraping, translation, and AI summarization
         await run_scraper()
         
+        import os
+        if os.getenv("ONLY_EDITOR", "false").lower() == "true":
+            logger.info("Background Scheduler: ONLY_EDITOR mode is active. Skipping remaining stages.")
+            return
+        
         # 2. Run Curador de Notícias (Agent-based curation pipeline)
         try:
             logger.info("Background Scheduler: Running Curador de Notícias agent...")
@@ -510,18 +515,25 @@ def get_news(
 
 @app.post("/api/admin/coleta-manual", summary="Forçar Execução do Pipeline (Admin)")
 async def force_manual_collection(
+    only_editor: bool = Query(False, description="Executar apenas o agente Editor Executivo"),
     admin_claims: dict = Depends(require_admin_role)
 ):
     """
     Protected Admin endpoint that runs the news crawler, AI processor, and notification dispatcher.
     """
-    logger.info(f"Admin '{admin_claims.get('email')}' triggered manual collection.")
+    logger.info(f"Admin '{admin_claims.get('email')}' triggered manual collection (only_editor={only_editor}).")
     
     async def run_manual_pipeline():
+        import os
         from core.status import update_pipeline_status
+        is_only_editor = only_editor or os.getenv("ONLY_EDITOR", "false").lower() == "true"
         try:
             logger.info("Manual Pipeline: Starting execution...")
-            await run_scraper(is_manual=True)
+            await run_scraper(is_manual=True, only_editor=is_only_editor)
+            
+            if is_only_editor:
+                logger.info("Manual Pipeline: ONLY_EDITOR mode is active. Skipping remaining stages.")
+                return
             
             # Run Curador de Notícias agent
             try:
@@ -617,6 +629,11 @@ async def vercel_cron_collection(
         try:
             logger.info("Cron Pipeline: Starting execution...")
             await run_scraper()
+            
+            import os
+            if os.getenv("ONLY_EDITOR", "false").lower() == "true":
+                logger.info("Cron Pipeline: ONLY_EDITOR mode is active. Skipping remaining stages.")
+                return
             
             # Run Curador de Notícias agent
             try:

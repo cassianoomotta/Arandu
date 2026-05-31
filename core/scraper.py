@@ -209,9 +209,62 @@ async def process_source(
     return new_articles
 
 
-async def main(is_manual: bool = False):
+async def main(is_manual: bool = False, only_editor: bool = False):
     import time
+    import os
     start_time = time.time()
+    
+    is_only_editor = only_editor or os.getenv("ONLY_EDITOR", "false").lower() == "true"
+    if is_only_editor:
+        logger.info("Initializing async news scraper in ONLY_EDITOR mode...")
+        # Start directly at Redação IA
+        update_pipeline_status(is_start=True, phase="Redação IA", detail="Iniciando processamento do Editor Executivo...")
+        try:
+            # 1. Running Editorial Agent (Editor Executivo) pipeline
+            logger.info("Scraper: Running Editorial Agent (Editor Executivo) pipeline...")
+            update_pipeline_status(phase="Redação IA", detail="Gerando resumos premium executivos e pontuações...")
+            try:
+                from agent import EditorExecutivoOrchestrator
+                editor = EditorExecutivoOrchestrator()
+                editorial_report = await asyncio.to_thread(editor.run_editorial_pipeline)
+                logger.info(f"Editorial Agent report:\n{editorial_report}")
+            except Exception as e:
+                logger.error(f"Editorial Agent pipeline failed: {str(e)}")
+                raise e
+
+            # 2. Running website publication phase (Divulgação no Site)
+            logger.info("Scraper: Publishing news on website...")
+            update_pipeline_status(phase="Divulgação no Site", detail="Divulgando notícias qualificadas no portal...")
+            try:
+                with get_db_session() as session:
+                    published_count = session.query(News).filter(News.editorial_status == "publicado").count()
+                logger.info(f"Divulgação no Site: {published_count} articles currently published on site.")
+                update_pipeline_status(phase="Divulgação no Site", detail=f"Divulgação concluída. Total de {published_count} notícias ativas no portal.")
+            except Exception as e:
+                logger.error(f"Divulgação no Site failed: {str(e)}")
+                raise e
+
+            # 3. Dispatch pending notifications to Telegram
+            logger.info("Scraper Dispatcher: Dispatching pending notifications...")
+            update_pipeline_status(phase="Notificações", detail="Enviando notícias qualificadas ao Telegram...")
+            try:
+                from core.notifier import TelegramNotifier, dispatch_pending_notifications
+                notifier = TelegramNotifier()
+                sent_count = await dispatch_pending_notifications(notifier)
+                logger.info(f"Scraper Dispatcher: Successfully dispatched {sent_count} notifications.")
+            except Exception as e:
+                logger.error(f"Scraper Dispatcher: Notification dispatch failed: {str(e)}")
+                raise e
+
+            # Success ending
+            update_pipeline_status(is_end=True)
+            logger.info("ONLY_EDITOR pipeline finished successfully.")
+        except Exception as e:
+            logger.error(f"Pipeline error in ONLY_EDITOR mode: {str(e)}")
+            update_pipeline_status(error=str(e))
+            raise e
+        return
+
     logger.info("Initializing async news scraper...")
     update_pipeline_status(is_start=True, phase="Inicialização", detail="Verificando fontes e artigos recentes no banco...")
     try:

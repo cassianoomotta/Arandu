@@ -34,17 +34,22 @@ class EditorExecutivoOrchestrator:
     def run_editorial_pipeline(self) -> str:
         """
         Runs the full editorial processing pipeline synchronously.
-        Can be wrapped in a thread pool for async execution.
+        Runs in a dedicated thread to avoid conflicting with existing running event loops.
         """
         import asyncio
-        # Create a new event loop or use the existing one to run the async scraping
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
+        from concurrent.futures import ThreadPoolExecutor
+
+        def _run():
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            
-        return loop.run_until_complete(self.run_editorial_pipeline_async())
+            try:
+                return loop.run_until_complete(self.run_editorial_pipeline_async())
+            finally:
+                loop.close()
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_run)
+            return future.result()
 
     async def run_editorial_pipeline_async(self) -> str:
         logger.info("Initializing Editorial Agent (Editor Executivo) Pipeline...")
