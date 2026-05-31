@@ -1,5 +1,6 @@
 import logging
 import time
+import threading
 from datetime import datetime
 from database.connection import get_db_session
 from database.models import PipelineStatus
@@ -8,6 +9,52 @@ logger = logging.getLogger("pipeline_status")
 
 # Global track for run start time for duration calculation
 _run_start_time = None
+
+# Heartbeat thread variables
+_heartbeat_thread = None
+_heartbeat_stop_event = None
+
+def _run_heartbeat():
+    logger.info("Heartbeat thread started.")
+    while _heartbeat_stop_event and not _heartbeat_stop_event.is_set():
+        # Sleep for 15 seconds, checking the stop event periodically (every 0.5s)
+        for _ in range(30):
+            if _heartbeat_stop_event is None or _heartbeat_stop_event.is_set():
+                break
+            time.sleep(0.5)
+        if _heartbeat_stop_event is None or _heartbeat_stop_event.is_set():
+            break
+            
+        # Update the updated_at timestamp in the database to signal life
+        try:
+            with get_db_session() as session:
+                state = session.query(PipelineStatus).filter(PipelineStatus.id == 1).first()
+                if state and state.status == "running":
+                    # Force updated_at update
+                    state.updated_at = datetime.utcnow()
+                    session.commit()
+                    logger.debug("Heartbeat: pipeline status updated_at touched.")
+                else:
+                    # If status is no longer running, stop the heartbeat thread
+                    break
+        except Exception as e:
+            logger.error(f"Heartbeat thread failed to touch status: {e}")
+    logger.info("Heartbeat thread stopped.")
+
+def start_heartbeat():
+    global _heartbeat_thread, _heartbeat_stop_event
+    stop_heartbeat() # Make sure any previous heartbeat is stopped
+    
+    _heartbeat_stop_event = threading.Event()
+    _heartbeat_thread = threading.Thread(target=_run_heartbeat, daemon=True, name="PipelineHeartbeat")
+    _heartbeat_thread.start()
+
+def stop_heartbeat():
+    global _heartbeat_thread, _heartbeat_stop_event
+    if _heartbeat_stop_event:
+        _heartbeat_stop_event.set()
+    _heartbeat_thread = None
+    _heartbeat_stop_event = None
 
 def update_pipeline_status(
     status: str = None,
@@ -39,6 +86,7 @@ def update_pipeline_status(
                 state.current_detail = detail or "Preparando pipeline de coleta..."
                 state.last_run_at = datetime.utcnow()
                 state.last_error = None
+                start_heartbeat()
             elif error:
                 state.status = "failed"
                 # Keep state.current_phase to show which phase failed on the frontend
@@ -46,6 +94,7 @@ def update_pipeline_status(
                 if _run_start_time:
                     state.last_duration_seconds = time.time() - _run_start_time
                     _run_start_time = None
+                stop_heartbeat()
             elif is_end:
                 state.status = "idle"
                 state.current_phase = None
@@ -56,9 +105,14 @@ def update_pipeline_status(
                 elif _run_start_time:
                     state.last_duration_seconds = time.time() - _run_start_time
                 _run_start_time = None
+                stop_heartbeat()
             else:
                 if status:
                     state.status = status
+                    if status != "running":
+                        stop_heartbeat()
+                    else:
+                        start_heartbeat()
                 if phase is not None:
                     state.current_phase = phase
                 if detail is not None:

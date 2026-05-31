@@ -883,15 +883,15 @@ def get_gemini_usage_stats(
 
 def check_and_reset_stuck_pipeline(session, status_entry):
     """
-    Checks if the pipeline status has been stuck in the 'running' state for more than 5 minutes.
-    In serverless environments like Vercel, processes are killed at the timeout limit,
-    leaving the status stuck. This auto-heals the state.
+    Checks if the pipeline status has been stuck in the 'running' state for more than 2 minutes.
+    Backed by a 15-second heartbeat thread in core/status.py, this detects crashed
+    or frozen serverless/VPS processes quickly without affecting slow runs.
     """
     if status_entry and status_entry.status == "running":
         from datetime import datetime, timedelta
         last_active = status_entry.updated_at or status_entry.last_run_at
-        if last_active and datetime.utcnow() - last_active > timedelta(minutes=5):
-            logger.warning("Pipeline status was stuck in 'running' for >5 minutes. Auto-resetting to failed (timeout).")
+        if last_active and datetime.utcnow() - last_active > timedelta(minutes=2):
+            logger.warning("Pipeline status was stuck in 'running' for >2 minutes (heartbeat stopped). Auto-resetting to failed.")
             status_entry.status = "failed"
             status_entry.current_phase = None
             status_entry.current_detail = None
