@@ -457,10 +457,11 @@ def get_news(
     size: int = Query(20, ge=1, le=100, description="Quantidade de registros por página"),
     source_id: Optional[int] = Query(None, description="Filtrar por ID da fonte de notícias"),
     send_status: Optional[SendStatus] = Query(None, description="Filtrar por status de envio (pendente, enviado_telegram, falha)"),
+    editorial_status: Optional[str] = Query(None, description="Filtrar por status editorial (pendente, publicado, falha, processando)"),
     order_by: Optional[str] = Query("published", description="Ordenação: 'published' (data de publicação) ou 'created' (data de inserção/processamento)")
 ):
     """
-    Returns a paginated list of curated news articles, filterable by source and telegram status.
+    Returns a paginated list of curated news articles, filterable by source, telegram status, and editorial status.
     """
     offset = (page - 1) * size
     
@@ -473,6 +474,8 @@ def get_news(
                 query = query.filter(News.source_id == source_id)
             if send_status is not None:
                 query = query.filter(News.send_status == send_status)
+            if editorial_status is not None:
+                query = query.filter(News.editorial_status == editorial_status)
                 
             # Count total results matching filters
             total = query.count()

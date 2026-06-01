@@ -467,6 +467,49 @@
                         </button>
                     </div>
 
+                    <!-- Filtros de Status Operacional -->
+                    <div class="flex flex-wrap items-center gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
+                            <i data-lucide="sliders-horizontal" class="w-4 h-4 text-gold"></i>
+                            Filtrar por:
+                        </div>
+                        
+                        <div class="flex flex-wrap items-center gap-3 flex-grow md:flex-grow-0">
+                            <!-- Select Editorial -->
+                            <div class="relative min-w-[180px]">
+                                <select id="filterEditorialStatus" onchange="handleFilterChange()" class="w-full bg-black border border-white/10 rounded-xl py-2 px-3 pr-8 text-xs text-gray-300 focus:outline-none focus:border-gold transition duration-200 appearance-none cursor-pointer">
+                                    <option value="all">Status Editorial: Todos</option>
+                                    <option value="publicado">Editorial: OK / Publicado</option>
+                                    <option value="pendente">Editorial: Pendente</option>
+                                    <option value="processando">Editorial: Processando</option>
+                                    <option value="falha">Editorial: Falhou</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-500">
+                                    <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- Select Telegram -->
+                            <div class="relative min-w-[180px]">
+                                <select id="filterTelegramStatus" onchange="handleFilterChange()" class="w-full bg-black border border-white/10 rounded-xl py-2 px-3 pr-8 text-xs text-gray-300 focus:outline-none focus:border-gold transition duration-200 appearance-none cursor-pointer">
+                                    <option value="all">Status Telegram: Todos</option>
+                                    <option value="enviado_telegram">Telegram: OK / Enviado</option>
+                                    <option value="pendente">Telegram: Pendente</option>
+                                    <option value="falha">Telegram: Falhou</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-500">
+                                    <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reset filters button -->
+                        <button onclick="resetFilters()" class="ml-auto text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition duration-200 flex items-center gap-1.5 focus:outline-none bg-white/5 border border-white/10 hover:border-white/20 px-3.5 py-2 rounded-xl">
+                            <i data-lucide="filter-x" class="w-3.5 h-3.5"></i>
+                            Limpar Filtros
+                        </button>
+                    </div>
+
                     <div class="glass-panel rounded-2xl overflow-hidden">
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm">
@@ -1328,6 +1371,39 @@
         let adminCurrentPage = 1;
         const adminPageSize = 20;
 
+        // Filter state variables
+        let selectedEditorialStatus = "all";
+        let selectedTelegramStatus = "all";
+
+        // Filter news by selected status filters
+        function getFilteredNews() {
+            return adminNews.filter(news => {
+                const editStatus = news.editorial_status || "pendente";
+                const telegramStatus = news.send_status || "pendente";
+                
+                const matchEditorial = selectedEditorialStatus === "all" || editStatus === selectedEditorialStatus;
+                const matchTelegram = selectedTelegramStatus === "all" || telegramStatus === selectedTelegramStatus;
+                
+                return matchEditorial && matchTelegram;
+            });
+        }
+
+        function handleFilterChange() {
+            selectedEditorialStatus = document.getElementById("filterEditorialStatus").value;
+            selectedTelegramStatus = document.getElementById("filterTelegramStatus").value;
+            adminCurrentPage = 1;
+            renderAdminTableBody();
+        }
+
+        function resetFilters() {
+            document.getElementById("filterEditorialStatus").value = "all";
+            document.getElementById("filterTelegramStatus").value = "all";
+            selectedEditorialStatus = "all";
+            selectedTelegramStatus = "all";
+            adminCurrentPage = 1;
+            renderAdminTableBody();
+        }
+
         // Fetch news for admin
         async function fetchAdminNews(resetPage = false) {
             if (!token) return;
@@ -1357,7 +1433,8 @@
                 if (resetPage) {
                     adminCurrentPage = 1;
                 } else {
-                    const totalPages = Math.ceil(adminNews.length / adminPageSize);
+                    const filteredNews = getFilteredNews();
+                    const totalPages = Math.ceil(filteredNews.length / adminPageSize);
                     if (adminCurrentPage > totalPages) {
                         adminCurrentPage = Math.max(1, totalPages);
                     }
@@ -1384,11 +1461,13 @@
             const tableBody = document.getElementById("newsTableBody");
             if (!tableBody) return;
 
-            if (adminNews.length === 0) {
+            const filteredNews = getFilteredNews();
+
+            if (filteredNews.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
                         <td colspan="5" class="p-8 text-center text-gray-500 font-light">
-                            Nenhuma notícia curada no banco de dados.
+                            Nenhuma notícia encontrada com os filtros selecionados.
                         </td>
                     </tr>
                 `;
@@ -1399,10 +1478,9 @@
 
             tableBody.innerHTML = "";
             const startIdx = (adminCurrentPage - 1) * adminPageSize;
-            const paginatedNews = adminNews.slice(startIdx, adminCurrentPage * adminPageSize);
+            const paginatedNews = filteredNews.slice(startIdx, adminCurrentPage * adminPageSize);
 
-            paginatedNews.forEach((news, relativeIdx) => {
-                const idx = startIdx + relativeIdx;
+            paginatedNews.forEach((news) => {
                 // Title formatting
                 const title = news.translated_title || news.original_title;
                 
@@ -1485,7 +1563,7 @@
                         </div>
                     </td>
                     <td class="p-4 text-center">
-                        <button onclick="openNewsModal(${idx})" class="px-3.5 py-1.5 rounded-lg bg-gold/10 hover:bg-gold/20 text-gold hover:text-gold-light text-xs font-bold uppercase tracking-wider transition flex items-center gap-1 mx-auto focus:outline-none">
+                        <button onclick="openNewsModal(${news.id})" class="px-3.5 py-1.5 rounded-lg bg-gold/10 hover:bg-gold/20 text-gold hover:text-gold-light text-xs font-bold uppercase tracking-wider transition flex items-center gap-1 mx-auto focus:outline-none">
                             <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                             Detalhes
                         </button>
@@ -1503,7 +1581,8 @@
             const paginationContainer = document.getElementById('admin-news-pagination');
             if (!paginationContainer) return;
             
-            const total = adminNews.length;
+            const filteredNews = getFilteredNews();
+            const total = filteredNews.length;
             const totalPages = Math.ceil(total / adminPageSize);
             
             if (totalPages <= 1) {
@@ -1584,8 +1663,8 @@
         }
 
         // Modal triggers
-        function openNewsModal(idx) {
-            const news = adminNews[idx];
+        function openNewsModal(newsId) {
+            const news = adminNews.find(n => n.id === newsId);
             if (!news) return;
 
             document.getElementById("modalOriginalTitle").textContent = news.original_title;
