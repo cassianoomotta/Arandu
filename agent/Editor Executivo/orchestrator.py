@@ -1,6 +1,7 @@
 import logging
 import importlib
 import json
+import asyncio
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 from sqlalchemy import or_
@@ -164,88 +165,114 @@ class EditorExecutivoOrchestrator:
                     duplicate_count += 1
                     continue
 
-                # B. Scraping and Cleaning
-                logger.info(f"Scraping full-text content from: {news_item['link']}")
-                clean_content = await fetch_and_clean_content(news_item["link"])
+                # Process the article with retry logic and abort on final failure
+                max_retries = 3
+                retry_delay = 2.0
+                success = False
                 
-                # If scraping returns empty content, fall back to title + short RSS summary
-                if not clean_content or len(clean_content.strip()) < 200:
-                    logger.warning(f"Scraping returned insufficient text. Falling back to RSS metadata.")
-                    clean_content = (
-                        f"Título: {title}\n\n"
-                        f"Resumo do RSS: {news_item['ai_summary'] or ''}"
-                    )
-                
-                # C. Local Semantic Compression
-                compressed = compress_text(
-                    clean_content, 
-                    min_words=editor_settings.MIN_COMPRESSION_WORDS, 
-                    max_words=editor_settings.MAX_COMPRESSION_WORDS
-                )
-                logger.info(f"Compressed content to {len(compressed.split())} words.")
+                for attempt in range(1, max_retries + 1):
+                    try:
+                        # B. Scraping and Cleaning
+                        logger.info(f"Scraping full-text content from: {news_item['link']} (Attempt {attempt}/{max_retries})")
+                        clean_content = await fetch_and_clean_content(news_item["link"])
+                        
+                        # If scraping returns empty content, fall back to title + short RSS summary
+                        if not clean_content or len(clean_content.strip()) < 200:
+                            logger.warning(f"Scraping returned insufficient text. Falling back to RSS metadata.")
+                            clean_content = (
+                                f"Título: {title}\n\n"
+                                f"Resumo do RSS: {news_item['ai_summary'] or ''}"
+                            )
+                        
+                        # C. Local Semantic Compression
+                        compressed = compress_text(
+                            clean_content, 
+                            min_words=editor_settings.MIN_COMPRESSION_WORDS, 
+                            max_words=editor_settings.MAX_COMPRESSION_WORDS
+                        )
+                        logger.info(f"Compressed content to {len(compressed.split())} words.")
 
-                # D. Gemini Call
-                prompt = (
-                    f"Notícia Original para Processamento Editorial:\n\n"
-                    f"Fonte original: {news_item['source_name']}\n"
-                    f"Título da notícia: {title}\n\n"
-                    f"Conteúdo do Artigo:\n{compressed}"
-                )
+                        # D. Gemini Call
+                        prompt = (
+                            f"Notícia Original para Processamento Editorial:\n\n"
+                            f"Fonte original: {news_item['source_name']}\n"
+                            f"Título da notícia: {title}\n\n"
+                            f"Conteúdo do Artigo:\n{compressed}"
+                        )
+                        
+                        logger.info("Calling Gemini API for editorial synthesis...")
+                        response = self.gateway.call_structured_api(
+                            prompt=prompt,
+                            system_instruction=EDITORIAL_SYSTEM_PROMPT,
+                            response_model=EditorialResponse
+                        )
+                        
+                        # E. Database Persistence
+                        headline = response.get("headline", title)
+                        summary_dict = response.get("summary", {})
+                        category = response.get("category", "Tecnologia")
+                        tags = response.get("tags", [])
+                        meta_desc = response.get("meta_description", "")
+                        scores = response.get("scores", {})
+                        
+                        # Format markdown summary for fallback and existing layouts
+                        formatted_summary = self._format_summary_as_markdown(summary_dict)
+                        
+                        with get_db_session() as session:
+                            db_item = session.query(News).filter(News.id == news_id).first()
+                            if db_item:
+                                # Update specific premium fields
+                                db_item.editorial_title = headline
+                                db_item.editorial_summary = json.dumps(summary_dict, ensure_ascii=False)
+                                db_item.editorial_category = category
+                                db_item.editorial_tags = json.dumps(tags, ensure_ascii=False)
+                                db_item.meta_description = meta_desc
+                                db_item.editorial_scores = scores
+                                db_item.editorial_status = "publicado"
+                                
+                                # Overwrite standard fields so the existing UI/Telegram gets the premium version
+                                db_item.translated_title = headline
+                                db_item.ai_summary = formatted_summary
+                                db_item.category = category
+                                
+                                session.commit()
+                                
+                        logger.info(f"Successfully published premium editorial for article ID {news_id}")
+                        processed_count += 1
+                        success = True
+                        break  # Break retry loop on success
+                        
+                    except Exception as e:
+                        logger.warning(f"Attempt {attempt} failed for article ID {news_id}: {str(e)}")
+                        # Stop processing further items if the daily API limit is reached
+                        is_daily_limit = "daily limit" in str(e).lower() or "cota diária" in str(e).lower() or "quota" in str(e).lower()
+                        if is_daily_limit:
+                            logger.warning("Gemini daily API limit reached. Stopping further editorial processing.")
+                            with get_db_session() as session:
+                                db_item = session.query(News).filter(News.id == news_id).first()
+                                if db_item:
+                                    db_item.editorial_status = "falha"
+                                    session.commit()
+                            failed_count += 1
+                            break
+                            
+                        if attempt < max_retries:
+                            # Wait with backoff before retrying
+                            await asyncio.sleep(retry_delay * attempt)
+                        else:
+                            # Final attempt failed
+                            logger.error(f"All {max_retries} attempts failed to generate editorial for article ID {news_id}: {str(e)}")
+                            with get_db_session() as session:
+                                db_item = session.query(News).filter(News.id == news_id).first()
+                                if db_item:
+                                    db_item.editorial_status = "falha"
+                                    session.commit()
+                            failed_count += 1
                 
-                try:
-                    logger.info("Calling Gemini API for editorial synthesis...")
-                    response = self.gateway.call_structured_api(
-                        prompt=prompt,
-                        system_instruction=EDITORIAL_SYSTEM_PROMPT,
-                        response_model=EditorialResponse
-                    )
-                    
-                    # E. Database Persistence
-                    headline = response.get("headline", title)
-                    summary_dict = response.get("summary", {})
-                    category = response.get("category", "Tecnologia")
-                    tags = response.get("tags", [])
-                    meta_desc = response.get("meta_description", "")
-                    scores = response.get("scores", {})
-                    
-                    # Format markdown summary for fallback and existing layouts
-                    formatted_summary = self._format_summary_as_markdown(summary_dict)
-                    
-                    with get_db_session() as session:
-                        db_item = session.query(News).filter(News.id == news_id).first()
-                        if db_item:
-                            # Update specific premium fields
-                            db_item.editorial_title = headline
-                            db_item.editorial_summary = json.dumps(summary_dict, ensure_ascii=False)
-                            db_item.editorial_category = category
-                            db_item.editorial_tags = json.dumps(tags, ensure_ascii=False)
-                            db_item.meta_description = meta_desc
-                            db_item.editorial_scores = scores
-                            db_item.editorial_status = "publicado"
-                            
-                            # Overwrite standard fields so the existing UI/Telegram gets the premium version
-                            db_item.translated_title = headline
-                            db_item.ai_summary = formatted_summary
-                            db_item.category = category
-                            
-                            session.commit()
-                            
-                    logger.info(f"Successfully published premium editorial for article ID {news_id}")
-                    processed_count += 1
-                    
-                except Exception as e:
-                    logger.error(f"Failed to generate editorial for article ID {news_id}: {e}")
-                    with get_db_session() as session:
-                        db_item = session.query(News).filter(News.id == news_id).first()
-                        if db_item:
-                            db_item.editorial_status = "falha"
-                            session.commit()
-                    failed_count += 1
-                    
-                    # Stop processing further items if the daily API limit is reached
-                    if "daily limit" in str(e).lower() or "cota diária" in str(e).lower() or "quota" in str(e).lower():
-                        logger.warning("Gemini daily API limit reached. Stopping further editorial processing.")
-                        break
+                if not success:
+                    # Abort execution immediately, never proceed to next news without finishing the current one
+                    logger.error(f"Aborting editorial processing because article ID {news_id} could not be completed.")
+                    break
                     
             report = (
                 f"Editorial processing completed: "
