@@ -71,16 +71,18 @@ class EditorExecutivoOrchestrator:
                     session.commit()
 
             with get_db_session() as session:
-                # 1. Fetch news articles that are curated and pending editorial processing
+                # 1. Fetch news articles that are curated and pending editorial processing (including failures to retry)
                 pending_news = (
                     session.query(News)
                     .filter(
                         News.is_curated == True,
                         or_(
                             News.editorial_status == "pendente",
+                            News.editorial_status == "falha",
                             News.editorial_status == None
                         )
                     )
+                    .order_by(News.created_at.desc())
                     .limit(10)
                     .all()
                 )
@@ -129,7 +131,7 @@ class EditorExecutivoOrchestrator:
                 # Only proceed if the editorial_status is still 'pendente' or None.
                 with get_db_session() as session:
                     db_item = session.query(News).filter(News.id == news_id).first()
-                    if db_item and db_item.editorial_status in ["pendente", None]:
+                    if db_item and db_item.editorial_status in ["pendente", "falha", None]:
                         db_item.editorial_status = "processando"
                         session.commit()
                     else:
