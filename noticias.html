@@ -327,6 +327,50 @@
         let allNews = [];
         let activeCategory = 'all';
 
+        // Parse structured Markdown summaries (with custom headers) into objects
+        function parseMarkdownSummary(text) {
+            if (!text) return null;
+            if (!text.includes("O que aconteceu?") && !text.includes("Por que isso importa?")) return null;
+            
+            const sections = {
+                what_happened: "",
+                why_it_matters: "",
+                possible_impacts: "",
+                key_points: []
+            };
+            
+            // Regex to find sections
+            const parts = text.split(/(?=🔍|💡|⚡|📌|\*\*O que aconteceu\*\*|\*\*Por que isso importa\*\*|\*\*Possíveis impactos\*\*|\*\*Pontos-chave\*\*)/g);
+            for (const part of parts) {
+                const cleanPart = part.trim();
+                if (cleanPart.includes("O que aconteceu?")) {
+                    sections.what_happened = cleanPart.replace(/^(🔍\s*)?(\*\*O que aconteceu\?\*\*|\*O que aconteceu\?\*|O que aconteceu\?)\s*/, "").trim();
+                } else if (cleanPart.includes("Por que isso importa?")) {
+                    sections.why_it_matters = cleanPart.replace(/^(💡\s*)?(\*\*Por que isso importa\?\*\*|\*Por que isso importa\?\*|Por que isso importa\?)\s*/, "").trim();
+                } else if (cleanPart.includes("Possíveis impactos") || cleanPart.includes("Possiveis impactos")) {
+                    sections.possible_impacts = cleanPart.replace(/^(⚡\s*)?(\*\*Possíveis impactos\*\*|\*Possíveis impactos\*|Possíveis impactos|\*\*Possiveis impactos\*\*|Possiveis impactos)\s*/, "").trim();
+                } else if (cleanPart.includes("Pontos-chave") || cleanPart.includes("Pontos chave")) {
+                    const lines = cleanPart.split('\n');
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim().replace(/^[-•*]\s*/, "");
+                        if (line) {
+                            sections.key_points.push(line);
+                        }
+                    }
+                }
+            }
+            
+            // Clean up any double asterisks or markdown in titles
+            sections.what_happened = sections.what_happened.replace(/^\*\*|^\*/, "").trim();
+            sections.why_it_matters = sections.why_it_matters.replace(/^\*\*|^\*/, "").trim();
+            sections.possible_impacts = sections.possible_impacts.replace(/^\*\*|^\*/, "").trim();
+            
+            // Return null if we failed to parse anything useful
+            if (!sections.what_happened && !sections.why_it_matters) return null;
+            
+            return sections;
+        }
+
         // Static fallbacks in case API is offline
         const fallbackNews = [
             {
@@ -659,7 +703,7 @@
 
                 let summaryContainerHtml = '';
                 let summaryObj = null;
-                if (item.editorial_status === "publicado" && item.editorial_summary) {
+                if (item.editorial_summary) {
                     try {
                         summaryObj = typeof item.editorial_summary === 'string' ? JSON.parse(item.editorial_summary) : item.editorial_summary;
                     } catch (e) {
@@ -667,17 +711,25 @@
                     }
                 }
 
-                if (item.editorial_status === "publicado" && summaryObj) {
+                if (!summaryObj && item.ai_summary) {
+                    summaryObj = parseMarkdownSummary(item.ai_summary);
+                }
+
+                if (summaryObj) {
                     const whatHappened = summaryObj.what_happened || "";
                     const whyItMatters = summaryObj.why_it_matters || "";
                     const possibleImpacts = summaryObj.possible_impacts || "";
                     const keyPoints = summaryObj.key_points || [];
 
+                    const isPremium = item.editorial_status === "publicado";
+                    const titleText = isPremium ? "Análise Editorial Premium" : "Resumo Executivo (IA)";
+                    const iconAttr = isPremium ? 'data-lucide="sparkles" class="w-3.5 h-3.5 text-gold animate-pulse"' : `data-lucide="${iconName}" class="w-3.5 h-3.5 text-gold"`;
+
                     summaryContainerHtml = `
                         <div class="flex-grow flex flex-col mb-3">
                             <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-2 flex items-center gap-1.5">
-                                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-gold animate-pulse"></i>
-                                Análise Editorial Premium
+                                <i ${iconAttr}></i>
+                                ${titleText}
                             </span>
                             <div class="space-y-1 bg-white/[0.01] border border-white/5 rounded-xl p-3">
                                 <!-- O que aconteceu -->
