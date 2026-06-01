@@ -100,6 +100,35 @@ async def execute_scheduled_ingestion():
         update_pipeline_status(error=str(e))
 
 
+async def execute_scheduled_editor():
+    """
+    Background job that runs ONLY the Editor Executivo agent
+    in between the main ingestion cycles to keep generating
+    executive summaries for pending curated news.
+    """
+    from core.status import update_pipeline_status
+    logger.info("Background Scheduler: Starting Editor Executivo scheduled run...")
+    try:
+        update_pipeline_status(phase="Redação IA", detail="Executando Editor Executivo em segundo plano para resumos pendentes...")
+        editor = EditorExecutivoOrchestrator()
+        editorial_report = await asyncio.to_thread(editor.run_editorial_pipeline)
+        logger.info(f"Background Scheduler: Editor Executivo finished. {editorial_report}")
+        
+        # Trigger Telegram notifier for any newly published articles
+        try:
+            update_pipeline_status(phase="Notificações", detail="Enviando notícias qualificadas ao Telegram...")
+            notifier = TelegramNotifier()
+            sent_count = await dispatch_pending_notifications(notifier)
+            logger.info(f"Background Scheduler: Successfully dispatched {sent_count} notifications.")
+        except Exception as ne:
+            logger.error(f"Background Scheduler: Telegram notification dispatch failed: {str(ne)}")
+            
+        update_pipeline_status(is_end=True)
+    except Exception as e:
+        logger.error(f"Background Scheduler: Editor Executivo failed: {str(e)}")
+        update_pipeline_status(phase="Redação IA", error=str(e))
+
+
 async def execute_news_cleanup():
     """
     Background job that removes news older than 20 days from the database.
@@ -175,12 +204,21 @@ async def lifespan(app: FastAPI):
         
     logger.info("Initializing application lifespan with background scheduler...")
     
-    # 1. Register the ingestion task (every 1 hour)
+    # 1. Register the ingestion task (every 2 hours)
     scheduler.add_job(
         execute_scheduled_ingestion, 
         trigger="interval", 
-        hours=1,
+        hours=2,
         id="ingestion_pipeline_job",
+        replace_existing=True
+    )
+    
+    # 1.5. Register the editor task (every 30 minutes)
+    scheduler.add_job(
+        execute_scheduled_editor,
+        trigger="interval",
+        minutes=30,
+        id="editor_pipeline_job",
         replace_existing=True
     )
     
