@@ -199,10 +199,6 @@
                         <button onclick="setCategoryFilter('investimentos')" id="tab-investimentos" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5 cursor-pointer">
                             Investimentos
                         </button>
-                        <button onclick="setCategoryFilter('premium')" id="tab-premium" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5 cursor-pointer" title="Mostrar apenas análises premium">
-                            Análise Premium
-                            <i data-lucide="star" class="w-3.5 h-3.5 text-gold"></i>
-                        </button>
                     </div>
                 </div>
 
@@ -565,14 +561,8 @@
                 const category = sourceMap[item.source_name] || 'tecnologia';
                 
                 // Category Filter
-                if (activeCategory !== 'all') {
-                    if (activeCategory === 'premium') {
-                        if (item.editorial_status !== 'publicado') {
-                            return false;
-                        }
-                    } else if (category !== activeCategory) {
-                        return false;
-                    }
+                if (activeCategory !== 'all' && category !== activeCategory) {
+                    return false;
                 }
 
                 // Search Term
@@ -745,11 +735,6 @@
                 let tagsHtml = '';
 
                 if (item.editorial_status === "publicado") {
-                    premiumBadgeHtml = `
-                        <span class="absolute top-4 right-4 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-black text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded shadow-[0_0_12px_rgba(245,158,11,0.5)]">
-                            Análise Premium ★
-                        </span>
-                    `;
 
                     const scores = item.editorial_scores || {};
                     const clarity = scores.clarity_score || 0;
@@ -812,8 +797,8 @@
                     const keyPoints = summaryObj.key_points || [];
 
                     const isPremium = item.editorial_status === "publicado";
-                    const titleText = isPremium ? "Análise Editorial Premium" : "Resumo Executivo (IA)";
-                    const iconAttr = isPremium ? 'data-lucide="sparkles" class="w-3.5 h-3.5 text-gold animate-pulse"' : `data-lucide="${iconName}" class="w-3.5 h-3.5 text-gold"`;
+                    const titleText = isPremium ? "Resumo Executivo" : "Resumo Executivo (IA)";
+                    const iconAttr = isPremium ? 'data-lucide="sparkles" class="w-3.5 h-3.5 text-gold"' : `data-lucide="${iconName}" class="w-3.5 h-3.5 text-gold"`;
 
                     summaryContainerHtml = `
                         <div class="flex-grow flex flex-col mb-3">
@@ -1106,8 +1091,7 @@
                 'all': 'Ver Tudo',
                 'tecnologia': 'Tecnologia',
                 'empreendedorismo': 'Empreendedorismo',
-                'investimentos': 'Investimentos',
-                'premium': 'Análise Premium ★'
+                'investimentos': 'Investimentos'
             };
             
             const sortNames = {
@@ -1135,7 +1119,7 @@
             currentPage = 1; // Reset to page 1
 
             // Remove active classes from all tabs
-            const tabs = ['all', 'tecnologia', 'empreendedorismo', 'investimentos', 'premium'];
+            const tabs = ['all', 'tecnologia', 'empreendedorismo', 'investimentos'];
             tabs.forEach(tab => {
                 const el = document.getElementById(`tab-${tab}`);
                 if (el) {
@@ -1146,11 +1130,7 @@
             // Set active class on target tab
             const activeEl = document.getElementById(`tab-${category}`);
             if (activeEl) {
-                if (category === 'premium') {
-                    activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.5)] flex items-center gap-1.5 cursor-pointer";
-                } else {
-                    activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5 cursor-pointer";
-                }
+                activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5 cursor-pointer";
             }
 
             updateFilterSummary();
