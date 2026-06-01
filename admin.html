@@ -287,15 +287,12 @@
                         <div class="flex-grow">
                             <span class="text-[10px] uppercase font-bold tracking-wider text-gray-500 block">Uso Diário Gemini</span>
                             <span id="geminiUsageVal" class="text-base font-bold text-white tracking-wide">Calculando...</span>
-                            <div id="rateLimitIndicator" class="hidden mt-1.5">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="relative flex h-2 w-2">
-                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                                    </span>
-                                    <span id="rateLimitText" class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Rate Limit</span>
+                            <div id="rateLimitIndicator" class="hidden mt-2">
+                                <div id="rateLimitBadge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                                    <i id="rateLimitIcon" data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                                    <span id="rateLimitText" class="text-[10px] font-bold uppercase tracking-wider">Rate Limit Ativo</span>
+                                    <span id="rateLimitCountdown" class="text-[10px] text-gray-400 font-mono ml-1 font-normal"></span>
                                 </div>
-                                <span id="rateLimitCountdown" class="text-[10px] text-gray-500 font-mono"></span>
                             </div>
                         </div>
                     </div>
@@ -617,7 +614,7 @@
                     } else {
                         usageVal.textContent = `${data.usage} / ${data.limit}`;
                         if (data.usage >= data.limit) {
-                            usageVal.className = "text-base font-bold text-red-500 tracking-wide animate-pulse";
+                            usageVal.className = "text-base font-bold text-red-500 tracking-wide";
                             iconBox.className = "p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400";
                         } else if (data.usage >= data.limit * 0.8) {
                             usageVal.className = "text-base font-bold text-yellow-500 tracking-wide";
@@ -628,15 +625,23 @@
                         }
 
                         // Handle rate limit info
+                        const rateLimitBadge = document.getElementById("rateLimitBadge");
+                        const rateLimitIcon = document.getElementById("rateLimitIcon");
                         if (data.rate_limit && data.rate_limit.active) {
                             rateLimitIndicator.classList.remove("hidden");
                             startRateLimitCountdown(data.rate_limit.cooldown_seconds, data.rate_limit.resets_at);
                         } else if (data.rate_limit && !data.rate_limit.active && data.rate_limit.last_hit_at) {
                             // Rate limit was hit but has since cleared
                             rateLimitIndicator.classList.remove("hidden");
+                            if (rateLimitBadge) {
+                                rateLimitBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-500/10 border border-green-500/20 text-green-400";
+                            }
+                            if (rateLimitIcon) {
+                                rateLimitIcon.setAttribute("data-lucide", "check-circle");
+                            }
                             rateLimitText.textContent = "Rate Limit Liberado";
-                            rateLimitText.className = "text-[10px] font-bold text-green-400 uppercase tracking-wider";
                             rateLimitCountdown.textContent = "";
+                            if (typeof lucide !== "undefined") lucide.createIcons();
                             // Auto-hide after 5 seconds
                             setTimeout(() => {
                                 rateLimitIndicator.classList.add("hidden");
@@ -657,6 +662,8 @@
             const rateLimitText = document.getElementById("rateLimitText");
             const rateLimitCountdown = document.getElementById("rateLimitCountdown");
             const iconBox = document.getElementById("geminiUsageIconBox");
+            const rateLimitBadge = document.getElementById("rateLimitBadge");
+            const rateLimitIcon = document.getElementById("rateLimitIcon");
 
             // Clear any existing interval
             if (rateLimitInterval) clearInterval(rateLimitInterval);
@@ -667,10 +674,16 @@
                 if (remaining <= 0) {
                     clearInterval(rateLimitInterval);
                     rateLimitInterval = null;
+                    if (rateLimitBadge) {
+                        rateLimitBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-500/10 border border-green-500/20 text-green-400";
+                    }
+                    if (rateLimitIcon) {
+                        rateLimitIcon.setAttribute("data-lucide", "check-circle");
+                    }
                     rateLimitText.textContent = "Rate Limit Liberado";
-                    rateLimitText.className = "text-[10px] font-bold text-green-400 uppercase tracking-wider";
                     rateLimitCountdown.textContent = "";
                     iconBox.className = "p-4 rounded-lg bg-gold/10 border border-gold/20 text-gold";
+                    if (typeof lucide !== "undefined") lucide.createIcons();
                     // Re-fetch data after cooldown
                     setTimeout(() => fetchGeminiUsage(), 2000);
                     return;
@@ -682,10 +695,16 @@
                     ? `${mins}m ${secs.toString().padStart(2, '0')}s` 
                     : `${secs}s`;
                 
+                if (rateLimitBadge) {
+                    rateLimitBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400";
+                }
+                if (rateLimitIcon) {
+                    rateLimitIcon.setAttribute("data-lucide", "alert-triangle");
+                }
                 rateLimitText.textContent = "Rate Limit Ativo";
-                rateLimitText.className = "text-[10px] font-bold text-amber-400 uppercase tracking-wider";
-                rateLimitCountdown.textContent = `Libera em ${timeStr}`;
+                rateLimitCountdown.textContent = `(${timeStr})`;
                 iconBox.className = "p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400";
+                if (typeof lucide !== "undefined") lucide.createIcons();
                 remaining--;
             };
 
