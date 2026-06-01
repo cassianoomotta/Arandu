@@ -308,39 +308,15 @@ def is_similar_to_recent(
 
 def translate_text(text: str, target_lang: str = "pt") -> tuple[str, bool]:
     """
-    Translates a title into Portuguese using Gemini API (with fallback to Google Translator).
+    Translates a title into Portuguese using Google Translator directly (fast, no rate limits).
     Returns (translated_text, translated_by_gemini).
     """
     if not text:
         return "", False
-        
-    system_prompt = (
-        "Você é um tradutor especialista em tecnologia e negócios.\n"
-        "Sua tarefa é traduzir o título de notícia fornecido para o português do Brasil (pt-BR).\n"
-        "REGRAS:\n"
-        "1. Retorne APENAS o texto traduzido final, sem aspas, explicações, introdução ou notas.\n"
-        "2. Se o texto já estiver em português brasileiro, retorne o texto original exatamente como está."
-    )
-    
-    if settings.GEMINI_API_KEY:
-        try:
-            logger.info(f"Translating via Gemini: '{text[:40]}...'")
-            translated = call_gemini_api(
-                prompt=text,
-                system_instruction=system_prompt,
-                max_tokens=800,
-                temperature=0.1
-            )
-            if translated:
-                clean_translated = translated.strip().replace('"', '')
-                return clean_translated, True
-        except Exception as e:
-            logger.error(f"Gemini translation failed: {str(e)}. Falling back to deep-translator...")
-            
     try:
         logger.info(f"Translating via GoogleTranslator: '{text[:40]}...'")
         translated = GoogleTranslator(source="auto", target=target_lang).translate(text)
-        return translated, False
+        return translated.strip().replace('"', ''), False
     except Exception as e:
         logger.error(f"GoogleTranslator failed: {str(e)}")
         return text, False
@@ -743,9 +719,8 @@ def process_article(
     Applies the full processing pipeline to a newly scraped news item:
     1. Check source type; translate title if SourceType.INTERNACIONAL.
     2. Heuristic relevance check on translated title.
-    3. AI-powered Relevance Filter on translated title.
-    4. Check for similarity deduplication.
-    5. Generate executive summary using LLM.
+    3. Check for similarity deduplication.
+    4. Save standard/fallback summary from RSS description.
     
     Returns the processed dictionary ready for DB save, or None if skipped.
     """
@@ -763,12 +738,7 @@ def process_article(
         logger.info(f"Skipping article (heuristic irrelevant): '{translated_title[:50]}'")
         return None
         
-    # 3. AI-powered Relevance Filter on the Portuguese translated title
-    if not is_relevant_article_ai(translated_title):
-        logger.info(f"Skipping article (AI classified as irrelevant): '{translated_title[:50]}'")
-        return None
-        
-    # 4. Deduplication check on the Portuguese translated title
+    # 3. Deduplication check on the Portuguese translated title
     if is_similar_to_recent(translated_title, recent_titles, threshold=0.8):
         logger.info(f"Skipping article (similar news exists): '{translated_title[:50]}'")
         return None
@@ -777,11 +747,18 @@ def process_article(
     processed_data["translated_title"] = translated_title
     processed_data["translated_by_gemini"] = translated_by_gemini
 
-    # 5. AI Summary Generation
-    processed_data["ai_summary"] = generate_ai_summary(
-        title=translated_title, 
-        source_name=source.name
-    )
+    # 4. Use RSS summary / description as a fallback before Curation and premium Editorial synthesis.
+    # This prevents calling Gemini during the scraping phase.
+    from bs4 import BeautifulSoup
+    summary_fallback = article_data.get("summary") or article_data.get("description") or ""
+    if summary_fallback:
+        try:
+            summary_fallback = BeautifulSoup(summary_fallback, "html.parser").get_text()
+        except Exception:
+            pass
+    if len(summary_fallback) > 300:
+        summary_fallback = summary_fallback[:297] + "..."
+    processed_data["ai_summary"] = summary_fallback or f"Artigo do portal {source.name} pendente de curadoria e síntese."
     
     # Define placeholder reduced key for search terms
     processed_data["reduced_key"] = " ".join(

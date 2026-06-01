@@ -19,7 +19,14 @@ class LocalFilter:
         
         if recent_titles is None:
             try:
-                recent_titles = get_recent_titles_from_db(hours_limit=24)
+                raw_recent = get_recent_titles_from_db(hours_limit=24)
+                # Exclude the current batch's titles from the comparison set to avoid self-matching
+                current_originals = {item.get("original_title", "").strip().lower() for item in news_items}
+                current_translated = {item.get("translated_title", "").strip().lower() for item in news_items if item.get("translated_title")}
+                recent_titles = [
+                    t for t in raw_recent 
+                    if t.strip().lower() not in current_originals and t.strip().lower() not in current_translated
+                ]
             except Exception as e:
                 logger.error(f"Failed to fetch recent titles: {e}")
                 recent_titles = []
