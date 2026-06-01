@@ -175,7 +175,7 @@ def call_gemini_api(prompt: str, system_instruction: str = None, max_tokens: int
     with _gemini_api_lock:
         now = time.time()
         elapsed = now - _last_gemini_call_time
-        required_gap = 12.0  # Safe: max 5 RPM to avoid constant 429 bouncing
+        required_gap = 6.0  # Safe: max 10 RPM to avoid constant 429 bouncing
         if elapsed < required_gap:
             sleep_needed = required_gap - elapsed
             logger.info(f"Rate limiting: sleeping for {sleep_needed:.2f}s to respect Gemini API RPM limits.")
@@ -188,7 +188,13 @@ def call_gemini_api(prompt: str, system_instruction: str = None, max_tokens: int
     except Exception as e:
         logger.error(f"Failed to increment Gemini usage log: {e}")
         
-    models = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
+    models = [
+        "gemini-flash-latest", 
+        "gemini-flash-lite-latest",
+        "gemini-3.5-flash", 
+        "gemini-2.5-flash-lite", 
+        "gemini-2.5-flash"
+    ]
     last_error = None
     
     for model in models:

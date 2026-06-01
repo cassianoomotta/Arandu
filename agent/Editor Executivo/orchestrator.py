@@ -32,7 +32,7 @@ class EditorExecutivoOrchestrator:
     def __init__(self):
         self.gateway = GeminiGateway()
 
-    def run_editorial_pipeline(self) -> str:
+    def run_editorial_pipeline(self, limit: int = 10) -> str:
         """
         Runs the full editorial processing pipeline synchronously.
         Runs in a dedicated thread to avoid conflicting with existing running event loops.
@@ -44,7 +44,7 @@ class EditorExecutivoOrchestrator:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                return loop.run_until_complete(self.run_editorial_pipeline_async())
+                return loop.run_until_complete(self.run_editorial_pipeline_async(limit=limit))
             finally:
                 loop.close()
 
@@ -52,7 +52,7 @@ class EditorExecutivoOrchestrator:
             future = executor.submit(_run)
             return future.result()
 
-    async def run_editorial_pipeline_async(self) -> str:
+    async def run_editorial_pipeline_async(self, limit: int = 10) -> str:
         logger.info("Initializing Editorial Agent (Editor Executivo) Pipeline...")
         
         try:
@@ -84,7 +84,7 @@ class EditorExecutivoOrchestrator:
                         )
                     )
                     .order_by(News.created_at.desc())
-                    .limit(10)
+                    .limit(limit)
                     .all()
                 )
                 

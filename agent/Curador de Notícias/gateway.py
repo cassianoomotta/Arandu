@@ -12,7 +12,13 @@ logger = logging.getLogger("news_agent.gateway")
 class GeminiGateway:
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
-        self.default_models = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
+        self.default_models = [
+            "gemini-flash-latest", 
+            "gemini-flash-lite-latest",
+            "gemini-3.5-flash", 
+            "gemini-2.5-flash-lite", 
+            "gemini-2.5-flash"
+        ]
         
     def _verify_quota(self):
         """Verifies if the daily token/request cota has been reached."""
@@ -33,7 +39,7 @@ class GeminiGateway:
         with proc._gemini_api_lock:
             now = time.time()
             elapsed = now - proc._last_gemini_call_time
-            required_gap = 12.0
+            required_gap = 6.0
             if elapsed < required_gap:
                 sleep_needed = required_gap - elapsed
                 logger.info(f"Rate limiter: sleeping for {sleep_needed:.2f}s to respect RPM...")
