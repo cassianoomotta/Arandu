@@ -1058,6 +1058,12 @@
             // Sync Gemini usage card inside the pipeline status polling loop
             fetchGeminiUsage();
 
+            // Refresh the news list in real-time if the news tab is active
+            const newsContent = document.getElementById("newsTabContent");
+            if (newsContent && !newsContent.classList.contains("hidden")) {
+                fetchAdminNews();
+            }
+
             const badge = document.getElementById("pipelineStatusBadge");
             const detailText = document.getElementById("pipelineDetailText");
             const iconBox = document.getElementById("pipelineStatusIconBox");
