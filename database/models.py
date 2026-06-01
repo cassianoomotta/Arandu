@@ -121,6 +121,7 @@ class News(Base):
     priority: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     is_curated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     curated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    destaque: Mapped[Optional[bool]] = mapped_column(Boolean, default=False, nullable=True)
 
     # Editorial Executivo fields
     editorial_status: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, default="pendente")
@@ -242,6 +243,25 @@ class ActiveSession(Base):
         return f"<ActiveSession(id={self.id}, user_id={self.user_id}, expires_at={self.expires_at})>"
 
 Index("ix_active_sessions_token", ActiveSession.token, unique=True)
+
+
+class NoticiasRejeitadas(Base):
+    """
+    Represents rejected news articles, storing the reason and metadata.
+    """
+    __tablename__ = "noticias_rejeitadas"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id_noticia: Mapped[int] = mapped_column(Integer, nullable=False)
+    titulo: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    link: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    motivo_rejeicao: Mapped[str] = mapped_column(Text, nullable=False)
+    data_rejeicao: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    categoria_identificada: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    def __repr__(self) -> str:
+        return f"<NoticiasRejeitadas(id={self.id}, id_noticia={self.id_noticia}, motivo_rejeicao='{self.motivo_rejeicao[:30]}...')>"
+
 
 
 

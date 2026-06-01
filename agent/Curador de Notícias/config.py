@@ -12,13 +12,24 @@ class AgentSettings:
     SIMILARITY_THRESHOLD: float = 0.8  # Threshold for SequenceMatcher deduplication
     MIN_TITLE_LENGTH: int = 10  # Minimum character count for titles to process
     
-    # Categories of interest
+    # Categories of interest (exactly 16 categories)
     CATEGORIES: list[str] = [
+        "Inteligência Artificial",
         "Tecnologia",
-        "IA/Automação",
-        "Mercado/Investimentos",
-        "Academia/Ciência",
-        "Descobertas Tecnológicas"
+        "Ciência",
+        "Robótica",
+        "Biotecnologia",
+        "Computação Quântica",
+        "Saúde e Inovação",
+        "Energia",
+        "Espaço",
+        "Startups",
+        "Investimentos",
+        "Mercado",
+        "Negócios",
+        "Empreendedorismo",
+        "Transformação Digital",
+        "Cibersegurança"
     ]
     
     # Priority Levels

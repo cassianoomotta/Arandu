@@ -18,7 +18,15 @@ class Phase2Item(BaseModel):
 
 class Phase2Response(BaseModel):
     items: List[Phase2Item]
+class CurationItem(BaseModel):
+    id: int
+    status: str = Field(..., description="APROVADA ou REPROVADA. Adote uma postura conservadora e reprove se houver dúvida.")
+    justificativa: str = Field(..., description="Justificativa concisa da classificação (máximo 15 palavras).")
+    categoria_identificada: str = Field(..., description="Categoria principal (deve ser exatamente uma das 16 listadas).")
+    score: int = Field(..., description="Score de relevância de 1 a 5.")
 
+class CurationResponse(BaseModel):
+    items: List[CurationItem]
 
 def get_gemini_schema(model_class) -> dict:
     """

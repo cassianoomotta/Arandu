@@ -1,15 +1,17 @@
 import logging
+import time
 from datetime import datetime
 from typing import List, Dict, Any
 from sqlalchemy import or_
 
 from database.connection import get_db_session
-from database.models import News, Source
+from database.models import News, Source, NoticiasRejeitadas
 from .config import agent_settings
 from .filters import LocalFilter
 from .gateway import GeminiGateway
-from .schemas import Phase1Response, Phase2Response
-from .utils import calculate_local_heuristic_score, ExecutionMetrics
+from .schemas import CurationResponse
+from .prompts import SYSTEM_CURATION_PROMPT_TEMPLATE
+from .utils import ExecutionMetrics
 
 logger = logging.getLogger("news_agent.orchestrator")
 
@@ -19,14 +21,14 @@ class AgentOrchestrator:
         
     def run_curation_pipeline(self) -> str:
         """
-        Runs the full AI News Curation Pipeline:
+        Runs the full AI News Curation Pipeline (Step 8: Triagem de novas notícias):
         1. Fetch uncurated news from the database.
         2. Filter out junk and duplicate news locally.
-        3. Score articles locally with heuristics and sort.
-        4. Phase 1: Coarse classification in batches of 20.
-        5. Phase 2: Fine-grained classification of the top 50 in micro-batches of 5.
-        6. Select top 5 (up to 7 exceptional) for final publishing.
-        7. Mark all processed articles as curated.
+        3. Fetch dynamic reference examples (Step 7: learning from score 4/5 items).
+        4. Curation & Classification: Call Gemini in batches to decide APROVADA/REPROVADA, category, score, justification.
+        5. For rejected or score < 3, move to noticias_rejeitadas and delete from news.
+        6. For approved (score >= 3): update news model, set priority and destaque flags.
+        7. Select top 5 (up to 7 if score is 4 or 5) for final publishing (Telegram notifications). Set others to falha.
         """
         metrics = ExecutionMetrics()
         metrics.start()
@@ -69,15 +71,25 @@ class AgentOrchestrator:
             filtered_items = LocalFilter.filter_and_deduplicate(raw_items)
             metrics.filtered_locally = len(raw_items) - len(filtered_items)
             
-            # Mark filtered items as curated in DB so they aren't processed again
+            # Move locally filtered items (rejected by heuristic or duplicate) to noticias_rejeitadas
             filtered_ids = {item["id"] for item in raw_items} - {item["id"] for item in filtered_items}
             if filtered_ids:
-                logger.info(f"Marking {len(filtered_ids)} locally filtered items as processed (score=0).")
+                logger.info(f"Moving {len(filtered_ids)} locally filtered items to noticias_rejeitadas.")
                 with get_db_session() as session:
-                    session.query(News).filter(News.id.in_(filtered_ids)).update(
-                        {"is_curated": True, "relevance_score": 0, "curated_at": datetime.utcnow()},
-                        synchronize_session=False
-                    )
+                    for item_id in filtered_ids:
+                        db_item = session.query(News).filter(News.id == item_id).first()
+                        if db_item:
+                            title = db_item.translated_title or db_item.original_title or ""
+                            rejected = NoticiasRejeitadas(
+                                id_noticia=db_item.id,
+                                titulo=title,
+                                link=db_item.link,
+                                motivo_rejeicao="FILTRADO LOCALMENTE (DUPLICIDADE OU FORA DE ESCOPO)",
+                                data_rejeicao=datetime.utcnow(),
+                                categoria_identificada="Outros"
+                            )
+                            session.add(rejected)
+                            session.delete(db_item)
                     session.commit()
             
             if not filtered_items:
@@ -85,35 +97,37 @@ class AgentOrchestrator:
                 metrics.stop(success=True)
                 return metrics.report()
                 
-            # 3. Calculate local heuristic scores and sort
-            for item in filtered_items:
-                title = item.get("translated_title") or item.get("original_title") or ""
-                item["heuristic_score"] = calculate_local_heuristic_score(title)
-                
-            # Sort by heuristic score descending
-            filtered_items.sort(key=lambda x: x["heuristic_score"], reverse=True)
+            # 3. Fetch dynamic reference examples (Step 7: Learning from score 4/5)
+            with get_db_session() as session:
+                examples = (
+                    session.query(News)
+                    .filter(News.is_curated == True)
+                    .filter(News.relevance_score.in_([4, 5]))
+                    .order_by(News.curated_at.desc())
+                    .limit(5)
+                    .all()
+                )
+                if examples:
+                    examples_str = "Exemplos de Referência (Score 4 e 5) obtidos da base:\n"
+                    for ex in examples:
+                        title = ex.translated_title or ex.original_title
+                        examples_str += f"- Título: {title} | Categoria: {ex.category} | Score: {ex.relevance_score} | Justificativa: {ex.ai_justification}\n"
+                else:
+                    # Default static examples
+                    examples_str = """Exemplos de Referência (Score 4 e 5):
+- Título: OpenAI lança GPT-4o, novo modelo capaz de raciocinar em tempo real por voz e visão | Categoria: Inteligência Artificial | Score: 5 | Justificativa: Avanço altamente disruptivo no campo de IA generativa e modelos multimodais.
+- Título: Nvidia ultrapassa Apple como segunda empresa mais valiosa com chips de IA | Categoria: Investimentos | Score: 4 | Justificativa: Movimentação de mercado significativa impulsionada pela demanda global de infraestrutura de IA.
+- Título: Cientistas conseguem fazer o primeiro teleporte quântico estável de longa distância | Categoria: Computação Quântica | Score: 5 | Justificativa: Breakthrough científico na computação quântica com impacto de longo prazo.
+"""
             
-            # Cap at 200 items to avoid token overload
-            if len(filtered_items) > 200:
-                discarded_items = filtered_items[200:]
-                filtered_items = filtered_items[:200]
-                discarded_ids = [item["id"] for item in discarded_items]
-                logger.info(f"Capped news pool to 200 items. Marking {len(discarded_ids)} extra items as processed.")
-                with get_db_session() as session:
-                    session.query(News).filter(News.id.in_(discarded_ids)).update(
-                        {"is_curated": True, "relevance_score": 0, "curated_at": datetime.utcnow()},
-                        synchronize_session=False
-                    )
-                    session.commit()
-
-            # 4. Phase 1: Coarse Classification in Batches of 20
-            logger.info(f"Starting Phase 1 (Coarse Classification) for {len(filtered_items)} items...")
-            from .prompts import PHASE1_SYSTEM_PROMPT
+            system_prompt = SYSTEM_CURATION_PROMPT_TEMPLATE.format(reference_examples=examples_str)
             
-            phase1_results = {}  # Map id -> score (0-10)
+            # 4. Batch Curation
+            approved_count = 0
+            rejected_count = 0
+            approved_news_ids = []
             
-            # Batch the items
-            batch_size = agent_settings.PHASE1_BATCH_SIZE
+            batch_size = 15
             for i in range(0, len(filtered_items), batch_size):
                 chunk = filtered_items[i:i+batch_size]
                 
@@ -121,183 +135,131 @@ class AgentOrchestrator:
                 news_list_str = ""
                 for item in chunk:
                     title = item.get("translated_title") or item.get("original_title") or ""
-                    news_list_str += f"- ID: {item['id']} | Título: {title}\n"
+                    summary = item.get("ai_summary") or "Sem resumo disponível."
+                    news_list_str += f"- ID: {item['id']} | Título: {title} | Resumo: {summary}\n"
                     
-                prompt = f"Por favor, classifique a relevância preliminar das seguintes notícias:\n\n{news_list_str}"
+                prompt = f"Por favor, classifique a relevância e escopo do seguinte lote de notícias:\n\n{news_list_str}"
                 
                 try:
-                    logger.info(f"Calling Gemini Phase 1 API for batch {i//batch_size + 1}...")
+                    logger.info(f"Calling Gemini Curation API for batch {i//batch_size + 1}...")
                     response = self.gateway.call_structured_api(
                         prompt=prompt,
-                        system_instruction=PHASE1_SYSTEM_PROMPT,
-                        response_model=Phase1Response
+                        system_instruction=system_prompt,
+                        response_model=CurationResponse
                     )
                     metrics.api_calls += 1
                     
-                    # Store results
-                    for classification in response.get("classifications", []):
-                        item_id = classification["id"]
-                        score = classification["score"]
-                        phase1_results[item_id] = score
+                    # 5. Process responses and update DB
+                    with get_db_session() as session:
+                        for classification in response.get("items", []):
+                            item_id = classification["id"]
+                            status_val = classification["status"].upper() # APROVADA or REPROVADA
+                            justificativa = classification["justificativa"]
+                            categoria = classification["categoria_identificada"]
+                            score = classification["score"]
+                            
+                            db_item = session.query(News).filter(News.id == item_id).first()
+                            if not db_item:
+                                continue
+                                
+                            if status_val == "REPROVADA":
+                                rejected = NoticiasRejeitadas(
+                                    id_noticia=db_item.id,
+                                    titulo=db_item.translated_title or db_item.original_title,
+                                    link=db_item.link,
+                                    motivo_rejeicao=justificativa or "REPROVADA POR ESCOPO",
+                                    data_rejeicao=datetime.utcnow(),
+                                    categoria_identificada=categoria or "Outros"
+                                )
+                                session.add(rejected)
+                                session.delete(db_item)
+                                rejected_count += 1
+                            else:
+                                # APROVADA
+                                if score in (1, 2):
+                                    reason = "BAIXA RELEVÂNCIA" if score == 1 else "RELEVÂNCIA INSUFICIENTE"
+                                    rejected = NoticiasRejeitadas(
+                                        id_noticia=db_item.id,
+                                        titulo=db_item.translated_title or db_item.original_title,
+                                        link=db_item.link,
+                                        motivo_rejeicao=reason,
+                                        data_rejeicao=datetime.utcnow(),
+                                        categoria_identificada=categoria
+                                    )
+                                    session.add(rejected)
+                                    session.delete(db_item)
+                                    rejected_count += 1
+                                else:
+                                    # Keep in main base (score 3, 4, 5)
+                                    db_item.relevance_score = score
+                                    db_item.category = categoria
+                                    db_item.ai_justification = justificativa
+                                    db_item.is_curated = True
+                                    db_item.curated_at = datetime.utcnow()
+                                    
+                                    # Rules of priority/highlight
+                                    if score == 3:
+                                        db_item.priority = "baixa"
+                                        db_item.destaque = False
+                                    elif score == 4:
+                                        db_item.priority = "media"
+                                        db_item.destaque = False
+                                    elif score == 5:
+                                        db_item.priority = "alta"
+                                        db_item.destaque = True
+                                        
+                                    approved_count += 1
+                                    approved_news_ids.append(db_item.id)
+                                    
+                        session.commit()
                         
                 except Exception as e:
-                    logger.error(f"Error in Phase 1 batch {i//batch_size + 1}: {e}")
-                    metrics.errors.append(f"Phase 1 error: {e}")
-                    # Fallback to local heuristic score for this batch
-                    for item in chunk:
-                        phase1_results[item["id"]] = item["heuristic_score"]
-
-            metrics.processed_p1 = len(phase1_results)
+                    logger.error(f"Error in curation batch {i//batch_size + 1}: {e}")
+                    metrics.errors.append(f"Curation error: {e}")
+                    # Fallback
+                    with get_db_session() as session:
+                        for item in chunk:
+                            db_item = session.query(News).filter(News.id == item["id"]).first()
+                            if db_item:
+                                db_item.relevance_score = 3
+                                db_item.category = "Tecnologia"
+                                db_item.ai_justification = "Classificação automática simplificada devido a falha da API."
+                                db_item.is_curated = True
+                                db_item.curated_at = datetime.utcnow()
+                                db_item.priority = "baixa"
+                                db_item.destaque = False
+                                approved_count += 1
+                                approved_news_ids.append(db_item.id)
+                        session.commit()
+                        
+            metrics.processed_p1 = len(filtered_items)
+            metrics.processed_p2 = approved_count
             
-            # Attach Phase 1 score to filtered_items
-            for item in filtered_items:
-                item["phase1_score"] = phase1_results.get(item["id"], 0)
-                
-            # Sort items by Phase 1 score descending
-            filtered_items.sort(key=lambda x: x.get("phase1_score", 0), reverse=True)
-            
-            # Select the top 50 candidates for Phase 2
-            top_50 = filtered_items[:agent_settings.TOP_N_SELECTION]
-            logger.info(f"Phase 1 complete. Selected Top {len(top_50)} candidates for Phase 2 detailed classification.")
-            
-            # Mark the remaining candidates (not in top 50) as curated with their low score
-            remaining_ids = [item["id"] for item in filtered_items[agent_settings.TOP_N_SELECTION:]]
-            if remaining_ids:
-                logger.info(f"Marking {len(remaining_ids)} remaining Phase 1 low-score items as processed.")
+            # 6. Apply Curation Publishing Rules for Telegram (Top 5 to 7)
+            if approved_news_ids:
                 with get_db_session() as session:
-                    for item_id in remaining_ids:
-                        score = phase1_results.get(item_id, 0)
-                        session.query(News).filter(News.id == item_id).update({
-                            "is_curated": True,
-                            "relevance_score": score * 10,  # Scale to 100
-                            "curated_at": datetime.utcnow()
-                        })
-                    session.commit()
-            
-            if not top_50:
-                logger.info("No candidates reached Phase 2. Exiting pipeline.")
-                metrics.stop(success=True)
-                return metrics.report()
-
-            # 5. Phase 2: Fine-Grained Classification in Micro-Batches of 5
-            logger.info(f"Starting Phase 2 (Fine Classification) for {len(top_50)} items...")
-            from .prompts import PHASE2_SYSTEM_PROMPT
-            
-            phase2_results = {}  # Map id -> detailed classification dict
-            
-            # Micro-batches of 5
-            micro_batch_size = 5
-            for i in range(0, len(top_50), micro_batch_size):
-                chunk = top_50[i:i+micro_batch_size]
-                
-                # Format chunk for prompt
-                news_list_str = ""
-                for item in chunk:
-                    title = item.get("translated_title") or item.get("original_title") or ""
-                    summary = item.get("ai_summary") or "Resumo indisponível"
-                    source = item.get("source_name") or "Desconhecido"
-                    news_list_str += f"- ID: {item['id']} | Título: {title} | Fonte: {source} | Resumo: {summary}\n"
+                    scored_news = session.query(News).filter(News.id.in_(approved_news_ids)).all()
+                    scored_news.sort(key=lambda x: x.relevance_score or 0, reverse=True)
                     
-                prompt = (
-                    "Por favor, execute a classificação detalhada para as seguintes notícias pré-selecionadas:\n\n"
-                    f"{news_list_str}"
-                )
-                
-                try:
-                    logger.info(f"Calling Gemini Phase 2 API for micro-batch {i//micro_batch_size + 1}...")
-                    response = self.gateway.call_structured_api(
-                        prompt=prompt,
-                        system_instruction=PHASE2_SYSTEM_PROMPT,
-                        response_model=Phase2Response
-                    )
-                    metrics.api_calls += 1
-                    
-                    # Store results
-                    for classification in response.get("items", []):
-                        item_id = classification["id"]
-                        phase2_results[item_id] = {
-                            "relevance_score": classification["score_relevance"],
-                            "ai_justification": classification["justification"],
-                            "category": classification["category"],
-                            "priority": classification["priority"]
-                        }
-                        
-                except Exception as e:
-                    logger.error(f"Error in Phase 2 micro-batch {i//micro_batch_size + 1}: {e}")
-                    metrics.errors.append(f"Phase 2 error: {e}")
-                    # Fallback values for this micro-batch
-                    for item in chunk:
-                        phase2_results[item["id"]] = {
-                            "relevance_score": item.get("phase1_score", 0) * 10,
-                            "ai_justification": "Classificação automática simplificada devido a falha da API.",
-                            "category": "Tecnologia",
-                            "priority": "Média"
-                        }
-
-            metrics.processed_p2 = len(phase2_results)
-            
-            # Update DB with Phase 2 results for these 50 news items
-            logger.info("Writing Phase 2 detailed curations to database...")
-            with get_db_session() as session:
-                for item_id, details in phase2_results.items():
-                    session.query(News).filter(News.id == item_id).update({
-                        "relevance_score": details["relevance_score"],
-                        "ai_justification": details["ai_justification"],
-                        "category": details["category"],
-                        "priority": details["priority"],
-                        "is_curated": True,
-                        "curated_at": datetime.utcnow()
-                    })
-                
-                # Fallback curation for any top_50 item that was missed/omitted in Phase 2 response
-                missed_ids = [item["id"] for item in top_50 if item["id"] not in phase2_results]
-                if missed_ids:
-                    logger.warning(f"{len(missed_ids)} items were missed in Phase 2 response. Applying fallback curation.")
-                    for item_id in missed_ids:
-                        p1_score = phase1_results.get(item_id, 0)
-                        session.query(News).filter(News.id == item_id).update({
-                            "relevance_score": p1_score * 10,
-                            "ai_justification": "Classificação detalhada indisponível (omitida pela IA).",
-                            "category": "Tecnologia",
-                            "priority": "Baixa",
-                            "is_curated": True,
-                            "curated_at": datetime.utcnow()
-                        })
-                session.commit()
-                
-            # 6. Apply Curation Publishing Rules (Top 5 to 7)
-            # Fetch all top_50 news items (including fallback ones) to ensure consistency
-            top_ids = [item["id"] for item in top_50]
-            with get_db_session() as session:
-                scored_news = session.query(News).filter(News.id.in_(top_ids)).all()
-                
-                # Sort by score descending
-                scored_news.sort(key=lambda x: x.relevance_score or 0, reverse=True)
-                
-                # Reset send_status of all scored news in this batch to PENDENTE or keep it
-                # To publish, we select the top 5, plus up to 2 exceptional (score >= 90)
-                selected_news = []
-                for idx, news_item in enumerate(scored_news):
-                    if idx < agent_settings.FINAL_MIN_NEWS:
-                        selected_news.append(news_item)
-                    elif idx < agent_settings.FINAL_MAX_NEWS:
-                        if (news_item.relevance_score or 0) >= agent_settings.EXCEPTIONAL_SCORE_THRESHOLD:
+                    selected_news = []
+                    for idx, news_item in enumerate(scored_news):
+                        if idx < agent_settings.FINAL_MIN_NEWS:
                             selected_news.append(news_item)
-                            logger.info(f"Including exceptional article ID {news_item.id} with score {news_item.relevance_score}.")
+                        elif idx < agent_settings.FINAL_MAX_NEWS:
+                            if (news_item.relevance_score or 0) >= 4:
+                                selected_news.append(news_item)
+                                logger.info(f"Including exceptional article ID {news_item.id} with score {news_item.relevance_score} for Telegram.")
+                            else:
+                                news_item.send_status = "falha"
                         else:
-                            # Not selected, set send_status to FALHA or another state so it's not dispatched, 
-                            # or just leave it. Let's make sure only selected ones are dispatched.
-                            news_item.send_status = "falha"  # Mark as failed/not selected to prevent Telegram dispatch
-                    else:
-                        news_item.send_status = "falha"  # Mark as failed/not selected to prevent Telegram dispatch
-                
-                # Mark selected news items as send_status = PENDENTE
-                for news_item in selected_news:
-                    news_item.send_status = "pendente"  # Ensure it is pending for Telegram dispatch
+                            news_item.send_status = "falha"
+                            
+                    for news_item in selected_news:
+                        news_item.send_status = "pendente"
+                        
+                    session.commit()
+                    logger.info(f"Curation complete. Selected {len(selected_news)} articles to Telegram dispatch. Total approved in DB: {approved_count}.")
                     
-                session.commit()
-                logger.info(f"Curation complete. Published {len(selected_news)} articles to portal / notification dispatcher.")
-                
             metrics.stop(success=True)
             return metrics.report()
             

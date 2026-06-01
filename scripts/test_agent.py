@@ -14,7 +14,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from agent import agent_settings, LocalFilter, calculate_local_heuristic_score, AgentOrchestrator
-from database.models import Base, News, Source, SendStatus
+from database.models import Base, News, Source, SendStatus, NoticiasRejeitadas
 
 # Create in-memory SQLite database for testing
 engine = create_engine("sqlite:///:memory:")
@@ -42,13 +42,13 @@ class TestCurationAgent(unittest.TestCase):
         with mock_get_db_session() as session:
             session.query(News).delete()
             session.query(Source).delete()
+            session.query(NoticiasRejeitadas).delete()
             session.commit()
 
     def test_heuristic_scoring(self):
         """Test keyword-based local heuristic scoring."""
         # High tech/AI title should score well
         score_tech = calculate_local_heuristic_score("Nova Inteligência Artificial da OpenAI revoluciona processamento de LLM")
-        # In this case: inteligência (+3), artificial (+3), openai (+3), llm (+3), but has hype word 'revoluciona' (-3). Total: 5 + 3 + 3 + 3 + 3 - 3 = 14, but wait! The code matches 4 keywords which is capped at 3: 5 + 3 - 2 = 6.
         self.assertEqual(score_tech, 6)
         
         # Clickbait/hype title should be penalized
@@ -88,32 +88,30 @@ class TestCurationAgent(unittest.TestCase):
         mock_gateway = MagicMock()
         mock_gateway_cls.return_value = mock_gateway
         
-        # Mock Phase 1 response and Phase 2 response
+        # Mock Curation response
         mock_gateway.call_structured_api.side_effect = [
-            # Phase 1 response
-            {
-                "classifications": [
-                    {"id": 1, "score": 9},
-                    {"id": 2, "score": 8},
-                    {"id": 3, "score": 4}
-                ]
-            },
-            # Phase 2 response
             {
                 "items": [
                     {
                         "id": 1,
-                        "score_relevance": 95,
-                        "justification": "AI breakthrough",
-                        "category": "IA/Automação",
-                        "priority": "Alta"
+                        "status": "APROVADA",
+                        "justificativa": "AI breakthrough",
+                        "categoria_identificada": "Inteligência Artificial",
+                        "score": 5
                     },
                     {
                         "id": 2,
-                        "score_relevance": 82,
-                        "justification": "Important hardware update",
-                        "category": "Tecnologia",
-                        "priority": "Média"
+                        "status": "APROVADA",
+                        "justificativa": "Important hardware update",
+                        "categoria_identificada": "Tecnologia",
+                        "score": 4
+                    },
+                    {
+                        "id": 3,
+                        "status": "REPROVADA",
+                        "justificativa": "Política local sem inovação",
+                        "categoria_identificada": "Outros",
+                        "score": 2
                     }
                 ]
             }
@@ -158,39 +156,40 @@ class TestCurationAgent(unittest.TestCase):
         # Override settings values for testing the top news curation rules
         agent_settings.FINAL_MIN_NEWS = 1
         agent_settings.FINAL_MAX_NEWS = 2
-        agent_settings.EXCEPTIONAL_SCORE_THRESHOLD = 90
-        agent_settings.PHASE1_BATCH_SIZE = 20
-        agent_settings.TOP_N_SELECTION = 50
         
         # Run orchestrator
         orchestrator = AgentOrchestrator()
         report = orchestrator.run_curation_pipeline()
         
         # Verify output report metrics
-        self.assertIn("API Calls made: 2", report)
-        self.assertIn("News detailed in Phase 2: 2", report)
+        self.assertIn("API Calls made: 1", report)
         
         # Fetch from database and verify state
         with mock_get_db_session() as session:
             db_news1 = session.query(News).filter(News.id == 1).first()
             db_news2 = session.query(News).filter(News.id == 2).first()
             db_news3 = session.query(News).filter(News.id == 3).first()
+            rejected = session.query(NoticiasRejeitadas).filter(NoticiasRejeitadas.id_noticia == 3).first()
             
-            # Verify news1 is curated, relevance is 95, priority is Alta, and send_status is PENDENTE (selected)
+            # Verify news1 is curated, relevance is 5, priority is alta, and send_status is PENDENTE (selected)
+            self.assertIsNotNone(db_news1)
             self.assertTrue(db_news1.is_curated)
-            self.assertEqual(db_news1.relevance_score, 95)
-            self.assertEqual(db_news1.category, "IA/Automação")
+            self.assertEqual(db_news1.relevance_score, 5)
+            self.assertEqual(db_news1.category, "Inteligência Artificial")
+            self.assertEqual(db_news1.priority, "alta")
+            self.assertEqual(db_news1.destaque, True)
             self.assertEqual(db_news1.send_status, SendStatus.PENDENTE)
             
-            # Verify news2 is curated, relevance is 82, priority is Média, but send_status is FALHA (exceeds min selection and score is < 90)
+            # Verify news2 is curated, relevance is 4, priority is media, and is curated
+            self.assertIsNotNone(db_news2)
             self.assertTrue(db_news2.is_curated)
-            self.assertEqual(db_news2.relevance_score, 82)
-            self.assertEqual(db_news2.send_status, SendStatus.FALHA)
+            self.assertEqual(db_news2.relevance_score, 4)
+            self.assertEqual(db_news2.priority, "media")
             
-            # Verify news3 is curated (from remaining Phase 1 step) with relevance 40 (scaled from 4)
-            self.assertTrue(db_news3.is_curated)
-            self.assertEqual(db_news3.relevance_score, 40)
-            self.assertEqual(db_news3.send_status, SendStatus.FALHA)
+            # Verify news3 was deleted from news table and moved to noticias_rejeitadas
+            self.assertIsNone(db_news3)
+            self.assertIsNotNone(rejected)
+            self.assertEqual(rejected.motivo_rejeicao, "Política local sem inovação")
 
 if __name__ == "__main__":
     unittest.main()
