@@ -63,8 +63,8 @@ Para cada notícia APROVADA, defina:
   * 1/5: Baixa relevância (pouco impactante ou interesse muito limitado)
   * 2/5: Relevância moderada (útil, sem impacto significativo)
   * 3/5: Boa relevância (importante para profissionais/entusiastas do setor)
-  * 4/5: Alta relevância (inovação ou movimento de mercado com potencial relevante de transformação)
-  * 5/5: Relevância excepcional (descoberta, inovação ou movimento capaz de impactar mercados/pesquisas inteiras)
+  * 4/5: Alta relevância (inovação ou movimento de mercado com grande impacto setorial ou potencial relevante de transformação)
+  * 5/5: Relevância Histórica e Excepcional. RESERVE ESTA NOTA APENAS PARA MARCOS HISTÓRICOS, DESCOBERTAS REVOLUCIONÁRIAS OU ANÚNCIOS QUE RECONFIGURAM O MERCADO MUNDIAL DE TECNOLOGIA OU NEGÓCIOS (ex: lançamento do GPT-5 original, fusão ou aquisição trilionária, cura de uma doença antes incurável via bio-tech, quebra da criptografia tradicional via computação quântica). Seja extremamente criterioso e restritivo; no máximo 2% a 5% das notícias de alto padrão devem receber essa nota. Se não tiver certeza absoluta de que é um marco histórico, classifique como 4/5 ou inferior.
 - Justificativa: Explicação concisa da classificação (máximo 15 palavras).
 
 {reference_examples}

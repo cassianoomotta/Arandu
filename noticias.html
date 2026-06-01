@@ -161,39 +161,84 @@
             </p>
         </div>
 
-        <!-- Filters & Search Bar -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 border-b border-white/5 pb-8">
-            <!-- Tabs -->
-            <div class="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0" id="filter-tabs">
-                <button onclick="setCategoryFilter('all')" id="tab-all" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5">
-                    Ver Tudo
-                </button>
-                <button onclick="setCategoryFilter('tecnologia')" id="tab-tecnologia" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5">
-                    Tecnologia
-                </button>
-                <button onclick="setCategoryFilter('empreendedorismo')" id="tab-empreendedorismo" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5">
-                    Empreendedorismo
-                </button>
-                <button onclick="setCategoryFilter('investimentos')" id="tab-investimentos" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5">
-                    Investimentos
-                </button>
-                <button onclick="setCategoryFilter('premium')" id="tab-premium" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5" title="Mostrar apenas análises premium">
-                    Análise Premium
-                    <i data-lucide="star" class="w-3.5 h-3.5 text-gold"></i>
-                </button>
+        <!-- Filter Toggle & Summary Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/5 border border-white/10 rounded-xl p-4 mb-6 hover:border-gold/30 transition-all duration-300">
+            <div class="flex flex-wrap items-center gap-2.5 text-xs text-gray-400">
+                <span class="font-bold uppercase tracking-wider text-gold/80 flex items-center gap-1.5">
+                    <i data-lucide="filter" class="w-3.5 h-3.5"></i> Painel de Filtros
+                </span>
+                <span class="text-white/20 hidden sm:inline">|</span>
+                <span>Filtro: <strong class="text-white" id="summary-filter">Ver Tudo</strong></span>
+                <span class="text-white/20">|</span>
+                <span>Ordem: <strong class="text-white" id="summary-sort">Mais Recentes</strong></span>
+                <span id="summary-search-text" class="hidden"><span class="text-white/20">|</span> Busca: <strong class="text-white" id="summary-search-val"></strong></span>
             </div>
+            <button onclick="toggleFilterPanel()" class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-wider text-gray-300 hover:text-white hover:border-gold/30 hover:bg-white/10 transition-all duration-300 select-none cursor-pointer">
+                <i data-lucide="sliders-horizontal" class="w-4 h-4 text-gold"></i>
+                <span>Filtros & Ordenação</span>
+                <i data-lucide="chevron-down" id="filter-chevron" class="w-4 h-4 transition-transform duration-300"></i>
+            </button>
+        </div>
 
-            <!-- Search input -->
-            <div class="flex items-center gap-3 w-full md:w-auto">
-                <div class="relative flex-grow md:w-72">
-                    <input type="text" id="search-input" oninput="handleSearch()" placeholder="Pesquisar notícias..." class="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold/50 transition-colors">
-                    <i data-lucide="search" class="w-4 h-4 text-gray-500 absolute left-3.5 top-3.5"></i>
+        <!-- Expandable Filters Panel (hidden by default) -->
+        <div id="filters-panel" class="max-h-0 opacity-0 overflow-hidden transition-all duration-500 ease-in-out">
+            <div class="glass-panel border border-white/5 rounded-xl p-5 mb-8 flex flex-col gap-6">
+                <!-- Row 1: Categories -->
+                <div>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-3">Categorias</span>
+                    <div class="flex flex-wrap items-center gap-2" id="filter-tabs">
+                        <button onclick="setCategoryFilter('all')" id="tab-all" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5 cursor-pointer">
+                            Ver Tudo
+                        </button>
+                        <button onclick="setCategoryFilter('tecnologia')" id="tab-tecnologia" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5 cursor-pointer">
+                            Tecnologia
+                        </button>
+                        <button onclick="setCategoryFilter('empreendedorismo')" id="tab-empreendedorismo" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5 cursor-pointer">
+                            Empreendedorismo
+                        </button>
+                        <button onclick="setCategoryFilter('investimentos')" id="tab-investimentos" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5 cursor-pointer">
+                            Investimentos
+                        </button>
+                        <button onclick="setCategoryFilter('premium')" id="tab-premium" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5 cursor-pointer" title="Mostrar apenas análises premium">
+                            Análise Premium
+                            <i data-lucide="star" class="w-3.5 h-3.5 text-gold"></i>
+                        </button>
+                    </div>
                 </div>
-                <button id="instantSearchBtn" onclick="triggerInstantSearch()" class="pulse-gold-animation flex-shrink-0 px-5 py-2.5 rounded-lg bg-gradient-to-r from-gold-dark via-gold to-gold-light text-black text-xs font-extrabold uppercase tracking-wider hover:scale-[1.03] transition-all duration-300 flex items-center gap-2 glow-btn" title="Buscar novas notícias em tempo real">
-                    <i data-lucide="zap" class="w-4 h-4"></i>
-                    <span class="hidden sm:inline">Buscar Agora</span>
-                    <span class="sm:hidden">Buscar</span>
-                </button>
+
+                <!-- Row 2: Search and Sorting -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                    <!-- Text Search -->
+                    <div class="md:col-span-5">
+                        <label for="search-input" class="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">Pesquisa de Texto</label>
+                        <div class="relative w-full">
+                            <input type="text" id="search-input" oninput="handleSearch()" placeholder="Pesquisar notícias..." class="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold/50 transition-colors">
+                            <i data-lucide="search" class="w-4 h-4 text-gray-500 absolute left-3.5 top-3.5"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Sorting Select -->
+                    <div class="md:col-span-4">
+                        <label for="sort-select" class="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">Ordem de Exibição</label>
+                        <div class="relative w-full">
+                            <select id="sort-select" onchange="handleSortChange()" class="w-full bg-[#121214] border border-white/10 rounded-lg py-2.5 px-4 pr-10 text-sm text-white focus:outline-none focus:border-gold/50 transition-colors appearance-none cursor-pointer">
+                                <option value="date-desc">Mais Recentes</option>
+                                <option value="date-asc">Mais Antigas</option>
+                                <option value="relevance-desc">Maior Relevância</option>
+                                <option value="relevance-asc">Menor Relevância</option>
+                            </select>
+                            <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500 absolute right-3.5 top-3.5 pointer-events-none"></i>
+                        </div>
+                    </div>
+
+                    <!-- Instant Search Button -->
+                    <div class="md:col-span-3">
+                        <button id="instantSearchBtn" onclick="triggerInstantSearch()" class="pulse-gold-animation w-full py-2.5 rounded-lg bg-gradient-to-r from-gold-dark via-gold to-gold-light text-black text-xs font-extrabold uppercase tracking-wider hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2 glow-btn cursor-pointer" title="Buscar novas notícias em tempo real">
+                            <i data-lucide="zap" class="w-4 h-4"></i>
+                            <span>Buscar Agora</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -330,6 +375,7 @@
     <script>
         let allNews = [];
         let activeCategory = 'all';
+        let activeSort = 'date-desc';
 
         // Parse structured Markdown summaries (with custom headers) into objects
         function parseMarkdownSummary(text) {
@@ -539,6 +585,40 @@
                     }
                 }
                 return true;
+            });
+
+            // Sort news based on activeSort
+            filtered.sort((a, b) => {
+                if (activeSort === 'date-desc') {
+                    const dateA = new Date(a.original_published_at || a.created_at || 0);
+                    const dateB = new Date(b.original_published_at || b.created_at || 0);
+                    return dateB - dateA;
+                } else if (activeSort === 'date-asc') {
+                    const dateA = new Date(a.original_published_at || a.created_at || 0);
+                    const dateB = new Date(b.original_published_at || b.created_at || 0);
+                    return dateA - dateB;
+                } else if (activeSort === 'relevance-desc') {
+                    const scoreA = a.relevance_score || 0;
+                    const scoreB = b.relevance_score || 0;
+                    if (scoreB !== scoreA) {
+                        return scoreB - scoreA;
+                    }
+                    // Tie-breaker: date descending
+                    const dateA = new Date(a.original_published_at || a.created_at || 0);
+                    const dateB = new Date(b.original_published_at || b.created_at || 0);
+                    return dateB - dateA;
+                } else if (activeSort === 'relevance-asc') {
+                    const scoreA = a.relevance_score || 0;
+                    const scoreB = b.relevance_score || 0;
+                    if (scoreA !== scoreB) {
+                        return scoreA - scoreB;
+                    }
+                    // Tie-breaker: date descending
+                    const dateA = new Date(a.original_published_at || a.created_at || 0);
+                    const dateB = new Date(b.original_published_at || b.created_at || 0);
+                    return dateB - dateA;
+                }
+                return 0;
             });
 
             const totalFiltered = filtered.length;
@@ -986,6 +1066,69 @@
             }
         }
 
+        function toggleFilterPanel() {
+            const panel = document.getElementById('filters-panel');
+            const chevron = document.getElementById('filter-chevron');
+            if (!panel || !chevron) return;
+            
+            if (panel.classList.contains('active')) {
+                panel.style.maxHeight = '0px';
+                panel.style.opacity = '0';
+                panel.classList.remove('active');
+                panel.classList.remove('mb-6');
+                chevron.style.transform = 'rotate(0deg)';
+            } else {
+                panel.classList.add('active');
+                panel.classList.add('mb-6');
+                panel.style.maxHeight = panel.scrollHeight + 'px';
+                panel.style.opacity = '1';
+                chevron.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        function handleSortChange() {
+            const sortSelect = document.getElementById('sort-select');
+            if (sortSelect) {
+                activeSort = sortSelect.value;
+                currentPage = 1;
+                updateFilterSummary();
+                renderFeed();
+            }
+        }
+
+        function updateFilterSummary() {
+            const summaryFilter = document.getElementById('summary-filter');
+            const summarySort = document.getElementById('summary-sort');
+            const summarySearchText = document.getElementById('summary-search-text');
+            const summarySearchVal = document.getElementById('summary-search-val');
+            
+            const categoryNames = {
+                'all': 'Ver Tudo',
+                'tecnologia': 'Tecnologia',
+                'empreendedorismo': 'Empreendedorismo',
+                'investimentos': 'Investimentos',
+                'premium': 'Análise Premium ★'
+            };
+            
+            const sortNames = {
+                'date-desc': 'Mais Recentes',
+                'date-asc': 'Mais Antigas',
+                'relevance-desc': 'Maior Relevância',
+                'relevance-asc': 'Menor Relevância'
+            };
+            
+            if (summaryFilter) summaryFilter.textContent = categoryNames[activeCategory] || activeCategory;
+            if (summarySort) summarySort.textContent = sortNames[activeSort] || activeSort;
+            
+            const searchInput = document.getElementById('search-input');
+            if (searchInput && searchInput.value.trim()) {
+                if (summarySearchText) summarySearchText.classList.remove('hidden');
+                if (summarySearchVal) summarySearchVal.textContent = `"${searchInput.value.trim()}"`;
+            } else {
+                if (summarySearchText) summarySearchText.classList.add('hidden');
+            }
+        }
+
         // Category tab navigation controller
         function setCategoryFilter(category) {
             activeCategory = category;
@@ -996,7 +1139,7 @@
             tabs.forEach(tab => {
                 const el = document.getElementById(`tab-${tab}`);
                 if (el) {
-                    el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5";
+                    el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5 cursor-pointer";
                 }
             });
 
@@ -1004,18 +1147,20 @@
             const activeEl = document.getElementById(`tab-${category}`);
             if (activeEl) {
                 if (category === 'premium') {
-                    activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.5)] flex items-center gap-1.5";
+                    activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.5)] flex items-center gap-1.5 cursor-pointer";
                 } else {
-                    activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5";
+                    activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5 cursor-pointer";
                 }
             }
 
+            updateFilterSummary();
             renderFeed();
         }
 
         // Live text filter
         function handleSearch() {
             currentPage = 1; // Reset to page 1
+            updateFilterSummary();
             renderFeed();
         }
 
@@ -1232,14 +1377,15 @@
                 tabs.forEach(tab => {
                     const el = document.getElementById(`tab-${tab}`);
                     if (el) {
-                        el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white";
+                        el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5 cursor-pointer";
                     }
                 });
                 const activeEl = document.getElementById(`tab-${categoriaParam}`);
                 if (activeEl) {
-                    activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black";
+                    activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5 cursor-pointer";
                 }
             }
+            updateFilterSummary();
             fetchNewsList();
             lucide.createIcons();
         }
