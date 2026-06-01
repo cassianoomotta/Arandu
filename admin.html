@@ -287,10 +287,10 @@
                         <div class="flex-grow">
                             <span class="text-[10px] uppercase font-bold tracking-wider text-gray-500 block">Uso Diário Gemini</span>
                             <span id="geminiUsageVal" class="text-base font-bold text-white tracking-wide">Calculando...</span>
-                            <div id="rateLimitIndicator" class="hidden mt-2">
-                                <div id="rateLimitBadge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                                    <i id="rateLimitIcon" data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
-                                    <span id="rateLimitText" class="text-[10px] font-bold uppercase tracking-wider">Rate Limit Ativo</span>
+                            <div id="rateLimitIndicator" class="mt-2">
+                                <div id="rateLimitBadge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-500/10 border border-green-500/20 text-green-400">
+                                    <i id="rateLimitIcon" data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                                    <span id="rateLimitText" class="text-[10px] font-bold uppercase tracking-wider">Sem Restrições</span>
                                     <span id="rateLimitCountdown" class="text-[10px] text-gray-400 font-mono ml-1 font-normal"></span>
                                 </div>
                             </div>
@@ -610,7 +610,17 @@
                         usageVal.textContent = "Chave Ausente";
                         usageVal.className = "text-base font-bold text-red-400 tracking-wide";
                         iconBox.className = "p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400";
-                        rateLimitIndicator.classList.add("hidden");
+                        const rateLimitBadge = document.getElementById("rateLimitBadge");
+                        const rateLimitIcon = document.getElementById("rateLimitIcon");
+                        if (rateLimitBadge) {
+                            rateLimitBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-500/10 border border-red-500/20 text-red-400";
+                        }
+                        if (rateLimitIcon) {
+                            rateLimitIcon.setAttribute("data-lucide", "x-circle");
+                        }
+                        rateLimitText.textContent = "Sem Chave API";
+                        rateLimitCountdown.textContent = "";
+                        if (typeof lucide !== "undefined") lucide.createIcons();
                     } else {
                         usageVal.textContent = `${data.usage} / ${data.limit}`;
                         if (data.usage >= data.limit) {
@@ -628,26 +638,21 @@
                         const rateLimitBadge = document.getElementById("rateLimitBadge");
                         const rateLimitIcon = document.getElementById("rateLimitIcon");
                         if (data.rate_limit && data.rate_limit.active) {
-                            rateLimitIndicator.classList.remove("hidden");
                             startRateLimitCountdown(data.rate_limit.cooldown_seconds, data.rate_limit.resets_at);
-                        } else if (data.rate_limit && !data.rate_limit.active && data.rate_limit.last_hit_at) {
-                            // Rate limit was hit but has since cleared
-                            rateLimitIndicator.classList.remove("hidden");
+                        } else {
+                            if (rateLimitInterval) {
+                                clearInterval(rateLimitInterval);
+                                rateLimitInterval = null;
+                            }
                             if (rateLimitBadge) {
                                 rateLimitBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-500/10 border border-green-500/20 text-green-400";
                             }
                             if (rateLimitIcon) {
                                 rateLimitIcon.setAttribute("data-lucide", "check-circle");
                             }
-                            rateLimitText.textContent = "Rate Limit Liberado";
+                            rateLimitText.textContent = "Sem Restrições";
                             rateLimitCountdown.textContent = "";
                             if (typeof lucide !== "undefined") lucide.createIcons();
-                            // Auto-hide after 5 seconds
-                            setTimeout(() => {
-                                rateLimitIndicator.classList.add("hidden");
-                            }, 5000);
-                        } else {
-                            rateLimitIndicator.classList.add("hidden");
                         }
                     }
                 }
@@ -680,7 +685,7 @@
                     if (rateLimitIcon) {
                         rateLimitIcon.setAttribute("data-lucide", "check-circle");
                     }
-                    rateLimitText.textContent = "Rate Limit Liberado";
+                    rateLimitText.textContent = "Sem Restrições";
                     rateLimitCountdown.textContent = "";
                     iconBox.className = "p-4 rounded-lg bg-gold/10 border border-gold/20 text-gold";
                     if (typeof lucide !== "undefined") lucide.createIcons();
