@@ -169,6 +169,7 @@ class EditorExecutivoOrchestrator:
                 max_retries = 3
                 retry_delay = 2.0
                 success = False
+                is_daily_limit = False
                 
                 for attempt in range(1, max_retries + 1):
                     try:
@@ -270,9 +271,12 @@ class EditorExecutivoOrchestrator:
                             failed_count += 1
                 
                 if not success:
-                    # Abort execution immediately, never proceed to next news without finishing the current one
-                    logger.error(f"Aborting editorial processing because article ID {news_id} could not be completed.")
-                    break
+                    if is_daily_limit:
+                        logger.error(f"Aborting entire editorial processing because Gemini API limit was hit.")
+                        break
+                    else:
+                        logger.warning(f"Skipping article ID {news_id} due to processing failure, continuing to next article.")
+                        continue
                     
             report = (
                 f"Editorial processing completed: "
