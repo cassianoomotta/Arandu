@@ -461,7 +461,7 @@
                             <i data-lucide="newspaper" class="w-5 h-5 text-gold"></i>
                             Histórico de Curadoria & Relevância (IA)
                         </h3>
-                        <button onclick="fetchAdminNews();" class="text-xs font-bold uppercase tracking-wider text-gold hover:text-gold-light transition duration-200 flex items-center gap-1.5 focus:outline-none">
+                        <button onclick="fetchAdminNews(true);" class="text-xs font-bold uppercase tracking-wider text-gold hover:text-gold-light transition duration-200 flex items-center gap-1.5 focus:outline-none">
                             <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
                             Atualizar Notícias
                         </button>
@@ -546,7 +546,7 @@
                 dashSec.classList.remove("hidden");
                 logoutBtn.classList.remove("hidden");
                 fetchLeads();
-                fetchAdminNews();
+                fetchAdminNews(true);
                 fetchStatsAndRenderCharts();
                 fetchGeminiUsage();
                 fetchPipelineStatus();
@@ -1061,7 +1061,7 @@
             // Refresh the news list in real-time if the news tab is active
             const newsContent = document.getElementById("newsTabContent");
             if (newsContent && !newsContent.classList.contains("hidden")) {
-                fetchAdminNews();
+                fetchAdminNews(false);
             }
 
             const badge = document.getElementById("pipelineStatusBadge");
@@ -1319,7 +1319,7 @@
                 tabLeads.className = "pb-4 text-sm font-bold uppercase tracking-wider border-b-2 border-transparent text-gray-400 hover:text-white focus:outline-none transition duration-200";
                 leadsContent.classList.add("hidden");
                 newsContent.classList.remove("hidden");
-                fetchAdminNews();
+                fetchAdminNews(true);
             }
         }
 
@@ -1329,7 +1329,7 @@
         const adminPageSize = 20;
 
         // Fetch news for admin
-        async function fetchAdminNews() {
+        async function fetchAdminNews(resetPage = false) {
             if (!token) return;
             const tableBody = document.getElementById("newsTableBody");
             
@@ -1353,7 +1353,15 @@
 
                 const data = await response.json();
                 adminNews = data.results || [];
-                adminCurrentPage = 1; // Reset page on refresh
+                
+                if (resetPage) {
+                    adminCurrentPage = 1;
+                } else {
+                    const totalPages = Math.ceil(adminNews.length / adminPageSize);
+                    if (adminCurrentPage > totalPages) {
+                        adminCurrentPage = Math.max(1, totalPages);
+                    }
+                }
 
                 renderAdminTableBody();
 
