@@ -79,10 +79,9 @@ class EditorExecutivoOrchestrator:
 
             while True:
                 with get_db_session() as session:
-                    # 1. Fetch news articles that are curated, pending editorial processing, and have relevance_score == 5 (most impactful)
+                    # 1. Fetch news articles that are curated and pending editorial processing
                     query = session.query(News).filter(
                         News.is_curated == True,
-                        News.relevance_score == 5,
                         or_(
                             News.editorial_status == "pendente",
                             News.editorial_status == "falha",
