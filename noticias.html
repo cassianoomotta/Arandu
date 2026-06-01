@@ -165,17 +165,21 @@
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 border-b border-white/5 pb-8">
             <!-- Tabs -->
             <div class="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0" id="filter-tabs">
-                <button onclick="setCategoryFilter('all')" id="tab-all" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black">
+                <button onclick="setCategoryFilter('all')" id="tab-all" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5">
                     Ver Tudo
                 </button>
-                <button onclick="setCategoryFilter('tecnologia')" id="tab-tecnologia" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white">
+                <button onclick="setCategoryFilter('tecnologia')" id="tab-tecnologia" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5">
                     Tecnologia
                 </button>
-                <button onclick="setCategoryFilter('empreendedorismo')" id="tab-empreendedorismo" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white">
+                <button onclick="setCategoryFilter('empreendedorismo')" id="tab-empreendedorismo" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5">
                     Empreendedorismo
                 </button>
-                <button onclick="setCategoryFilter('investimentos')" id="tab-investimentos" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white">
+                <button onclick="setCategoryFilter('investimentos')" id="tab-investimentos" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5">
                     Investimentos
+                </button>
+                <button onclick="setCategoryFilter('premium')" id="tab-premium" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5" title="Mostrar apenas análises premium">
+                    Análise Premium
+                    <i data-lucide="star" class="w-3.5 h-3.5 text-gold"></i>
                 </button>
             </div>
 
@@ -515,8 +519,14 @@
                 const category = sourceMap[item.source_name] || 'tecnologia';
                 
                 // Category Filter
-                if (activeCategory !== 'all' && category !== activeCategory) {
-                    return false;
+                if (activeCategory !== 'all') {
+                    if (activeCategory === 'premium') {
+                        if (item.editorial_status !== 'publicado') {
+                            return false;
+                        }
+                    } else if (category !== activeCategory) {
+                        return false;
+                    }
                 }
 
                 // Search Term
@@ -982,18 +992,22 @@
             currentPage = 1; // Reset to page 1
 
             // Remove active classes from all tabs
-            const tabs = ['all', 'tecnologia', 'empreendedorismo', 'investimentos'];
+            const tabs = ['all', 'tecnologia', 'empreendedorismo', 'investimentos', 'premium'];
             tabs.forEach(tab => {
                 const el = document.getElementById(`tab-${tab}`);
                 if (el) {
-                    el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white";
+                    el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5";
                 }
             });
 
             // Set active class on target tab
             const activeEl = document.getElementById(`tab-${category}`);
             if (activeEl) {
-                activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black";
+                if (category === 'premium') {
+                    activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.5)] flex items-center gap-1.5";
+                } else {
+                    activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5";
+                }
             }
 
             renderFeed();
