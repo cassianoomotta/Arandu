@@ -688,8 +688,8 @@
 
         async function fetchLatestNews() {
             try {
-                // Fetch the latest 20 news items to group them by category
-                const response = await fetch(`${API_BASE_URL}/api/noticias?page=1&size=20`);
+                // Fetch the latest 100 news items to group them by category
+                const response = await fetch(`${API_BASE_URL}/api/noticias?page=1&size=100`);
                 if (!response.ok) throw new Error('API offline');
                 const data = await response.json();
                 
