@@ -33,7 +33,7 @@
                     },
                     backgroundImage: {
                         'gold-gradient': 'linear-gradient(135deg, #C5A85C 0%, #E8D098 50%, #9A7B3E 100%)',
-                        'gold-glow': 'radial-gradient(circle, rgba(197, 168, 92, 0.1) 0%, rgba(5, 5, 5, 0) 70%)',
+                        'gold-glow': 'radial-gradient(ellipse at center, rgba(197, 168, 92, 0.07) 0%, rgba(197, 168, 92, 0.03) 35%, rgba(5, 5, 5, 0) 70%)',
                     }
                 }
             }
@@ -50,7 +50,7 @@
             background: rgba(255, 255, 255, 0.02);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.04);
         }
         .gold-border-glow:hover {
             box-shadow: 0 0 20px rgba(197, 168, 92, 0.35);
@@ -143,9 +143,12 @@
 </head>
 <body class="bg-obsidian text-white font-sans min-h-screen relative overflow-x-hidden selection:bg-gold selection:text-black">
 
-    <!-- Glowing lights -->
-    <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-gold-glow pointer-events-none z-0"></div>
-    <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-gold-glow pointer-events-none z-0"></div>
+    <!-- Ambient glowing backgrounds -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute top-[-20%] left-[-15%] w-[70%] h-[70%] bg-gold-glow blur-3xl"></div>
+        <div class="absolute top-[30%] right-[-20%] w-[80%] h-[80%] bg-gold-glow blur-3xl"></div>
+        <div class="absolute bottom-[-20%] left-[10%] w-[70%] h-[70%] bg-gold-glow blur-3xl"></div>
+    </div>
 
     <!-- MAIN CONTAINER -->
     <div class="relative z-10 flex flex-col min-h-screen">

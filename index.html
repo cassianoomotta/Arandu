@@ -845,6 +845,125 @@
                     pointsHtml = ptsHtml;
                 }
 
+                let summaryContainerHtml = '';
+                let summaryObj = null;
+
+                if (item && item.editorial_status === "publicado" && item.editorial_summary) {
+                    try {
+                        summaryObj = typeof item.editorial_summary === 'string' 
+                            ? JSON.parse(item.editorial_summary) 
+                            : item.editorial_summary;
+                    } catch (e) {
+                        console.error("Error parsing editorial summary:", e);
+                    }
+                }
+
+                if (item && !summaryObj && item.ai_summary) {
+                    summaryObj = parseMarkdownSummary(item.ai_summary);
+                }
+
+                if (summaryObj) {
+                    const itemId = item.id || key;
+                    const whatHappened = summaryObj.what_happened || "";
+                    const whyItMatters = summaryObj.why_it_matters || "";
+                    const possibleImpacts = summaryObj.possible_impacts || "";
+                    const keyPoints = summaryObj.key_points || [];
+
+                    const isPremium = item && item.editorial_status === "publicado";
+                    const titleText = isPremium ? "Resumo Executivo" : "Resumo Executivo (IA)";
+                    const iconAttr = isPremium ? 'data-lucide="sparkles" class="w-3.5 h-3.5 text-gold"' : `data-lucide="${iconName}" class="w-3.5 h-3.5 text-gold"`;
+
+                    summaryContainerHtml = `
+                        <div class="flex-grow flex flex-col mb-4">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-2 flex items-center gap-1.5">
+                                <i ${iconAttr}></i>
+                                ${titleText}
+                            </span>
+                            <div class="space-y-1 bg-white/[0.01] border border-white/5 rounded-xl p-3">
+                                <!-- O que aconteceu -->
+                                <div class="border-b border-white/5 pb-1">
+                                    <button onclick="toggleAccordion(event, 'acc-${itemId}-what')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">🔍</span>
+                                            O que aconteceu?
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${itemId}-what" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <p class="text-[11px] text-gray-400 font-light pl-5 pt-0.5 leading-relaxed pb-1.5">
+                                            ${whatHappened}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Por que isso importa -->
+                                <div class="border-b border-white/5 pb-1">
+                                    <button onclick="toggleAccordion(event, 'acc-${itemId}-why')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">💡</span>
+                                            Por que isso importa?
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${itemId}-why" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <p class="text-[11px] text-gray-400 font-light pl-5 pt-0.5 leading-relaxed pb-1.5">
+                                            ${whyItMatters}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Possíveis impactos -->
+                                ${possibleImpacts ? `
+                                <div class="border-b border-white/5 pb-1">
+                                    <button onclick="toggleAccordion(event, 'acc-${itemId}-impacts')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">⚡</span>
+                                            Possíveis impactos?
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${itemId}-impacts" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <p class="text-[11px] text-gray-400 font-light pl-5 pt-0.5 leading-relaxed pb-1.5">
+                                            ${possibleImpacts}
+                                        </p>
+                                    </div>
+                                </div>
+                                ` : ''}
+
+                                <!-- Pontos-chave -->
+                                ${keyPoints && keyPoints.length > 0 ? `
+                                <div>
+                                    <button onclick="toggleAccordion(event, 'acc-${itemId}-points')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">📌</span>
+                                            Pontos-chave
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${itemId}-points" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <ul class="list-disc list-inside text-[11px] text-gray-400 font-light pl-5 pt-0.5 space-y-1 pb-1.5 leading-relaxed">
+                                            ${keyPoints.map(pt => `<li>${pt}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    summaryContainerHtml = `
+                        <div class="flex-grow flex flex-col mb-4">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-3 flex items-center gap-1.5">
+                                <i data-lucide="${iconName}" class="w-3.5 h-3.5 text-gold"></i>
+                                Resumo Executivo (IA)
+                            </span>
+                            <ul class="space-y-2.5 text-sm text-gray-400 mb-6 flex-grow">
+                                ${pointsHtml}
+                            </ul>
+                        </div>
+                    `;
+                }
+
                 const card = document.createElement('article');
                 card.className = "news-card glass-panel rounded-2xl overflow-hidden hover:bg-white/[0.03] flex flex-col h-full group";
                 card.setAttribute('data-aos', 'fade-up');
@@ -864,13 +983,7 @@
                         </h3>
                         
                         <div class="border-t border-white/5 pt-4 flex-grow flex flex-col">
-                            <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-3 flex items-center gap-1.5">
-                                <i data-lucide="${iconName}" class="w-3.5 h-3.5 text-gold"></i>
-                                Resumo Executivo (IA)
-                            </span>
-                            <ul class="space-y-2.5 text-sm text-gray-400 mb-6 flex-grow">
-                                ${pointsHtml}
-                            </ul>
+                            ${summaryContainerHtml}
                             
                             <a href="${newsLink}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold hover:text-gold-light transition duration-300 mt-auto">
                                 Ler Artigo Completo
@@ -1041,6 +1154,65 @@
                 input.value = `(${value.substring(0, 2)}) ${value.substring(2)}`;
             } else if (value.length > 0) {
                 input.value = `(${value}`;
+            }
+        }
+
+        // Parse structured Markdown summaries (with custom headers) into objects
+        function parseMarkdownSummary(text) {
+            if (!text) return null;
+            if (!text.includes("O que aconteceu?") && !text.includes("Por que isso importa?")) return null;
+            
+            const sections = {
+                what_happened: "",
+                why_it_matters: "",
+                possible_impacts: "",
+                key_points: []
+            };
+            
+            // Regex to find sections
+            const parts = text.split(/(?=🔍|💡|⚡|📌|\*\*O que aconteceu\*\*|\*\*Por que isso importa\*\*|\*\*Possíveis impactos\*\*|\*\*Pontos-chave\*\*)/g);
+            for (const part of parts) {
+                const cleanPart = part.trim();
+                if (cleanPart.includes("O que aconteceu?")) {
+                    sections.what_happened = cleanPart.replace(/^(🔍\s*)?(\*\*O que aconteceu\?\*\*|\*O que aconteceu\?\*|O que aconteceu\?)\s*/, "").trim();
+                } else if (cleanPart.includes("Por que isso importa?")) {
+                    sections.why_it_matters = cleanPart.replace(/^(💡\s*)?(\*\*Por que isso importa\?\*\*|\*Por que isso importa\?\*|Por que isso importa\?)\s*/, "").trim();
+                } else if (cleanPart.includes("Possíveis impactos") || cleanPart.includes("Possiveis impactos")) {
+                    sections.possible_impacts = cleanPart.replace(/^(⚡\s*)?(\*\*Possíveis impactos\*\*|\*Possíveis impactos\*|Possíveis impactos|\*\*Possiveis impactos\*\*|Possiveis impactos)\s*/, "").trim();
+                } else if (cleanPart.includes("Pontos-chave") || cleanPart.includes("Pontos chave")) {
+                    const lines = cleanPart.split('\n');
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim().replace(/^[-•*]\s*/, "");
+                        if (line) {
+                            sections.key_points.push(line);
+                        }
+                    }
+                }
+            }
+            
+            // Clean up any double asterisks or markdown in titles
+            sections.what_happened = sections.what_happened.replace(/^\*\*|^\*/, "").trim();
+            sections.why_it_matters = sections.why_it_matters.replace(/^\*\*|^\*/, "").trim();
+            sections.possible_impacts = sections.possible_impacts.replace(/^\*\*|^\*/, "").trim();
+            
+            // Return null if we failed to parse anything useful
+            if (!sections.what_happened && !sections.why_it_matters) return null;
+            
+            return sections;
+        }
+
+        function toggleAccordion(event, id) {
+            event.stopPropagation();
+            const content = document.getElementById(id);
+            const button = event.currentTarget;
+            const icon = button.querySelector('.accordion-icon');
+
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+                icon.style.transform = 'rotate(180deg)';
             }
         }
     </script>
