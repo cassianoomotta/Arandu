@@ -862,8 +862,20 @@
                     summaryObj = parseMarkdownSummary(item.ai_summary);
                 }
 
+                if (!summaryObj) {
+                    const fb = fallbackData[key];
+                    if (fb && fb.points && fb.points.length >= 2) {
+                        summaryObj = {
+                            what_happened: fb.points[0],
+                            why_it_matters: fb.points[1],
+                            possible_impacts: "",
+                            key_points: fb.points.slice(2)
+                        };
+                    }
+                }
+
                 if (summaryObj) {
-                    const itemId = item.id || key;
+                    const itemId = (item && item.id) || key;
                     const whatHappened = summaryObj.what_happened || "";
                     const whyItMatters = summaryObj.why_it_matters || "";
                     const possibleImpacts = summaryObj.possible_impacts || "";
