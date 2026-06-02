@@ -34,7 +34,7 @@
                     },
                     backgroundImage: {
                         'gold-gradient': 'linear-gradient(135deg, #C5A85C 0%, #E8D098 50%, #9A7B3E 100%)',
-                        'gold-glow': 'radial-gradient(circle, rgba(197, 168, 92, 0.15) 0%, rgba(5, 5, 5, 0) 70%)',
+                        'gold-glow': 'radial-gradient(ellipse at center, rgba(197, 168, 92, 0.07) 0%, rgba(197, 168, 92, 0.03) 35%, rgba(5, 5, 5, 0) 70%)',
                     }
                 }
             }
@@ -60,10 +60,74 @@
             background: rgba(255, 255, 255, 0.02);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.04);
         }
         .text-glow {
             text-shadow: 0 0 10px rgba(197, 168, 92, 0.3);
+        }
+
+        /* Card glow refinado: degradê suave ao invés de borda brusca */
+        .news-card {
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .news-card::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(
+                135deg,
+                rgba(197, 168, 92, 0.08) 0%,
+                rgba(197, 168, 92, 0.02) 40%,
+                rgba(255, 255, 255, 0.03) 60%,
+                rgba(197, 168, 92, 0.06) 100%
+            );
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            transition: all 0.5s ease;
+            z-index: 1;
+        }
+        .news-card:hover {
+            box-shadow:
+                0 4px 30px rgba(197, 168, 92, 0.06),
+                0 0 60px rgba(197, 168, 92, 0.03);
+            border-color: rgba(197, 168, 92, 0.12);
+            transform: translateY(-2px);
+        }
+        .news-card:hover::before {
+            background: linear-gradient(
+                135deg,
+                rgba(197, 168, 92, 0.18) 0%,
+                rgba(197, 168, 92, 0.06) 40%,
+                rgba(255, 255, 255, 0.05) 60%,
+                rgba(197, 168, 92, 0.14) 100%
+            );
+        }
+
+        /* Fade-out suave na base do conteúdo dos cards */
+        .card-content-fade {
+            position: relative;
+        }
+        .card-content-fade::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(
+                to bottom,
+                rgba(5, 5, 5, 0) 0%,
+                rgba(5, 5, 5, 0.6) 100%
+            );
+            pointer-events: none;
+            border-radius: 0 0 1rem 1rem;
         }
     </style>
 </head>
@@ -71,9 +135,9 @@
 
     <!-- Ambient glowing backgrounds -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-gold-glow"></div>
-        <div class="absolute top-[40%] right-[-10%] w-[60%] h-[60%] bg-gold-glow"></div>
-        <div class="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] bg-gold-glow"></div>
+        <div class="absolute top-[-20%] left-[-15%] w-[70%] h-[70%] bg-gold-glow blur-3xl"></div>
+        <div class="absolute top-[30%] right-[-20%] w-[80%] h-[80%] bg-gold-glow blur-3xl"></div>
+        <div class="absolute bottom-[-20%] left-[10%] w-[70%] h-[70%] bg-gold-glow blur-3xl"></div>
     </div>
 
     <!-- HEADER -->
@@ -170,7 +234,7 @@
             <!-- 3 Glassmorphism Cards -->
             <div id="news-grid" class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- Card 1: Tecnologia -->
-                <article data-aos="fade-up" data-aos-delay="100" data-aos-duration="1200" class="glass-panel rounded-2xl overflow-hidden hover:border-gold/30 hover:bg-white/[0.04] transition-all duration-500 flex flex-col h-full group">
+                <article data-aos="fade-up" data-aos-delay="100" data-aos-duration="1200" class="news-card glass-panel rounded-2xl overflow-hidden hover:bg-white/[0.03] flex flex-col h-full group">
                     <a href="noticias.html?categoria=tecnologia" class="block relative h-48 overflow-hidden cursor-pointer">
                         <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80" alt="Tecnologia" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
                         <span class="absolute top-4 left-4 bg-gold/95 backdrop-blur text-black text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded">
@@ -211,7 +275,7 @@
                 </article>
 
                 <!-- Card 2: Empreendedorismo -->
-                <article data-aos="fade-up" data-aos-delay="200" data-aos-duration="1200" class="glass-panel rounded-2xl overflow-hidden hover:border-gold/30 hover:bg-white/[0.04] transition-all duration-500 flex flex-col h-full group">
+                <article data-aos="fade-up" data-aos-delay="200" data-aos-duration="1200" class="news-card glass-panel rounded-2xl overflow-hidden hover:bg-white/[0.03] flex flex-col h-full group">
                     <a href="noticias.html?categoria=empreendedorismo" class="block relative h-48 overflow-hidden cursor-pointer">
                         <img src="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=600&q=80" alt="Empreendedorismo" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
                         <span class="absolute top-4 left-4 bg-gold/95 backdrop-blur text-black text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded">
@@ -252,7 +316,7 @@
                 </article>
 
                 <!-- Card 3: Investimentos -->
-                <article data-aos="fade-up" data-aos-delay="300" data-aos-duration="1200" class="glass-panel rounded-2xl overflow-hidden hover:border-gold/30 hover:bg-white/[0.04] transition-all duration-500 flex flex-col h-full group">
+                <article data-aos="fade-up" data-aos-delay="300" data-aos-duration="1200" class="news-card glass-panel rounded-2xl overflow-hidden hover:bg-white/[0.03] flex flex-col h-full group">
                     <a href="noticias.html?categoria=investimentos" class="block relative h-48 overflow-hidden cursor-pointer">
                         <img src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80" alt="Investimentos" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
                         <span class="absolute top-4 left-4 bg-gold/95 backdrop-blur text-black text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded">
@@ -782,7 +846,7 @@
                 }
 
                 const card = document.createElement('article');
-                card.className = "glass-panel rounded-2xl overflow-hidden hover:border-gold/30 hover:bg-white/[0.04] transition-all duration-500 flex flex-col h-full group";
+                card.className = "news-card glass-panel rounded-2xl overflow-hidden hover:bg-white/[0.03] flex flex-col h-full group";
                 card.setAttribute('data-aos', 'fade-up');
                 card.setAttribute('data-aos-delay', (index * 100).toString());
                 card.setAttribute('data-aos-duration', '1200');
