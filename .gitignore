@@ -1,2 +1,6 @@
 .vercel
 .env*
+
+# Propostas comerciais (não versionar)
+propostas/
+*.pptx
