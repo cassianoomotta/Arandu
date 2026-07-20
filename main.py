@@ -1107,11 +1107,26 @@ def read_noticias():
 def read_admin():
     return FileResponse("admin.html")
 
-@app.get("/favicon.ico", summary="Servir favicon")
-def read_favicon():
-    if os.path.exists("scripts/arandu_emblem_transparent.png"):
-        return FileResponse("scripts/arandu_emblem_transparent.png", media_type="image/png")
-    return FileResponse("favicon.ico")
+@app.get("/favicon.ico", summary="Servir favicon.ico")
+def read_favicon_ico():
+    if os.path.exists("favicon.ico"):
+        return FileResponse("favicon.ico", media_type="image/x-icon")
+    elif os.path.exists("favicon.png"):
+        return FileResponse("favicon.png", media_type="image/png")
+    return FileResponse("scripts/arandu_emblem_transparent.png", media_type="image/png")
+
+@app.get("/favicon.png", summary="Servir favicon.png")
+def read_favicon_png():
+    if os.path.exists("favicon.png"):
+        return FileResponse("favicon.png", media_type="image/png")
+    return FileResponse("scripts/arandu_emblem_transparent.png", media_type="image/png")
+
+@app.get("/favicon.svg", summary="Servir favicon.svg")
+def read_favicon_svg():
+    if os.path.exists("favicon.svg"):
+        return FileResponse("favicon.svg", media_type="image/svg+xml")
+    return FileResponse("favicon.png", media_type="image/png")
+
 
 
 if __name__ == "__main__":
