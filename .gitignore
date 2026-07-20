@@ -1,6 +1,13 @@
 .vercel
 .env*
 
+# Banco de dados e temporários
+*.db
+*.db.*
+*.sqlite
+*.sqlite3
+
 # Propostas comerciais (não versionar)
 propostas/
 *.pptx
+
