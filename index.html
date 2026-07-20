@@ -130,6 +130,7 @@
             border-radius: 0 0 1rem 1rem;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 </head>
 <body class="bg-obsidian text-white font-sans overflow-x-hidden min-h-screen relative selection:bg-gold selection:text-black">
 
@@ -982,7 +983,7 @@
                 card.setAttribute('data-aos-delay', (index * 100).toString());
                 card.setAttribute('data-aos-duration', '1200');
 
-                card.innerHTML = `
+                card.innerHTML = DOMPurify.sanitize(`
                     <div class="relative h-48 overflow-hidden">
                         <img src="${image}" alt="${title}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy">
                         <span class="absolute top-4 left-4 bg-gold/95 backdrop-blur text-black text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded">
@@ -1003,7 +1004,7 @@
                             </a>
                         </div>
                     </div>
-                `;
+                `);
                 
                 grid.appendChild(card);
             });
@@ -1087,13 +1088,13 @@
 
             const submitBtn = event.target.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `
+            submitBtn.innerHTML = DOMPurify.sanitize(`
                 <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 <span>Salvando contato...</span>
-            `;
+            `);
 
             // Submit lead to FastAPI REST endpoint
             fetch(`${API_BASE_URL}/api/leads`, {
@@ -1125,7 +1126,7 @@
 
         function showSuccessScreen(name) {
             // Render custom premium success screen inside modal
-            modalContent.innerHTML = `
+            modalContent.innerHTML = DOMPurify.sanitize(`
                 <div class="text-center py-8">
                     <div class="inline-flex items-center justify-center p-4 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 mb-6 drop-shadow-[0_0_15px_rgba(34,197,94,0.3)] animate-bounce">
                         <i data-lucide="check-circle" class="w-12 h-12 stroke-[2.5px]"></i>
@@ -1142,7 +1143,7 @@
                         <span>Conectando com o Telegram...</span>
                     </div>
                 </div>
-            `;
+            `);
             
             // Re-render check-circle icon
             lucide.createIcons();

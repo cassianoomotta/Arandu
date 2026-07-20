@@ -140,6 +140,7 @@
             50% { opacity: 0.5; }
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 </head>
 <body class="bg-obsidian text-white font-sans min-h-screen relative overflow-x-hidden selection:bg-gold selection:text-black">
 
@@ -769,13 +770,13 @@
             feedback.classList.add("hidden");
             const submitBtn = event.target.querySelector("button[type='submit']");
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `
+            submitBtn.innerHTML = DOMPurify.sanitize(`
                 <svg class="animate-spin h-5 w-5 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 <span>Autenticando...</span>
-            `;
+            `);
 
             try {
                 const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
@@ -802,10 +803,10 @@
                 feedback.classList.remove("hidden");
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = `
+                submitBtn.innerHTML = DOMPurify.sanitize(`
                     <span>Autenticar</span>
                     <i data-lucide="shield-check" class="w-4 h-4"></i>
-                `;
+                `);
                 lucide.createIcons();
             }
         }
@@ -838,13 +839,13 @@
                 counter.textContent = leads.length.toString();
 
                 if (leads.length === 0) {
-                    tableBody.innerHTML = `
+                    tableBody.innerHTML = DOMPurify.sanitize(`
                         <tr>
                             <td colspan="4" class="p-8 text-center text-gray-500 font-light">
                                 Nenhum lead capturado ainda.
                             </td>
                         </tr>
-                    `;
+                    `);
                     return;
                 }
 
@@ -857,22 +858,22 @@
                     const formattedDate = leadDateStr ? new Date(leadDateStr).toLocaleString("pt-BR", { timeZone: 'America/Sao_Paulo' }) : 'N/A';
                     const row = document.createElement("tr");
                     row.className = "border-b border-white/5 hover:bg-white/[0.02] transition duration-150";
-                    row.innerHTML = `
+                    row.innerHTML = DOMPurify.sanitize(`
                         <td class="p-4 font-semibold text-white">${lead.name}</td>
                         <td class="p-4 text-gray-300 font-light">${lead.email}</td>
                         <td class="p-4 text-gray-300 font-light">${lead.whatsapp}</td>
                         <td class="p-4 text-gray-400 font-light text-xs">${formattedDate}</td>
-                    `;
+                    `);
                     tableBody.appendChild(row);
                 });
             } catch (err) {
-                tableBody.innerHTML = `
+                tableBody.innerHTML = DOMPurify.sanitize(`
                     <tr>
                         <td colspan="4" class="p-8 text-center text-red-400 font-light">
                             Falha ao carregar leads do servidor. Verifique a conexão com a API.
                         </td>
                     </tr>
-                `;
+                `);
             }
         }
 
@@ -1034,13 +1035,13 @@
             if (!token) return;
             const btn = document.getElementById("triggerScraperBtn");
             btn.disabled = true;
-            btn.innerHTML = `
+            btn.innerHTML = DOMPurify.sanitize(`
                 <svg class="animate-spin h-4 w-4 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 <span>Atualizando...</span>
-            `;
+            `);
 
             try {
                 await Promise.all([
@@ -1055,10 +1056,10 @@
                 showToast("Erro ao Atualizar", "Não foi possível carregar alguns dados em tempo real.", "error");
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = `
+                btn.innerHTML = DOMPurify.sanitize(`
                     <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                     <span>Atualizar Painel</span>
-                `;
+                `);
                 lucide.createIcons();
             }
         }
@@ -1075,10 +1076,10 @@
 
             if (type === "success") {
                 tIcon.className = "p-1.5 rounded-full bg-green-500/10 text-green-400";
-                tIcon.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i>`;
+                tIcon.innerHTML = DOMPurify.sanitize(`<i data-lucide="check" class="w-4 h-4"></i>`);
             } else {
                 tIcon.className = "p-1.5 rounded-full bg-red-500/10 text-red-400";
-                tIcon.innerHTML = `<i data-lucide="alert-triangle" class="w-4 h-4"></i>`;
+                tIcon.innerHTML = DOMPurify.sanitize(`<i data-lucide="alert-triangle" class="w-4 h-4"></i>`);
             }
 
             lucide.createIcons();
@@ -1167,13 +1168,13 @@
                         detailText.textContent = data.current_detail || "Iniciando processos de Inteligência Artificial...";
                         
                         triggerBtn.disabled = true;
-                        triggerBtn.innerHTML = `
+                        triggerBtn.innerHTML = DOMPurify.sanitize(`
                             <svg class="animate-spin h-3.5 w-3.5 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                             <span>Executando...</span>
-                        `;
+                        `);
                         
                         startPipelinePolling();
                         errorBox.classList.add("hidden");
@@ -1195,10 +1196,10 @@
                         }
 
                         triggerBtn.disabled = false;
-                        triggerBtn.innerHTML = `
+                        triggerBtn.innerHTML = DOMPurify.sanitize(`
                             <i data-lucide="zap" class="w-3.5 h-3.5"></i>
                             <span>Executar</span>
-                        `;
+                        `);
                         lucide.createIcons();
                         stopPipelinePolling();
                         updateStepper(data.current_phase, "failed");
@@ -1213,10 +1214,10 @@
                         errorBox.classList.add("hidden");
 
                         triggerBtn.disabled = false;
-                        triggerBtn.innerHTML = `
+                        triggerBtn.innerHTML = DOMPurify.sanitize(`
                             <i data-lucide="zap" class="w-3.5 h-3.5"></i>
                             <span>Executar</span>
-                        `;
+                        `);
                         lucide.createIcons();
                         stopPipelinePolling();
                         updateStepper(null, data.last_success_at ? "success" : "idle");
@@ -1250,13 +1251,13 @@
             // Optimistic UI disable
             if (activeBtn) {
                 activeBtn.disabled = true;
-                activeBtn.innerHTML = `
+                activeBtn.innerHTML = DOMPurify.sanitize(`
                     <svg class="animate-spin h-4 w-4 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     <span>Enviando Comando...</span>
-                `;
+                `);
             }
             if (otherBtn) {
                 otherBtn.disabled = true;
@@ -1287,17 +1288,17 @@
                 // Restore button content
                 if (triggerBtn) {
                     triggerBtn.disabled = false;
-                    triggerBtn.innerHTML = `
+                    triggerBtn.innerHTML = DOMPurify.sanitize(`
                         <i data-lucide="zap" class="w-3.5 h-3.5"></i>
                         <span>Executar</span>
-                    `;
+                    `);
                 }
                 if (editorBtn) {
                     editorBtn.disabled = false;
-                    editorBtn.innerHTML = `
+                    editorBtn.innerHTML = DOMPurify.sanitize(`
                         <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i>
                         <span>Executar Editor</span>
-                    `;
+                    `);
                 }
                 
                 // Trigger one last fetch to reflect final state
@@ -1443,13 +1444,13 @@
 
             } catch (err) {
                 console.error("Error fetching news:", err);
-                tableBody.innerHTML = `
+                tableBody.innerHTML = DOMPurify.sanitize(`
                     <tr>
                         <td colspan="5" class="p-8 text-center text-red-400 font-light">
                             Erro ao carregar histórico de notícias da API.
                         </td>
                     </tr>
-                `;
+                `);
                 const paginationContainer = document.getElementById('admin-news-pagination');
                 if (paginationContainer) paginationContainer.classList.add('hidden');
             }
@@ -1463,13 +1464,13 @@
             const filteredNews = getFilteredNews();
 
             if (filteredNews.length === 0) {
-                tableBody.innerHTML = `
+                tableBody.innerHTML = DOMPurify.sanitize(`
                     <tr>
                         <td colspan="5" class="p-8 text-center text-gray-500 font-light">
                             Nenhuma notícia encontrada com os filtros selecionados.
                         </td>
                     </tr>
-                `;
+                `);
                 const paginationContainer = document.getElementById('admin-news-pagination');
                 if (paginationContainer) paginationContainer.classList.add('hidden');
                 return;
@@ -1531,7 +1532,7 @@
 
                 const row = document.createElement("tr");
                 row.className = "border-b border-white/5 hover:bg-white/[0.02] transition duration-150";
-                row.innerHTML = `
+                row.innerHTML = DOMPurify.sanitize(`
                     <td class="p-4 max-w-sm md:max-w-md">
                         <div class="font-semibold text-white truncate hover:text-gold-light transition">
                             <a href="${news.link}" target="_blank" class="hover:underline">${title}</a>
@@ -1567,7 +1568,7 @@
                             Detalhes
                         </button>
                     </td>
-                `;
+                `);
                 tableBody.appendChild(row);
             });
 
@@ -1600,12 +1601,12 @@
             const startRange = (adminCurrentPage - 1) * adminPageSize + 1;
             const endRange = Math.min(adminCurrentPage * adminPageSize, total);
             
-            paginationContainer.innerHTML = `
+            paginationContainer.innerHTML = DOMPurify.sanitize(`
                 <div class="text-xs text-gray-400 font-light">
                     Exibindo <span class="font-semibold text-white">${startRange}-${endRange}</span> de <span class="font-semibold text-white">${total}</span> notícias
                 </div>
                 <div class="flex items-center gap-1.5" id="admin-news-page-buttons"></div>
-            `;
+            `);
             
             const buttonContainer = document.getElementById('admin-news-page-buttons');
             
@@ -1616,7 +1617,7 @@
                     ? 'border-white/5 text-gray-500 bg-white/[0.01] cursor-not-allowed' 
                     : 'border-white/10 text-white bg-white/5 hover:border-gold hover:text-gold cursor-pointer'
             }`;
-            prevBtn.innerHTML = '<i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>';
+            prevBtn.innerHTML = DOMPurify.sanitize('<i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>');
             prevBtn.disabled = adminCurrentPage === 1;
             prevBtn.onclick = () => {
                 if (adminCurrentPage > 1) {
@@ -1649,7 +1650,7 @@
                     ? 'border-white/5 text-gray-500 bg-white/[0.01] cursor-not-allowed' 
                     : 'border-white/10 text-white bg-white/5 hover:border-gold hover:text-gold cursor-pointer'
             }`;
-            nextBtn.innerHTML = '<i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>';
+            nextBtn.innerHTML = DOMPurify.sanitize('<i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>');
             nextBtn.disabled = adminCurrentPage === totalPages;
             nextBtn.onclick = () => {
                 if (adminCurrentPage < totalPages) {
@@ -1737,12 +1738,12 @@
                     if (clean) {
                         const li = document.createElement("li");
                         li.className = "flex items-start gap-2 leading-snug";
-                        li.innerHTML = `<span class="text-gold mt-1">&bull;</span> <span>${clean}</span>`;
+                        li.innerHTML = DOMPurify.sanitize(`<span class="text-gold mt-1">&bull;</span> <span>${clean}</span>`);
                         summaryList.appendChild(li);
                     }
                 });
             } else {
-                summaryList.innerHTML = `<li class="text-gray-500 italic">Nenhum resumo em marcadores disponível.</li>`;
+                summaryList.innerHTML = DOMPurify.sanitize(`<li class="text-gray-500 italic">Nenhum resumo em marcadores disponível.</li>`);
             }
 
             const modal = document.getElementById("aiModal");

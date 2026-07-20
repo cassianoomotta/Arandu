@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import func, text
+from passlib.context import CryptContext
 
 from database.config import settings
 from database.connection import get_db_session, engine
@@ -273,12 +274,18 @@ app.add_middleware(
 
 # Authentication Utilities
 security = HTTPBearer()
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def verify_sha256_password(plain_password: str, hashed_password: str) -> bool:
+def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
-    Verifies a password against a SHA-256 hash.
+    Verifies a password against bcrypt or legacy SHA-256.
     """
-    return hashlib.sha256(plain_password.encode("utf-8")).hexdigest() == hashed_password
+    if len(hashed_password) == 64 and all(c in "0123456789abcdefABCDEF" for c in hashed_password):
+        return hashlib.sha256(plain_password.encode("utf-8")).hexdigest() == hashed_password
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
 
 
 def generate_jwt_token(user_id: int, email: str, role: str) -> str:
@@ -422,7 +429,7 @@ def login(payload: LoginRequest):
     try:
         with get_db_session() as session:
             user = session.query(User).filter(User.email == payload.email).first()
-            if not user or not verify_sha256_password(payload.password, user.password_hash):
+            if not user or not verify_password(payload.password, user.password_hash):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="E-mail ou senha incorretos."

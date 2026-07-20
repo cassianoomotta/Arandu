@@ -161,6 +161,7 @@
             border-radius: 0 0 1rem 1rem;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 </head>
 <body class="bg-obsidian text-white font-sans overflow-x-hidden min-h-screen relative selection:bg-gold selection:text-black">
 
@@ -954,7 +955,7 @@
 
                 const card = document.createElement('div');
                 card.className = "glass-panel rounded-2xl overflow-hidden hover:border-gold/30 hover:bg-white/[0.04] transition-all duration-500 flex flex-col h-full group";
-                card.innerHTML = `
+                card.innerHTML = DOMPurify.sanitize(`
                     <a href="${item.link}" target="_blank" class="block relative h-48 overflow-hidden cursor-pointer">
                         <img src="${image}" alt="${title}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy">
                         <span class="absolute top-4 left-4 bg-gold/95 backdrop-blur text-black text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded">
@@ -983,7 +984,7 @@
                             </div>
                         </div>
                     </div>
-                `;
+                `);
                 container.appendChild(card);
             });
 
@@ -1220,13 +1221,13 @@
             // Disable button and show loading state
             btn.disabled = true;
             btn.classList.remove('pulse-gold-animation');
-            btn.innerHTML = `
+            btn.innerHTML = DOMPurify.sanitize(`
                 <svg class="animate-spin h-4 w-4 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 <span>Buscando...</span>
-            `;
+            `);
 
             try {
                 // 1. Fetch current status of the pipeline
@@ -1252,7 +1253,7 @@
                 if (currentStatus === "running" || token) {
                     // Show status bar
                     statusBar.classList.remove('hidden');
-                    statusIcon.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>';
+                    statusIcon.innerHTML = DOMPurify.sanitize('<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>');
                     statusIcon.className = 'p-2 rounded-lg bg-gold/10 text-gold';
                     statusTitle.textContent = currentStatus === "running" ? `Fase: ${currentPhase || 'Executando...'}` : 'Pipeline de coleta acionado...';
                     statusMsg.textContent = currentStatus === "running" ? (currentDetail || 'A IA está processando novas pesquisas...') : 'Iniciando pipeline de coleta...';
@@ -1340,7 +1341,7 @@
                 await fetchNewsList();
 
                 // D. Show feedback
-                statusIcon.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i>';
+                statusIcon.innerHTML = DOMPurify.sanitize('<i data-lucide="check-circle" class="w-5 h-5"></i>');
                 statusIcon.className = 'p-2 rounded-lg bg-green-500/10 text-green-400';
                 statusTitle.textContent = 'Notícias atualizadas com sucesso!';
                 statusMsg.textContent = `${allNews.length} notícias disponíveis. Filtrados: ${document.getElementById('news-grid-container').children.length} artigos exibidos.`;
@@ -1350,7 +1351,7 @@
 
             } catch (err) {
                 // E. Error feedback
-                statusIcon.innerHTML = '<i data-lucide="alert-triangle" class="w-5 h-5"></i>';
+                statusIcon.innerHTML = DOMPurify.sanitize('<i data-lucide="alert-triangle" class="w-5 h-5"></i>');
                 statusIcon.className = 'p-2 rounded-lg bg-red-500/10 text-red-400';
                 statusTitle.textContent = 'Erro na busca';
                 statusMsg.textContent = err.message || 'Não foi possível conectar ao servidor. As notícias de cache serão exibidas.';
@@ -1361,11 +1362,11 @@
                 // Restore button state
                 btn.disabled = false;
                 btn.classList.add('pulse-gold-animation');
-                btn.innerHTML = `
+                btn.innerHTML = DOMPurify.sanitize(`
                     <i data-lucide="zap" class="w-4 h-4"></i>
                     <span class="hidden sm:inline">Buscar Agora</span>
                     <span class="sm:hidden">Buscar</span>
-                `;
+                `);
                 lucide.createIcons();
 
                 // Auto-hide status bar after 6 seconds if it was displayed
@@ -1389,13 +1390,13 @@
                 : 'p-1.5 rounded-full bg-red-500/10 text-red-400';
             const iconName = type === 'success' ? 'check' : 'alert-triangle';
 
-            toast.innerHTML = `
+            toast.innerHTML = DOMPurify.sanitize(`
                 <div class="${iconClass}"><i data-lucide="${iconName}" class="w-4 h-4"></i></div>
                 <div>
                     <h4 class="font-outfit text-xs font-bold text-white">${title}</h4>
                     <p class="text-gray-400 text-[11px] font-light mt-0.5">${message}</p>
                 </div>
-            `;
+            `);
 
             document.body.appendChild(toast);
             lucide.createIcons();
