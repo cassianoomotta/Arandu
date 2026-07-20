@@ -9,6 +9,7 @@ import jwt
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Depends, HTTPException, status, Query, Header, Response
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
@@ -271,6 +272,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files directory for assets (logos, images, etc.)
+import os
+if os.path.exists("scripts"):
+    app.mount("/scripts", StaticFiles(directory="scripts"), name="scripts")
 
 # Authentication Utilities
 security = HTTPBearer()
