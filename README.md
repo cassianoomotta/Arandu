@@ -47,9 +47,26 @@ flowchart TD
 ### 🔹 Agente 1: Curador de Notícias (`agent/Curador de Notícias`)
 - **Responsabilidade**: Atua como o primeiro filtro de qualidade e relevância, eliminando sensacionalismo, clickbaits e notícias de baixo impacto.
 - **Operação em 2 Fases**:
-  1. **Triagem Preliminar**: Avaliação rápida de lote bruto com pontuação de 0 a 10.
-  2. **Qualificação Profunda**: Atribuição de score refinado (0-100), categoria temática (`Tecnologia`, `IA/Automação`, `Mercado/Investimentos`, etc.), nível de prioridade e justificativa analítica em até 15 palavras.
-- **Exemplo de JSON Output do Agente Curador**:
+  1. **Fase 1 - Triagem Preliminar**: Avaliação em lote de matérias brutas atribuindo score rápido (0 a 10).
+  2. **Fase 2 - Qualificação Profunda**: Curadoria conservadora atribuindo status (`APROVADA` / `REPROVADA`), justificativa concisa (< 15 palavras), categoria temática oficial e score final.
+
+- **Exemplo de JSON Output (Fase 1 - Triagem Preliminar)**:
+```json
+{
+  "classifications": [
+    {
+      "id": 142,
+      "score": 8
+    },
+    {
+      "id": 143,
+      "score": 3
+    }
+  ]
+}
+```
+
+- **Exemplo de JSON Output (Fase 2 - Curadoria & Qualificação)**:
 ```json
 {
   "items": [
