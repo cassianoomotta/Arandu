@@ -1109,8 +1109,9 @@ def read_admin():
 
 @app.get("/favicon.ico", summary="Servir favicon")
 def read_favicon():
-    svg_content = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none"><path d="M50 5L92 85H74L50 37L26 85H8L50 5Z" fill="#C5A85C"/><path d="M37 60H63L68 70H32L37 60Z" fill="#E8D098"/></svg>"""
-    return Response(content=svg_content, media_type="image/svg+xml")
+    if os.path.exists("scripts/arandu_emblem_transparent.png"):
+        return FileResponse("scripts/arandu_emblem_transparent.png", media_type="image/png")
+    return FileResponse("favicon.ico")
 
 
 if __name__ == "__main__":
