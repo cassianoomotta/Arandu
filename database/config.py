@@ -12,15 +12,9 @@ class Settings:
         "sqlite:///arandu.db"
     ).strip()
     if raw_db_url.startswith("postgres://"):
-        db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
+        DATABASE_URL = raw_db_url.replace("postgres://", "postgresql://", 1)
     else:
-        db_url = raw_db_url
-
-    # Auto-heal Supabase pooler connections missing project-ref in username
-    if "pooler.supabase.com" in db_url and "://postgres:" in db_url:
-        db_url = db_url.replace("://postgres:", "://postgres.albucbddugupigeaepbb:", 1)
-
-    DATABASE_URL = db_url
+        DATABASE_URL = raw_db_url
 
     # Cleaned up debug statements
 
