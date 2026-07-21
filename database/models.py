@@ -154,6 +154,9 @@ Index("ix_news_original_published_at_desc", News.original_published_at.desc())
 Index("ix_news_is_curated", News.is_curated)
 Index("ix_news_relevance_score", News.relevance_score)
 Index("ix_news_editorial_status", News.editorial_status)
+Index("ix_news_editorial_pubdate", News.editorial_status, News.original_published_at.desc())
+Index("ix_news_category_pubdate", News.editorial_category, News.original_published_at.desc())
+Index("ix_news_curated_pubdate", News.is_curated, News.original_published_at.desc())
 
 
 class User(Base):

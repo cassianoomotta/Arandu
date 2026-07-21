@@ -572,8 +572,8 @@
         // Fetch list of news
         async function fetchNewsList() {
             try {
-                // Fetch up to 100 recent articles
-                const response = await fetch(`${API_BASE_URL}/api/noticias?page=1&size=100`);
+                // Fetch initial batch of recent articles
+                const response = await fetch(`${API_BASE_URL}/api/noticias?page=1&size=36`);
                 if (response.ok) {
                     const data = await response.json();
                     allNews = data.results || data.items || [];

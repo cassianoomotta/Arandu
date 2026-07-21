@@ -155,47 +155,19 @@ async def lifespan(app: FastAPI):
     """
     import os
     
-    # Auto-create all tables at startup if they do not exist
-    try:
-        logger.info("Lifespan: Ensuring all database tables exist...")
-        Base.metadata.create_all(bind=engine)
-        
-        # Dynamic migration: add translated_by_gemini column if it doesn't exist
-        with engine.connect() as conn:
-            try:
-                conn.execute(text("ALTER TABLE news ADD COLUMN translated_by_gemini BOOLEAN DEFAULT FALSE"))
-                conn.commit()
-                logger.info("Lifespan Database Migration: Added column 'translated_by_gemini' to news table.")
-            except Exception as e:
-                try:
-                    conn.rollback()
-                except:
-                    pass
-                logger.info(f"Lifespan Database Migration: Column 'translated_by_gemini' check: {str(e)}")
-            
-            # Migration for Editor Executivo columns
-            editorial_cols = [
-                ("editorial_status", "VARCHAR(50) DEFAULT 'pendente'"),
-                ("editorial_title", "VARCHAR(255)"),
-                ("editorial_summary", "TEXT"),
-                ("editorial_category", "VARCHAR(100)"),
-                ("editorial_tags", "TEXT"),
-                ("meta_description", "TEXT"),
-                ("editorial_scores", "JSON")
-            ]
-            for col_name, col_type in editorial_cols:
-                try:
-                    conn.execute(text(f"ALTER TABLE news ADD COLUMN {col_name} {col_type}"))
-                    conn.commit()
-                    logger.info(f"Lifespan Database Migration: Added column '{col_name}' to news table.")
-                except Exception as e:
-                    try:
-                        conn.rollback()
-                    except:
-                        pass
-                    logger.info(f"Lifespan Database Migration: Column '{col_name}' check: {str(e)}")
-    except Exception as e:
-        logger.error(f"Lifespan: Failed to create database tables: {e}")
+    # Run DB schema check only if not on serverless/Vercel or if RUN_MIGRATIONS is set
+    is_vercel = "VERCEL" in os.environ or "VERCEL_ENV" in os.environ
+    should_migrate = os.getenv("RUN_MIGRATIONS", "false" if is_vercel else "true").lower() == "true"
+    
+    if should_migrate:
+        try:
+            logger.info("Lifespan: Running database schema migrations...")
+            from database.migrate import run_migrations
+            run_migrations()
+        except Exception as e:
+            logger.error(f"Lifespan: Migration failed: {e}")
+    else:
+        logger.info("Lifespan: Skipping DDL migrations on serverless boot for fast startup.")
 
     disable_scheduler = os.getenv("DISABLE_SCHEDULER", "false").lower() == "true"
     
@@ -504,6 +476,7 @@ def logout(
 
 @app.get("/api/noticias", response_model=PaginatedNewsResponse, summary="Consultar Notícias")
 def get_news(
+    response: Response,
     page: int = Query(1, ge=1, description="Número da página (início em 1)"),
     size: int = Query(20, ge=1, le=100, description="Quantidade de registros por página"),
     source_id: Optional[int] = Query(None, description="Filtrar por ID da fonte de notícias"),
@@ -514,10 +487,13 @@ def get_news(
     """
     Returns a paginated list of curated news articles, filterable by source, telegram status, and editorial status.
     """
+    # Cache public GET responses in Edge CDN and browser for 60 seconds
+    response.headers["Cache-Control"] = "public, max-age=60, s-maxage=120, stale-while-revalidate=300"
     offset = (page - 1) * size
     
     try:
         with get_db_session() as session:
+            from sqlalchemy.orm import joinedload
             query = session.query(News)
             
             # Apply optional filters
@@ -536,26 +512,20 @@ def get_news(
             if order_by == "created":
                 order_clause = News.created_at.desc()
             
-            # Retrieve paginated list ordered by original publish date descending or created_at descending
+            # Retrieve paginated list with eager joinedload for source
             results = (
-                query.order_by(order_clause)
+                query.options(joinedload(News.source))
+                .order_by(order_clause)
                 .offset(offset)
                 .limit(size)
                 .all()
             )
             
-            # Build source name lookup cache
-            source_ids = list({item.source_id for item in results})
-            sources_lookup = {}
-            if source_ids:
-                sources_data = session.query(Source).filter(Source.id.in_(source_ids)).all()
-                sources_lookup = {s.id: s.name for s in sources_data}
-            
-            # Convert models to dictionaries with source_name included
+            # Convert models to dictionaries with source_name included from relationship
             items = []
             for item in results:
                 item_dict = NewsItemResponse.from_orm(item)
-                item_dict.source_name = sources_lookup.get(item.source_id, "")
+                item_dict.source_name = item.source.name if item.source else ""
                 items.append(item_dict)
             
             return {
