@@ -180,11 +180,9 @@ TELEGRAM_CHAT_ID=seu-id-de-chat-aqui
 python scripts/init_db.py
 ```
 
-### 5. Executar o Servidor Local
-```bash
-python main.py
-```
-Acesse o portal localmente em: [http://localhost:8000](http://localhost:8000)
+### 5. Executar / Acessar o Portal
+- **Produção (Vercel):** [https://arandu-tau.vercel.app](https://arandu-tau.vercel.app)
+- **Servidor Local:** [http://localhost:8000](http://localhost:8000)
 
 ---
 
