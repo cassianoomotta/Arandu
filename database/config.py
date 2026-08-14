@@ -1,4 +1,5 @@
 import os
+import secrets
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -20,7 +21,7 @@ class Settings:
 
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GEMINI_DAILY_LIMIT: int = int(os.getenv("GEMINI_DAILY_LIMIT", "1500"))
-    JWT_SECRET: str = os.getenv("JWT_SECRET", "super_secret_key_change_me_in_production")
+    JWT_SECRET: str = os.getenv("JWT_SECRET", secrets.token_urlsafe(32))
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
     TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")

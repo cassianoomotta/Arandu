@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, text
 from passlib.context import CryptContext
 
@@ -330,9 +330,9 @@ def require_admin_role(claims: dict = Depends(get_current_user_claims)) -> dict:
 
 # Pydantic Schemas
 class LeadCreateRequest(BaseModel):
-    name: str
+    name: str = Field(..., max_length=100)
     email: EmailStr
-    whatsapp: str
+    whatsapp: str = Field(..., max_length=30)
 
 
 class LeadResponse(BaseModel):
@@ -1012,42 +1012,7 @@ def get_public_pipeline_status():
         )
 
 
-@app.get("/api/debug-gemini", summary="Debug Gemini API Connection")
-def debug_gemini():
-    """
-    Temporary debug endpoint to test Gemini API key and connection.
-    """
-    key = settings.GEMINI_API_KEY
-    if not key:
-        return {
-            "status": "error",
-            "message": "GEMINI_API_KEY is not defined in environment variables."
-        }
-    
-    # Mask key for security
-    masked_key = key[:6] + "..." + key[-4:] if len(key) > 10 else "too short"
-    
-    try:
-        from core.processor import call_gemini_api
-        response_text = call_gemini_api(
-            prompt="Hello. Respond with 'API Key is working' if you see this.",
-            max_tokens=30,
-            temperature=0.0
-        )
-        return {
-            "status": "success",
-            "masked_key": masked_key,
-            "response": response_text.strip() if response_text else None
-        }
-    except Exception as e:
-        import traceback
-        return {
-            "status": "error",
-            "masked_key": masked_key,
-            "error_type": type(e).__name__,
-            "error_message": str(e),
-            "traceback": traceback.format_exc()
-        }
+
 
 
 @app.get("/api/health", summary="Health Check")
