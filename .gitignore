@@ -11,6 +11,12 @@
 *.sqlite
 *.sqlite3
 
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
 # Propostas comerciais (não versionar)
 propostas/
 *.pptx

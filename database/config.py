@@ -8,10 +8,8 @@ env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 class Settings:
-    raw_db_url = os.getenv(
-        "DATABASE_URL", 
-        "sqlite:///arandu.db"
-    ).strip()
+    default_sqlite = "sqlite:////tmp/arandu.db" if ("VERCEL" in os.environ or "VERCEL_ENV" in os.environ) else "sqlite:///arandu.db"
+    raw_db_url = os.getenv("DATABASE_URL", default_sqlite).strip()
     if raw_db_url.startswith("postgres://"):
         DATABASE_URL = raw_db_url.replace("postgres://", "postgresql://", 1)
     else:

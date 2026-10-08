@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, text
-from passlib.context import CryptContext
+import bcrypt
 
 from database.config import settings
 from database.connection import get_db_session, engine
@@ -169,10 +169,10 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("Lifespan: Skipping DDL migrations on serverless boot for fast startup.")
 
-    disable_scheduler = os.getenv("DISABLE_SCHEDULER", "false").lower() == "true"
+    disable_scheduler = is_vercel or os.getenv("DISABLE_SCHEDULER", "false").lower() == "true"
     
     if disable_scheduler:
-        logger.info("Background Scheduler is disabled (DISABLE_SCHEDULER=true).")
+        logger.info("Background Scheduler is disabled (serverless environment).")
         yield
         return
         
@@ -210,22 +210,27 @@ async def lifespan(app: FastAPI):
     scheduler.start()
     logger.info("Background Scheduler started successfully (ingestion + 20-day cleanup).")
     
-    # Trigger initial ingestion in background on startup if DB is empty of news
-    try:
-        with get_db_session() as session:
-            news_count = session.query(News).count()
-        if news_count == 0:
-            logger.info("Database is empty of news. Triggering initial ingestion on startup in background...")
-            asyncio.create_task(execute_scheduled_ingestion())
-    except Exception as e:
-        logger.error(f"Startup check failed: {str(e)}")
+    # Trigger initial ingestion in background on startup if DB is empty of news (local only)
+    if not is_vercel:
+        try:
+            with get_db_session() as session:
+                news_count = session.query(News).count()
+            if news_count == 0:
+                logger.info("Database is empty of news. Triggering initial ingestion on startup in background...")
+                asyncio.create_task(execute_scheduled_ingestion())
+        except Exception as e:
+            logger.error(f"Startup check failed: {str(e)}")
         
     yield
     
     # 3. Shutdown scheduler gracefully on app close
-    logger.info("Shutting down Background Scheduler...")
-    scheduler.shutdown()
-    logger.info("Background Scheduler stopped.")
+    try:
+        if scheduler.running:
+            logger.info("Shutting down Background Scheduler...")
+            scheduler.shutdown()
+            logger.info("Background Scheduler stopped.")
+    except Exception:
+        pass
 
 
 # Initialize FastAPI app with lifespan events
@@ -252,7 +257,6 @@ if os.path.exists("scripts"):
 
 # Authentication Utilities
 security = HTTPBearer()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
@@ -260,10 +264,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     if len(hashed_password) == 64 and all(c in "0123456789abcdefABCDEF" for c in hashed_password):
         return hashlib.sha256(plain_password.encode("utf-8")).hexdigest() == hashed_password
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except Exception:
+        return False
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
 
 def generate_jwt_token(user_id: int, email: str, role: str) -> str:
