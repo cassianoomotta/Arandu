@@ -1,0 +1,1884 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arandu | Painel do Administrador</title>
+    
+    <!-- Favicon: Golden split-apex 'A' emblem logo -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="canonical" href="https://arandu-tau.vercel.app/admin.html" />
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        obsidian: '#050505',
+                        gold: {
+                            light: '#E8D098',
+                            DEFAULT: '#C5A85C',
+                            dark: '#9A7B3E',
+                        }
+                    },
+                    backgroundImage: {
+                        'gold-gradient': 'linear-gradient(135deg, #C5A85C 0%, #E8D098 50%, #9A7B3E 100%)',
+                        'gold-glow': 'radial-gradient(ellipse at center, rgba(197, 168, 92, 0.07) 0%, rgba(197, 168, 92, 0.03) 35%, rgba(5, 5, 5, 0) 70%)',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .gold-border-glow:hover {
+            box-shadow: 0 0 20px rgba(197, 168, 92, 0.35);
+        }
+        .text-glow {
+            text-shadow: 0 0 10px rgba(197, 168, 92, 0.25);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(5, 5, 5, 1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(197, 168, 92, 0.2);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(197, 168, 92, 0.4);
+        }
+        /* Pipeline Stepper Modules */
+        .pipeline-phase {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 4px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.015);
+            transition: all 0.3s ease;
+        }
+        .pipeline-phase-icon {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: rgba(156,163,175,0.5);
+            transition: all 0.3s ease;
+        }
+        .pipeline-phase-label {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(156,163,175,0.4);
+            transition: color 0.3s ease;
+        }
+        /* Active phase */
+        .pipeline-phase.phase-active {
+            border-color: rgba(197,168,92,0.3);
+            background: rgba(197,168,92,0.06);
+        }
+        .pipeline-phase.phase-active .pipeline-phase-icon {
+            background: rgba(197,168,92,0.15);
+            border-color: rgba(197,168,92,0.3);
+            color: #C5A85C;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        .pipeline-phase.phase-active .pipeline-phase-label { color: #C5A85C; }
+        /* Done phase */
+        .pipeline-phase.phase-done {
+            border-color: rgba(34,197,94,0.2);
+            background: rgba(34,197,94,0.04);
+        }
+        .pipeline-phase.phase-done .pipeline-phase-icon {
+            background: rgba(34,197,94,0.12);
+            border-color: rgba(34,197,94,0.25);
+            color: #22c55e;
+        }
+        .pipeline-phase.phase-done .pipeline-phase-label { color: #22c55e; }
+        /* Failed phase */
+        .pipeline-phase.phase-failed {
+            border-color: rgba(239,68,68,0.25);
+            background: rgba(239,68,68,0.05);
+        }
+        .pipeline-phase.phase-failed .pipeline-phase-icon {
+            background: rgba(239,68,68,0.12);
+            border-color: rgba(239,68,68,0.25);
+            color: #ef4444;
+        }
+        .pipeline-phase.phase-failed .pipeline-phase-label { color: #ef4444; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+</head>
+<body class="bg-obsidian text-white font-sans min-h-screen relative overflow-x-hidden selection:bg-gold selection:text-black">
+
+    <!-- Ambient glowing backgrounds -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute top-[-20%] left-[-15%] w-[70%] h-[70%] bg-gold-glow blur-3xl"></div>
+        <div class="absolute top-[30%] right-[-20%] w-[80%] h-[80%] bg-gold-glow blur-3xl"></div>
+        <div class="absolute bottom-[-20%] left-[10%] w-[70%] h-[70%] bg-gold-glow blur-3xl"></div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <div class="relative z-10 flex flex-col min-h-screen">
+        
+        <!-- HEADER -->
+        <header class="w-full py-6 px-6 md:px-12 border-b border-white/5 glass-panel">
+            <div class="max-w-7xl mx-auto flex items-center justify-between">
+                <a href="index.html" class="flex items-center gap-1.5">
+                    <img src="favicon.png" onerror="this.onerror=null; this.src='favicon.svg';" alt="A" class="w-7 h-7 object-contain drop-shadow-[0_0_8px_rgba(197,168,92,0.6)]">
+                    <span class="font-outfit text-xl font-bold tracking-[0.2em] text-white">RANDU</span>
+                </a>
+                
+                <div class="flex items-center gap-4">
+                    <a href="index.html" class="text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition duration-200 flex items-center gap-1.5">
+                        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                        Voltar ao Portal
+                    </a>
+                    <button id="logoutBtn" onclick="handleLogout()" class="hidden px-4 py-2 rounded bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400 text-xs font-bold uppercase tracking-wider transition-all duration-200">
+                        Sair
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTENT SECTION -->
+        <main class="flex-grow flex items-center justify-center p-6">
+            
+            <!-- 1. LOGIN CONTAINER -->
+            <div id="loginSection" class="w-full max-w-md glass-panel rounded-2xl p-8 transition-all duration-500">
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center p-3.5 rounded-full bg-gold/10 border border-gold/20 text-gold mb-4">
+                        <i data-lucide="lock" class="w-6 h-6"></i>
+                    </div>
+                    <h2 class="font-outfit text-2xl font-bold text-white mb-2">Login do Administrador</h2>
+                    <p class="text-gray-400 text-xs font-light">Autentique-se com suas credenciais de segurança para gerenciar a plataforma Arandu.</p>
+                </div>
+
+                <form onsubmit="handleLoginSubmit(event)" class="space-y-5">
+                    <div>
+                        <label for="email" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">E-mail</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                <i data-lucide="mail" class="w-4 h-4"></i>
+                            </span>
+                            <input type="email" id="email" required class="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white text-sm focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition duration-200" placeholder="">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="password" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Senha</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                <i data-lucide="key-round" class="w-4 h-4"></i>
+                            </span>
+                            <input type="password" id="password" required class="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white text-sm focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition duration-200" placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full gold-border-glow bg-gold-gradient text-black font-outfit font-extrabold uppercase tracking-wider py-3.5 rounded-xl hover:scale-[1.01] transition-all duration-300 flex items-center justify-center gap-2 mt-6">
+                        <span>Autenticar</span>
+                        <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    </button>
+                </form>
+                <div id="loginFeedback" class="text-xs text-center text-red-400 mt-4 font-light hidden"></div>
+            </div>
+
+            <!-- 2. DASHBOARD CONTAINER (HIDDEN BY DEFAULT) -->
+            <div id="dashboardSection" class="w-full max-w-6xl glass-panel rounded-3xl p-8 md:p-12 transition-all duration-500 hidden flex flex-col gap-10">
+                <!-- Dashboard Header -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/5">
+                    <div>
+                        <span class="text-xs font-extrabold uppercase tracking-widest text-gold text-glow flex items-center gap-1.5 mb-2">
+                            <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+                            Painel Operacional
+                        </span>
+                        <h2 class="font-outfit text-3xl font-bold text-white">Bem-vindo, Administrador</h2>
+                        <p class="text-gray-400 text-sm font-light mt-1">Monitore os leads de sua landing page e execute rotinas operacionais.</p>
+                    </div>
+
+                    <!-- Refresh Dashboard button -->
+                    <div class="flex items-center gap-4">
+                        <button id="triggerScraperBtn" onclick="refreshDashboard()" class="px-6 py-3.5 rounded-xl bg-gold-gradient text-black font-outfit font-extrabold uppercase tracking-wider text-xs flex items-center gap-2 hover:scale-[1.03] transition duration-200">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                            Atualizar Painel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats summary grid -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="glass-panel p-6 rounded-xl flex items-center gap-5">
+                        <div class="p-4 rounded-lg bg-gold/10 border border-gold/20 text-gold">
+                            <i data-lucide="users-2" class="w-7 h-7"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gray-500 block">Total de Leads</span>
+                            <span id="leadsCountVal" class="text-3xl font-bold text-white tracking-tight">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-panel p-6 rounded-xl flex items-center gap-5">
+                        <div class="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400">
+                            <i data-lucide="check-check" class="w-7 h-7"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gray-500 block">Status da API</span>
+                            <span id="apiStatusVal" class="text-lg font-bold text-green-400 uppercase tracking-wide">Online</span>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-6 rounded-xl flex items-center gap-5">
+                        <div class="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                            <i data-lucide="clock" class="w-7 h-7"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gray-500 block">Intervalo do Pipeline</span>
+                            <span class="text-base font-bold text-white tracking-wide">A cada 1 Hora</span>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-6 rounded-xl flex items-center gap-5">
+                        <div id="geminiUsageIconBox" class="p-4 rounded-lg bg-gold/10 border border-gold/20 text-gold">
+                            <i data-lucide="cpu" class="w-7 h-7"></i>
+                        </div>
+                        <div class="flex-grow">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gray-500 block">Uso Diário Gemini</span>
+                            <span id="geminiUsageVal" class="text-base font-bold text-white tracking-wide">Calculando...</span>
+                            <div id="rateLimitIndicator" class="mt-2">
+                                <div id="rateLimitBadge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-500/10 border border-green-500/20 text-green-400">
+                                    <i id="rateLimitIcon" data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                                    <span id="rateLimitText" class="text-[10px] font-bold uppercase tracking-wider">Sem Restrições</span>
+                                    <span id="rateLimitCountdown" class="text-[10px] text-gray-400 font-mono ml-1 font-normal"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pipeline Status Section -->
+                <div class="glass-panel p-6 rounded-2xl">
+                    <!-- Header row -->
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-5">
+                        <div class="flex items-center gap-3">
+                            <div id="pipelineStatusIconBox" class="p-3 rounded-lg bg-gray-500/10 border border-gray-500/20 text-gray-400 flex items-center justify-center">
+                                <i id="pipelineStatusIcon" data-lucide="play-circle" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] uppercase font-bold tracking-wider text-gray-500">Pipeline de IA</span>
+                                    <span id="pipelineStatusBadge" class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-gray-500/15 text-gray-400 border border-gray-500/20">Ocioso</span>
+                                </div>
+                                <p id="pipelineDetailText" class="text-gray-400 text-xs font-light mt-0.5">Aguardando execução do próximo ciclo automático.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-500 font-mono">
+                                <span id="pipelineLastRunTime">Início: Nunca</span>
+                                <span id="pipelineLastSuccessTime">Sucesso: Nunca</span>
+                                <span id="pipelineLastDuration">Duração: N/A</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button id="triggerPipelineBtn" onclick="triggerManualPipeline()" class="px-5 py-2.5 rounded-xl bg-gold-gradient text-black font-outfit font-extrabold uppercase tracking-wider text-[10px] flex items-center gap-2 hover:scale-[1.02] transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+                                    <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                    <span>Executar</span>
+                                </button>
+                                <button id="triggerEditorBtn" onclick="triggerManualPipeline(true)" class="px-5 py-2.5 rounded-xl bg-gray-700/50 hover:bg-gray-700/80 border border-gray-600 text-gray-200 font-outfit font-extrabold uppercase tracking-wider text-[10px] flex items-center gap-2 hover:scale-[1.02] transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+                                    <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i>
+                                    <span>Executar Editor</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phase Stepper Modules -->
+                    <div id="pipelineStepper" class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-10 gap-2">
+                        <div class="pipeline-phase" data-phase="Inicialização">
+                            <div class="pipeline-phase-icon"><i data-lucide="power" class="w-4 h-4"></i></div>
+                            <span class="pipeline-phase-label">Início</span>
+                        </div>
+                        <div class="pipeline-phase" data-phase="Busca RSS">
+                            <div class="pipeline-phase-icon"><i data-lucide="rss" class="w-4 h-4"></i></div>
+                            <span class="pipeline-phase-label">RSS</span>
+                        </div>
+                        <div class="pipeline-phase" data-phase="Deduplicação">
+                            <div class="pipeline-phase-icon"><i data-lucide="filter" class="w-4 h-4"></i></div>
+                            <span class="pipeline-phase-label">Filtros</span>
+                        </div>
+                        <div class="pipeline-phase" data-phase="Processamento IA">
+                            <div class="pipeline-phase-icon"><i data-lucide="brain" class="w-4 h-4"></i></div>
+                            <span class="pipeline-phase-label">Tradução</span>
+                        </div>
+                        <div class="pipeline-phase" data-phase="Curadoria IA">
+                            <div class="pipeline-phase-icon"><i data-lucide="sparkles" class="w-4 h-4"></i></div>
+                            <span class="pipeline-phase-label">Curadoria</span>
+                        </div>
+                        <div class="pipeline-phase" data-phase="Redação IA">
+                            <div class="pipeline-phase-icon"><i data-lucide="pen-tool" class="w-4 h-4"></i></div>
+                            <span class="pipeline-phase-label">Redação</span>
+                        </div>
+                        <div class="pipeline-phase" data-phase="Divulgação no Site">
+                            <div class="pipeline-phase-icon"><i data-lucide="globe" class="w-4 h-4"></i></div>
+                            <span class="pipeline-phase-label">Site</span>
+                        </div>
+                        <div class="pipeline-phase" data-phase="Notificações">
+                            <div class="pipeline-phase-icon"><i data-lucide="send" class="w-4 h-4"></i></div>
+                            <span class="pipeline-phase-label">Telegram</span>
+                        </div>
+                        <div class="pipeline-phase" data-phase="Limpeza">
+                            <div class="pipeline-phase-icon"><i data-lucide="trash-2" class="w-4 h-4"></i></div>
+                            <span class="pipeline-phase-label">Limpeza</span>
+                        </div>
+                        <div class="pipeline-phase" data-phase="Correção de Resumos">
+                            <div class="pipeline-phase-icon"><i data-lucide="wrench" class="w-4 h-4"></i></div>
+                            <span class="pipeline-phase-label">Correção</span>
+                        </div>
+                    </div>
+
+                    <!-- Error display -->
+                    <div id="pipelineErrorBox" class="hidden mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono">
+                        <strong>Erro:</strong> <span id="pipelineErrorText"></span>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Chart 1: Leads Growth -->
+                    <div class="glass-panel p-6 rounded-2xl flex flex-col gap-4">
+                        <h4 class="font-outfit text-base font-bold text-white flex items-center gap-2">
+                            <i data-lucide="trending-up" class="w-4 h-4 text-gold"></i>
+                            Evolução de Cadastro de Leads (Último Mês)
+                        </h4>
+                        <div class="relative w-full h-[220px]">
+                            <canvas id="leadsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 2: News Categories -->
+                    <div class="glass-panel p-6 rounded-2xl flex flex-col gap-4">
+                        <h4 class="font-outfit text-base font-bold text-white flex items-center gap-2">
+                            <i data-lucide="pie-chart" class="w-4 h-4 text-gold"></i>
+                            Distribuição de Relatórios por Nicho
+                        </h4>
+                        <div class="relative w-full h-[220px] flex items-center justify-center">
+                            <canvas id="categoriesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <div class="flex border-b border-white/5 gap-6 mb-2">
+                    <button id="tabLeadsBtn" onclick="switchAdminTab('leads')" class="pb-4 text-sm font-bold uppercase tracking-wider border-b-2 border-gold text-white focus:outline-none transition duration-200">
+                        Leads Capturados
+                    </button>
+                    <button id="tabNewsBtn" onclick="switchAdminTab('news')" class="pb-4 text-sm font-bold uppercase tracking-wider border-b-2 border-transparent text-gray-400 hover:text-white focus:outline-none transition duration-200">
+                        Histórico de Curadoria (Agente IA)
+                    </button>
+                </div>
+
+                <!-- Tab: Leads -->
+                <div id="leadsTabContent" class="flex flex-col gap-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-outfit text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="database" class="w-5 h-5 text-gold"></i>
+                            Contatos e Leads Capturados
+                        </h3>
+                        <button onclick="fetchLeads(); fetchGeminiUsage();" class="text-xs font-bold uppercase tracking-wider text-gold hover:text-gold-light transition duration-200 flex items-center gap-1.5 focus:outline-none">
+                            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                            Atualizar Tabela
+                        </button>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="border-b border-white/5 bg-white/[0.01]">
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400">Nome</th>
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400">E-mail</th>
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400">WhatsApp</th>
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400">Data de Cadastro</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leadsTableBody">
+                                    <tr>
+                                        <td colspan="4" class="p-8 text-center text-gray-500 font-light">
+                                            Carregando lista de leads...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: News Curation History -->
+                <div id="newsTabContent" class="flex flex-col gap-4 hidden">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-outfit text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="newspaper" class="w-5 h-5 text-gold"></i>
+                            Histórico de Curadoria & Relevância (IA)
+                        </h3>
+                    </div>
+
+                    <!-- Filtros de Status Operacional -->
+                    <div class="flex flex-wrap items-center gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
+                            <i data-lucide="sliders-horizontal" class="w-4 h-4 text-gold"></i>
+                            Filtrar por:
+                        </div>
+                        
+                        <div class="flex flex-wrap items-center gap-3 flex-grow md:flex-grow-0">
+                            <!-- Select Editorial -->
+                            <div class="relative min-w-[180px]">
+                                <select id="filterEditorialStatus" onchange="handleFilterChange()" class="w-full bg-black border border-white/10 rounded-xl py-2 px-3 pr-8 text-xs text-gray-300 focus:outline-none focus:border-gold transition duration-200 appearance-none cursor-pointer">
+                                    <option value="all">Status Editorial: Todos</option>
+                                    <option value="publicado">Editorial: OK / Publicado</option>
+                                    <option value="pendente">Editorial: Pendente</option>
+                                    <option value="processando">Editorial: Processando</option>
+                                    <option value="falha">Editorial: Falhou</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-500">
+                                    <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- Select Telegram -->
+                            <div class="relative min-w-[180px]">
+                                <select id="filterTelegramStatus" onchange="handleFilterChange()" class="w-full bg-black border border-white/10 rounded-xl py-2 px-3 pr-8 text-xs text-gray-300 focus:outline-none focus:border-gold transition duration-200 appearance-none cursor-pointer">
+                                    <option value="all">Status Telegram: Todos</option>
+                                    <option value="enviado_telegram">Telegram: OK / Enviado</option>
+                                    <option value="pendente">Telegram: Pendente</option>
+                                    <option value="falha">Telegram: Falhou</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-500">
+                                    <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reset filters button -->
+                        <button onclick="resetFilters()" class="ml-auto text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-white transition duration-200 flex items-center gap-1.5 focus:outline-none bg-white/5 border border-white/10 hover:border-white/20 px-3.5 py-2 rounded-xl">
+                            <i data-lucide="filter-x" class="w-3.5 h-3.5"></i>
+                            Limpar Filtros
+                        </button>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="border-b border-white/5 bg-white/[0.01]">
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400">Notícia / Fonte</th>
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400 text-center">Score (Relevância)</th>
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400">Prioridade / Nicho</th>
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400">Status Operacional</th>
+                                        <th class="p-4 font-bold text-xs uppercase tracking-wider text-gray-400 text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="newsTableBody">
+                                    <tr>
+                                        <td colspan="5" class="p-8 text-center text-gray-500 font-light">
+                                            Carregando histórico de notícias...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Admin News Pagination Controls -->
+                        <div id="admin-news-pagination" class="flex items-center justify-between px-6 py-4 border-t border-white/5 bg-white/[0.01]">
+                            <!-- Populated via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- FOOTER -->
+        <footer class="w-full py-8 px-6 text-center border-t border-white/5 glass-panel mt-auto">
+            <p class="text-gray-500 text-xs font-light">
+                &copy; 2026 Arandu Admin. Painel operacional restrito a administradores autorizados.
+            </p>
+        </footer>
+    </div>
+
+    <!-- NOTIFICATION TOAST -->
+    <div id="toast" class="fixed bottom-6 right-6 z-[200] glass-panel px-5 py-4 rounded-xl flex items-center gap-3 shadow-2xl transition-all duration-300 translate-y-20 opacity-0 max-w-sm">
+        <div id="toastIcon" class="p-1.5 rounded-full"></div>
+        <div>
+            <h4 id="toastTitle" class="font-outfit text-xs font-bold text-white"></h4>
+            <p id="toastMessage" class="text-gray-400 text-[11px] font-light mt-0.5"></p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
+            ? "http://localhost:8000"
+            : "";
+        let token = localStorage.getItem("admin_token");
+        let leadsChartInstance = null;
+        let categoriesChartInstance = null;
+        let generalRefreshInterval = null;
+
+        // App life-cycle hook
+        function initializeAdmin() {
+            lucide.createIcons();
+            checkAuthentication();
+            checkBackendHealth();
+        }
+
+        if (document.readyState === "loading") {
+            window.addEventListener("DOMContentLoaded", initializeAdmin);
+        } else {
+            initializeAdmin();
+        }
+
+        function checkAuthentication() {
+            const loginSec = document.getElementById("loginSection");
+            const dashSec = document.getElementById("dashboardSection");
+            const logoutBtn = document.getElementById("logoutBtn");
+
+            if (token) {
+                loginSec.classList.add("hidden");
+                dashSec.classList.remove("hidden");
+                logoutBtn.classList.remove("hidden");
+                fetchLeads();
+                fetchAdminNews(true);
+                fetchStatsAndRenderCharts();
+                fetchGeminiUsage();
+                fetchPipelineStatus();
+
+                // Periodic refresh of Gemini usage and pipeline status (every 10s)
+                if (!generalRefreshInterval) {
+                    generalRefreshInterval = setInterval(() => {
+                        fetchPipelineStatus();
+                        fetchGeminiUsage();
+                    }, 10000);
+                }
+            } else {
+                loginSec.classList.remove("hidden");
+                dashSec.classList.add("hidden");
+                logoutBtn.classList.add("hidden");
+                stopPipelinePolling();
+                if (generalRefreshInterval) {
+                    clearInterval(generalRefreshInterval);
+                    generalRefreshInterval = null;
+                }
+            }
+        }
+
+        // Check backend and DB status
+        async function checkBackendHealth() {
+            const statusIndicator = document.getElementById("apiStatusVal");
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/health`);
+                if (res.ok) {
+                    statusIndicator.textContent = "Online";
+                    statusIndicator.className = "text-lg font-bold text-green-400 uppercase tracking-wide";
+                } else {
+                    throw new Error();
+                }
+            } catch (err) {
+                statusIndicator.textContent = "Offline (Erro de Rede)";
+                statusIndicator.className = "text-lg font-bold text-red-500 uppercase tracking-wide";
+            }
+        }
+
+        // Check Gemini usage and limits
+        let rateLimitInterval = null;
+
+        async function fetchGeminiUsage() {
+            if (!token) return;
+            const usageVal = document.getElementById("geminiUsageVal");
+            const iconBox = document.getElementById("geminiUsageIconBox");
+            const rateLimitIndicator = document.getElementById("rateLimitIndicator");
+            const rateLimitText = document.getElementById("rateLimitText");
+            const rateLimitCountdown = document.getElementById("rateLimitCountdown");
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/stats/gemini-usage`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (!data.has_key) {
+                        usageVal.textContent = "Chave Ausente";
+                        usageVal.className = "text-base font-bold text-red-400 tracking-wide";
+                        iconBox.className = "p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400";
+                        const rateLimitBadge = document.getElementById("rateLimitBadge");
+                        const rateLimitIcon = document.getElementById("rateLimitIcon");
+                        if (rateLimitBadge) {
+                            rateLimitBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-500/10 border border-red-500/20 text-red-400";
+                        }
+                        if (rateLimitIcon) {
+                            rateLimitIcon.setAttribute("data-lucide", "x-circle");
+                        }
+                        rateLimitText.textContent = "Sem Chave API";
+                        rateLimitCountdown.textContent = "";
+                        if (typeof lucide !== "undefined") lucide.createIcons();
+                    } else {
+                        usageVal.textContent = `${data.usage} / ${data.limit}`;
+                        if (data.usage >= data.limit) {
+                            usageVal.className = "text-base font-bold text-red-500 tracking-wide";
+                            iconBox.className = "p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400";
+                        } else if (data.usage >= data.limit * 0.8) {
+                            usageVal.className = "text-base font-bold text-yellow-500 tracking-wide";
+                            iconBox.className = "p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400";
+                        } else {
+                            usageVal.className = "text-base font-bold text-white tracking-wide";
+                            iconBox.className = "p-4 rounded-lg bg-gold/10 border border-gold/20 text-gold";
+                        }
+
+                        // Handle rate limit info
+                        const rateLimitBadge = document.getElementById("rateLimitBadge");
+                        const rateLimitIcon = document.getElementById("rateLimitIcon");
+                        if (data.rate_limit && data.rate_limit.active) {
+                            startRateLimitCountdown(data.rate_limit.cooldown_seconds, data.rate_limit.resets_at);
+                        } else {
+                            if (rateLimitInterval) {
+                                clearInterval(rateLimitInterval);
+                                rateLimitInterval = null;
+                            }
+                            if (rateLimitBadge) {
+                                rateLimitBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-500/10 border border-green-500/20 text-green-400";
+                            }
+                            if (rateLimitIcon) {
+                                rateLimitIcon.setAttribute("data-lucide", "check-circle");
+                            }
+                            rateLimitText.textContent = "Sem Restrições";
+                            rateLimitCountdown.textContent = "";
+                            if (typeof lucide !== "undefined") lucide.createIcons();
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching Gemini usage:", err);
+                usageVal.textContent = "Erro de Rede";
+                usageVal.className = "text-base font-bold text-red-400 tracking-wide";
+            }
+        }
+
+        function startRateLimitCountdown(seconds, resetsAtISO) {
+            const rateLimitText = document.getElementById("rateLimitText");
+            const rateLimitCountdown = document.getElementById("rateLimitCountdown");
+            const iconBox = document.getElementById("geminiUsageIconBox");
+            const rateLimitBadge = document.getElementById("rateLimitBadge");
+            const rateLimitIcon = document.getElementById("rateLimitIcon");
+
+            // Clear any existing interval
+            if (rateLimitInterval) clearInterval(rateLimitInterval);
+
+            let remaining = seconds;
+            
+            const updateDisplay = () => {
+                if (remaining <= 0) {
+                    clearInterval(rateLimitInterval);
+                    rateLimitInterval = null;
+                    if (rateLimitBadge) {
+                        rateLimitBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-500/10 border border-green-500/20 text-green-400";
+                    }
+                    if (rateLimitIcon) {
+                        rateLimitIcon.setAttribute("data-lucide", "check-circle");
+                    }
+                    rateLimitText.textContent = "Sem Restrições";
+                    rateLimitCountdown.textContent = "";
+                    iconBox.className = "p-4 rounded-lg bg-gold/10 border border-gold/20 text-gold";
+                    if (typeof lucide !== "undefined") lucide.createIcons();
+                    // Re-fetch data after cooldown
+                    setTimeout(() => fetchGeminiUsage(), 2000);
+                    return;
+                }
+                
+                const mins = Math.floor(remaining / 60);
+                const secs = remaining % 60;
+                const timeStr = mins > 0 
+                    ? `${mins}m ${secs.toString().padStart(2, '0')}s` 
+                    : `${secs}s`;
+                
+                if (rateLimitBadge) {
+                    rateLimitBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400";
+                }
+                if (rateLimitIcon) {
+                    rateLimitIcon.setAttribute("data-lucide", "alert-triangle");
+                }
+                rateLimitText.textContent = "Rate Limit Ativo";
+                rateLimitCountdown.textContent = `(${timeStr})`;
+                iconBox.className = "p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400";
+                if (typeof lucide !== "undefined") lucide.createIcons();
+                remaining--;
+            };
+
+            updateDisplay();
+            rateLimitInterval = setInterval(updateDisplay, 1000);
+        }
+
+        // Login Handler
+        async function handleLoginSubmit(event) {
+            event.preventDefault();
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value;
+            const feedback = document.getElementById("loginFeedback");
+            
+            feedback.classList.add("hidden");
+            const submitBtn = event.target.querySelector("button[type='submit']");
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = DOMPurify.sanitize(`
+                <svg class="animate-spin h-5 w-5 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Autenticando...</span>
+            `);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || "Credenciais inválidas");
+                }
+
+                const data = await response.json();
+                token = data.access_token;
+                localStorage.setItem("admin_token", token);
+                
+                showToast("Sucesso", "Login efetuado com sucesso!", "success");
+                checkAuthentication();
+            } catch (err) {
+                feedback.textContent = err.message || "Falha na conexão com o servidor.";
+                feedback.classList.remove("hidden");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = DOMPurify.sanitize(`
+                    <span>Autenticar</span>
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                `);
+                lucide.createIcons();
+            }
+        }
+
+        // Fetch Leads Handler
+        async function fetchLeads() {
+            if (!token) return;
+            const tableBody = document.getElementById("leadsTableBody");
+            const counter = document.getElementById("leadsCountVal");
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/leads`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    // Token expired or invalid
+                    handleLogout();
+                    showToast("Sessão Expirada", "Por favor, faça login novamente.", "error");
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error("Erro ao carregar leads.");
+                }
+
+                const leads = await response.json();
+                counter.textContent = leads.length.toString();
+
+                if (leads.length === 0) {
+                    tableBody.innerHTML = DOMPurify.sanitize(`
+                        <tr>
+                            <td colspan="4" class="p-8 text-center text-gray-500 font-light">
+                                Nenhum lead capturado ainda.
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                tableBody.innerHTML = "";
+                leads.forEach(lead => {
+                    let leadDateStr = lead.created_at ? lead.created_at.replace(' ', 'T') : '';
+                    if (leadDateStr && !leadDateStr.endsWith('Z') && !/[+-]\d{2}(?::?\d{2})?$/.test(leadDateStr)) {
+                        leadDateStr += 'Z';
+                    }
+                    const formattedDate = leadDateStr ? new Date(leadDateStr).toLocaleString("pt-BR", { timeZone: 'America/Sao_Paulo' }) : 'N/A';
+                    const row = document.createElement("tr");
+                    row.className = "border-b border-white/5 hover:bg-white/[0.02] transition duration-150";
+                    row.innerHTML = DOMPurify.sanitize(`
+                        <td class="p-4 font-semibold text-white">${lead.name}</td>
+                        <td class="p-4 text-gray-300 font-light">${lead.email}</td>
+                        <td class="p-4 text-gray-300 font-light">${lead.whatsapp}</td>
+                        <td class="p-4 text-gray-400 font-light text-xs">${formattedDate}</td>
+                    `);
+                    tableBody.appendChild(row);
+                });
+            } catch (err) {
+                tableBody.innerHTML = DOMPurify.sanitize(`
+                    <tr>
+                        <td colspan="4" class="p-8 text-center text-red-400 font-light">
+                            Falha ao carregar leads do servidor. Verifique a conexão com a API.
+                        </td>
+                    </tr>
+                `);
+            }
+        }
+
+        // Fetch Stats and Render Charts
+        async function fetchStatsAndRenderCharts() {
+            if (!token) return;
+
+            // 1. Fetch leads growth data
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/stats/leads-daily`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    renderLeadsChart(data.labels, data.data);
+                }
+            } catch (err) {
+                console.error("Error fetching leads daily stats:", err);
+            }
+
+            // 2. Fetch news categories data
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/stats/news-categories`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    renderCategoriesChart(data.labels, data.data);
+                }
+            } catch (err) {
+                console.error("Error fetching news categories stats:", err);
+            }
+        }
+
+        // Render Leads Growth Chart
+        function renderLeadsChart(labels, data) {
+            const ctx = document.getElementById('leadsChart').getContext('2d');
+            
+            // Destroy existing chart to prevent overlay glitched tooltip rendering
+            if (leadsChartInstance) {
+                leadsChartInstance.destroy();
+            }
+
+            leadsChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Novos Leads',
+                        data: data,
+                        borderColor: '#C5A85C',
+                        backgroundColor: 'rgba(197, 168, 92, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#E8D098',
+                        pointBorderColor: '#050505',
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#C5A85C',
+                        pointHoverBorderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(5, 5, 5, 0.9)',
+                            titleFont: { family: 'Outfit', size: 12 },
+                            bodyFont: { family: 'Plus Jakarta Sans', size: 12 },
+                            borderColor: 'rgba(197, 168, 92, 0.2)',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#9ca3af',
+                                font: { family: 'Plus Jakarta Sans', size: 10 }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#9ca3af',
+                                font: { family: 'Plus Jakarta Sans', size: 10 },
+                                stepSize: 1
+                            },
+                            min: 0
+                        }
+                    }
+                }
+            });
+        }
+
+        // Render News Categories Chart
+        function renderCategoriesChart(labels, data) {
+            const ctx = document.getElementById('categoriesChart').getContext('2d');
+
+            if (categoriesChartInstance) {
+                categoriesChartInstance.destroy();
+            }
+
+            categoriesChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#C5A85C', // Gold
+                            '#E8D098', // Gold Light
+                            '#9A7B3E'  // Gold Dark
+                        ],
+                        borderColor: 'rgba(5, 5, 5, 0.5)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#d1d5db',
+                                font: { family: 'Plus Jakarta Sans', size: 11 },
+                                boxWidth: 12,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(5, 5, 5, 0.9)',
+                            titleFont: { family: 'Outfit', size: 12 },
+                            bodyFont: { family: 'Plus Jakarta Sans', size: 12 },
+                            borderColor: 'rgba(197, 168, 92, 0.2)',
+                            borderWidth: 1
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        // Refresh dashboard data in real-time
+        async function refreshDashboard() {
+            if (!token) return;
+            const btn = document.getElementById("triggerScraperBtn");
+            btn.disabled = true;
+            btn.innerHTML = DOMPurify.sanitize(`
+                <svg class="animate-spin h-4 w-4 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Atualizando...</span>
+            `);
+
+            try {
+                await Promise.all([
+                    checkBackendHealth(),
+                    fetchLeads(),
+                    fetchStatsAndRenderCharts(),
+                    fetchGeminiUsage(),
+                    fetchPipelineStatus()
+                ]);
+                showToast("Painel Atualizado", "Todas as métricas e leads foram recarregados com sucesso!", "success");
+            } catch (err) {
+                showToast("Erro ao Atualizar", "Não foi possível carregar alguns dados em tempo real.", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = DOMPurify.sanitize(`
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    <span>Atualizar Painel</span>
+                `);
+                lucide.createIcons();
+            }
+        }
+
+        // Toast feedback system
+        function showToast(title, message, type = "success") {
+            const toast = document.getElementById("toast");
+            const tTitle = document.getElementById("toastTitle");
+            const tMsg = document.getElementById("toastMessage");
+            const tIcon = document.getElementById("toastIcon");
+
+            tTitle.textContent = title;
+            tMsg.textContent = message;
+
+            if (type === "success") {
+                tIcon.className = "p-1.5 rounded-full bg-green-500/10 text-green-400";
+                tIcon.innerHTML = DOMPurify.sanitize(`<i data-lucide="check" class="w-4 h-4"></i>`);
+            } else {
+                tIcon.className = "p-1.5 rounded-full bg-red-500/10 text-red-400";
+                tIcon.innerHTML = DOMPurify.sanitize(`<i data-lucide="alert-triangle" class="w-4 h-4"></i>`);
+            }
+
+            lucide.createIcons();
+
+            toast.classList.remove("translate-y-20", "opacity-0");
+            toast.classList.add("translate-y-0", "opacity-100");
+
+            setTimeout(() => {
+                toast.classList.remove("translate-y-0", "opacity-100");
+                toast.classList.add("translate-y-20", "opacity-0");
+            }, 4000);
+        }
+
+        let pipelinePollingInterval = null;
+
+        async function fetchPipelineStatus() {
+            if (!token) return;
+            
+            // Sync Gemini usage card inside the pipeline status polling loop
+            fetchGeminiUsage();
+
+            // Refresh the news list in real-time if the news tab is active
+            const newsContent = document.getElementById("newsTabContent");
+            if (newsContent && !newsContent.classList.contains("hidden")) {
+                fetchAdminNews(false);
+            }
+
+            const badge = document.getElementById("pipelineStatusBadge");
+            const detailText = document.getElementById("pipelineDetailText");
+            const iconBox = document.getElementById("pipelineStatusIconBox");
+            const lastRunTime = document.getElementById("pipelineLastRunTime");
+            const lastSuccessTime = document.getElementById("pipelineLastSuccessTime");
+            const lastDuration = document.getElementById("pipelineLastDuration");
+            const errorBox = document.getElementById("pipelineErrorBox");
+            const errorText = document.getElementById("pipelineErrorText");
+            const triggerBtn = document.getElementById("triggerPipelineBtn");
+
+            // Ordered phases matching backend
+            const PHASES = [
+                "Inicialização", "Busca RSS", "Deduplicação", "Processamento IA",
+                "Curadoria IA", "Redação IA", "Divulgação no Site", "Notificações", "Limpeza", "Correção de Resumos"
+            ];
+
+            function updateStepper(currentPhase, pipelineStatus) {
+                const modules = document.querySelectorAll("#pipelineStepper .pipeline-phase");
+                const activeIdx = PHASES.indexOf(currentPhase);
+
+                modules.forEach((mod, i) => {
+                    mod.classList.remove("phase-active", "phase-done", "phase-failed");
+                    if (pipelineStatus === "running" && activeIdx >= 0) {
+                        if (i < activeIdx) mod.classList.add("phase-done");
+                        else if (i === activeIdx) mod.classList.add("phase-active");
+                    } else if (pipelineStatus === "failed" && activeIdx >= 0) {
+                        if (i < activeIdx) mod.classList.add("phase-done");
+                        else if (i === activeIdx) mod.classList.add("phase-failed");
+                    } else if (pipelineStatus === "idle" || pipelineStatus === "success") {
+                        // Show all as done if last run succeeded
+                        if (document.getElementById("pipelineLastSuccessTime").textContent.indexOf("Nunca") === -1) {
+                            mod.classList.add("phase-done");
+                        }
+                    }
+                });
+                lucide.createIcons();
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/admin/pipeline-status`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Set stats/times
+                    lastRunTime.textContent = `Início: ${formatPipelineDate(data.last_run_at)}`;
+                    lastSuccessTime.textContent = `Sucesso: ${formatPipelineDate(data.last_success_at)}`;
+                    lastDuration.textContent = `Duração: ${formatDuration(data.last_duration_seconds)}`;
+
+                    if (data.status === "running") {
+                        badge.textContent = "Executando";
+                        badge.className = "px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-gold/15 text-gold border border-gold/20 animate-pulse";
+                        iconBox.className = "p-3 rounded-lg bg-gold/10 border border-gold/20 text-gold flex items-center justify-center";
+                        setPipelineIcon("loader-2", true);
+                        
+                        detailText.textContent = data.current_detail || "Iniciando processos de Inteligência Artificial...";
+                        
+                        triggerBtn.disabled = true;
+                        triggerBtn.innerHTML = DOMPurify.sanitize(`
+                            <svg class="animate-spin h-3.5 w-3.5 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Executando...</span>
+                        `);
+                        
+                        startPipelinePolling();
+                        errorBox.classList.add("hidden");
+                        updateStepper(data.current_phase, "running");
+
+                    } else if (data.status === "failed") {
+                        badge.textContent = "Falhou";
+                        badge.className = "px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-red-500/15 text-red-400 border border-red-500/20";
+                        iconBox.className = "p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center";
+                        setPipelineIcon("alert-triangle", false);
+
+                        detailText.textContent = "Ocorreu um erro durante a coleta ou o processamento de IA.";
+                        
+                        if (data.last_error) {
+                            errorBox.classList.remove("hidden");
+                            errorText.textContent = data.last_error;
+                        } else {
+                            errorBox.classList.add("hidden");
+                        }
+
+                        triggerBtn.disabled = false;
+                        triggerBtn.innerHTML = DOMPurify.sanitize(`
+                            <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                            <span>Executar</span>
+                        `);
+                        lucide.createIcons();
+                        stopPipelinePolling();
+                        updateStepper(data.current_phase, "failed");
+
+                    } else {
+                        badge.textContent = "Ocioso";
+                        badge.className = "px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-gray-500/15 text-gray-400 border border-gray-500/20";
+                        iconBox.className = "p-3 rounded-lg bg-gray-500/10 border border-gray-500/20 text-gray-400 flex items-center justify-center";
+                        setPipelineIcon("play-circle", false);
+
+                        detailText.textContent = "Aguardando execução do próximo ciclo automático.";
+                        errorBox.classList.add("hidden");
+
+                        triggerBtn.disabled = false;
+                        triggerBtn.innerHTML = DOMPurify.sanitize(`
+                            <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                            <span>Executar</span>
+                        `);
+                        lucide.createIcons();
+                        stopPipelinePolling();
+                        updateStepper(null, data.last_success_at ? "success" : "idle");
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching pipeline status:", err);
+            }
+        }
+
+        function startPipelinePolling() {
+            if (pipelinePollingInterval) return;
+            pipelinePollingInterval = setInterval(fetchPipelineStatus, 1500);
+        }
+
+        function stopPipelinePolling() {
+            if (pipelinePollingInterval) {
+                clearInterval(pipelinePollingInterval);
+                pipelinePollingInterval = null;
+            }
+        }
+
+        async function triggerManualPipeline(onlyEditor = false) {
+            if (!token) return;
+            const triggerBtn = document.getElementById("triggerPipelineBtn");
+            const editorBtn = document.getElementById("triggerEditorBtn");
+            
+            const activeBtn = onlyEditor && editorBtn ? editorBtn : triggerBtn;
+            const otherBtn = onlyEditor && editorBtn ? triggerBtn : editorBtn;
+            
+            // Optimistic UI disable
+            if (activeBtn) {
+                activeBtn.disabled = true;
+                activeBtn.innerHTML = DOMPurify.sanitize(`
+                    <svg class="animate-spin h-4 w-4 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Enviando Comando...</span>
+                `);
+            }
+            if (otherBtn) {
+                otherBtn.disabled = true;
+            }
+
+            // Start polling immediately so the UI catches the status transition to "running"
+            startPipelinePolling();
+
+            try {
+                const url = onlyEditor ? `${API_BASE_URL}/api/admin/coleta-manual?only_editor=true` : `${API_BASE_URL}/api/admin/coleta-manual`;
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    showToast("Pipeline Concluído", onlyEditor ? "O processamento com o Editor Executivo foi concluído com sucesso!" : "A curadoria de notícias e processamento com IA foi concluído com sucesso!", "success");
+                } else {
+                    const data = await response.json();
+                    showToast("Falha no Pipeline", data.detail || "Erro inesperado ao executar o pipeline.", "error");
+                }
+            } catch (err) {
+                console.error("Error triggering pipeline:", err);
+                showToast("Erro de Conexão", "Não foi possível conectar à API para executar o pipeline.", "error");
+            } finally {
+                // Restore button content
+                if (triggerBtn) {
+                    triggerBtn.disabled = false;
+                    triggerBtn.innerHTML = DOMPurify.sanitize(`
+                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                        <span>Executar</span>
+                    `);
+                }
+                if (editorBtn) {
+                    editorBtn.disabled = false;
+                    editorBtn.innerHTML = DOMPurify.sanitize(`
+                        <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i>
+                        <span>Executar Editor</span>
+                    `);
+                }
+                
+                // Trigger one last fetch to reflect final state
+                fetchPipelineStatus();
+                // Also refresh the charts and leads since new news might have arrived
+                fetchStatsAndRenderCharts();
+                fetchLeads();
+                fetchGeminiUsage();
+                
+                // Re-render Lucide icons
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            }
+        }
+
+        function setPipelineIcon(iconName, isSpinning = false) {
+            const iconEl = document.getElementById("pipelineStatusIcon");
+            if (!iconEl) return;
+            iconEl.setAttribute("data-lucide", iconName);
+            if (isSpinning) {
+                iconEl.classList.add("animate-spin");
+            } else {
+                iconEl.classList.remove("animate-spin");
+            }
+            lucide.createIcons();
+        }
+
+        const formatPipelineDate = (isoStr) => {
+            if (!isoStr) return "Nunca";
+            try {
+                return new Date(isoStr).toLocaleString("pt-BR", { timeZone: 'America/Sao_Paulo' });
+            } catch (e) {
+                return "N/A";
+            }
+        };
+
+        const formatDuration = (seconds) => {
+            if (seconds === null || seconds === undefined) return "N/A";
+            const sec = Math.round(seconds);
+            if (sec < 60) return `${sec}s`;
+            const mins = Math.floor(sec / 60);
+            const remainingSecs = sec % 60;
+            return `${mins}m ${remainingSecs}s`;
+        };
+
+        // Tab switcher
+        function switchAdminTab(tab) {
+            const tabLeads = document.getElementById("tabLeadsBtn");
+            const tabNews = document.getElementById("tabNewsBtn");
+            const leadsContent = document.getElementById("leadsTabContent");
+            const newsContent = document.getElementById("newsTabContent");
+
+            if (tab === 'leads') {
+                tabLeads.className = "pb-4 text-sm font-bold uppercase tracking-wider border-b-2 border-gold text-white focus:outline-none transition duration-200";
+                tabNews.className = "pb-4 text-sm font-bold uppercase tracking-wider border-b-2 border-transparent text-gray-400 hover:text-white focus:outline-none transition duration-200";
+                leadsContent.classList.remove("hidden");
+                newsContent.classList.add("hidden");
+            } else {
+                tabNews.className = "pb-4 text-sm font-bold uppercase tracking-wider border-b-2 border-gold text-white focus:outline-none transition duration-200";
+                tabLeads.className = "pb-4 text-sm font-bold uppercase tracking-wider border-b-2 border-transparent text-gray-400 hover:text-white focus:outline-none transition duration-200";
+                leadsContent.classList.add("hidden");
+                newsContent.classList.remove("hidden");
+                fetchAdminNews(true);
+            }
+        }
+
+        // Global list of news for admin panel
+        let adminNews = [];
+        let adminCurrentPage = 1;
+        const adminPageSize = 20;
+
+        // Filter state variables
+        let selectedEditorialStatus = "all";
+        let selectedTelegramStatus = "all";
+
+        // Filter news by selected status filters
+        function getFilteredNews() {
+            return adminNews.filter(news => {
+                const editStatus = news.editorial_status || "pendente";
+                const telegramStatus = news.send_status || "pendente";
+                
+                const matchEditorial = selectedEditorialStatus === "all" || editStatus === selectedEditorialStatus;
+                const matchTelegram = selectedTelegramStatus === "all" || telegramStatus === selectedTelegramStatus;
+                
+                return matchEditorial && matchTelegram;
+            });
+        }
+
+        function handleFilterChange() {
+            selectedEditorialStatus = document.getElementById("filterEditorialStatus").value;
+            selectedTelegramStatus = document.getElementById("filterTelegramStatus").value;
+            adminCurrentPage = 1;
+            renderAdminTableBody();
+        }
+
+        function resetFilters() {
+            document.getElementById("filterEditorialStatus").value = "all";
+            document.getElementById("filterTelegramStatus").value = "all";
+            selectedEditorialStatus = "all";
+            selectedTelegramStatus = "all";
+            adminCurrentPage = 1;
+            renderAdminTableBody();
+        }
+
+        // Fetch news for admin
+        async function fetchAdminNews(resetPage = false) {
+            if (!token) return;
+            const tableBody = document.getElementById("newsTableBody");
+            
+            try {
+                // Fetch 100 recent articles
+                const response = await fetch(`${API_BASE_URL}/api/noticias?page=1&size=100`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    handleLogout();
+                    showToast("Sessão Expirada", "Por favor, faça login novamente.", "error");
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error("Erro ao obter notícias.");
+                }
+
+                const data = await response.json();
+                adminNews = data.results || [];
+                
+                if (resetPage) {
+                    adminCurrentPage = 1;
+                } else {
+                    const filteredNews = getFilteredNews();
+                    const totalPages = Math.ceil(filteredNews.length / adminPageSize);
+                    if (adminCurrentPage > totalPages) {
+                        adminCurrentPage = Math.max(1, totalPages);
+                    }
+                }
+
+                renderAdminTableBody();
+
+            } catch (err) {
+                console.error("Error fetching news:", err);
+                tableBody.innerHTML = DOMPurify.sanitize(`
+                    <tr>
+                        <td colspan="5" class="p-8 text-center text-red-400 font-light">
+                            Erro ao carregar histórico de notícias da API.
+                        </td>
+                    </tr>
+                `);
+                const paginationContainer = document.getElementById('admin-news-pagination');
+                if (paginationContainer) paginationContainer.classList.add('hidden');
+            }
+        }
+
+        // Render admin news table page
+        function renderAdminTableBody() {
+            const tableBody = document.getElementById("newsTableBody");
+            if (!tableBody) return;
+
+            const filteredNews = getFilteredNews();
+
+            if (filteredNews.length === 0) {
+                tableBody.innerHTML = DOMPurify.sanitize(`
+                    <tr>
+                        <td colspan="5" class="p-8 text-center text-gray-500 font-light">
+                            Nenhuma notícia encontrada com os filtros selecionados.
+                        </td>
+                    </tr>
+                `);
+                const paginationContainer = document.getElementById('admin-news-pagination');
+                if (paginationContainer) paginationContainer.classList.add('hidden');
+                return;
+            }
+
+            tableBody.innerHTML = "";
+            const startIdx = (adminCurrentPage - 1) * adminPageSize;
+            const paginatedNews = filteredNews.slice(startIdx, adminCurrentPage * adminPageSize);
+
+            paginatedNews.forEach((news) => {
+                // Title formatting
+                const title = news.translated_title || news.original_title;
+                
+                // Score styling
+                const score = news.relevance_score !== null && news.relevance_score !== undefined ? news.relevance_score : "N/A";
+                let scoreClass = "text-gray-400 bg-white/5 border border-white/10";
+                if (typeof score === 'number') {
+                    if (score >= 12) scoreClass = "text-green-400 bg-green-500/10 border border-green-500/20 font-extrabold";
+                    else if (score >= 8) scoreClass = "text-gold bg-gold/10 border border-gold/20 font-bold";
+                    else if (score >= 5) scoreClass = "text-yellow-500 bg-yellow-500/10 border border-yellow-500/20";
+                    else scoreClass = "text-red-400 bg-red-500/10 border border-red-500/20";
+                }
+
+                // Priority & Category badge styling
+                const priority = news.priority || "N/A";
+                let prioClass = "text-gray-500 border-gray-500/20 bg-gray-500/5";
+                if (priority.toUpperCase() === "ALTA") prioClass = "text-red-400 border-red-500/30 bg-red-500/10 font-bold";
+                else if (priority.toUpperCase() === "MÉDIA") prioClass = "text-gold border-gold/30 bg-gold/10 font-medium";
+                else if (priority.toUpperCase() === "BAIXA") prioClass = "text-gray-400 border-white/10 bg-white/5";
+
+                const category = news.category || "N/A";
+                
+                // Telegram Status styling
+                const status = news.send_status || "pendente";
+                let statusClass = "text-yellow-500 border-yellow-500/20 bg-yellow-500/5";
+                let statusText = "Telegram: Pendente";
+                if (status === "enviado_telegram") {
+                    statusClass = "text-green-400 border-green-500/20 bg-green-500/5";
+                    statusText = "Telegram: OK";
+                } else if (status === "falha") {
+                    statusClass = "text-red-400 border-red-500/20 bg-red-500/5";
+                    statusText = "Telegram: Falha";
+                }
+
+                // Editorial Status styling
+                const editStatus = news.editorial_status || "pendente";
+                let editClass = "text-yellow-500 border-yellow-500/20 bg-yellow-500/5";
+                let editText = "Editorial: Pendente";
+                if (editStatus === "publicado") {
+                    editClass = "text-green-400 border-green-500/20 bg-green-500/5";
+                    editText = "Editorial: OK";
+                } else if (editStatus === "falha") {
+                    editClass = "text-red-400 border-red-500/20 bg-red-500/5";
+                    editText = "Editorial: Falhou";
+                } else if (editStatus === "processando") {
+                    editClass = "text-amber-400 border-amber-500/20 bg-amber-500/5 animate-pulse";
+                    editText = "Editorial: Processando";
+                }
+
+                const row = document.createElement("tr");
+                row.className = "border-b border-white/5 hover:bg-white/[0.02] transition duration-150";
+                row.innerHTML = DOMPurify.sanitize(`
+                    <td class="p-4 max-w-sm md:max-w-md">
+                        <div class="font-semibold text-white truncate hover:text-gold-light transition">
+                            <a href="${news.link}" target="_blank" class="hover:underline">${title}</a>
+                        </div>
+                        <div class="text-[10px] text-gray-500 font-mono mt-0.5">Fonte: ${news.source_name || "Desconhecida"}</div>
+                    </td>
+                    <td class="p-4 text-center">
+                        <span class="px-2.5 py-1 rounded text-xs font-mono ${scoreClass}">
+                            ${score}
+                        </span>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex flex-col gap-1 items-start">
+                            <span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider border ${prioClass}">
+                                Prio: ${priority}
+                            </span>
+                            <span class="text-[10px] text-gray-400 font-light">Nicho: ${category}</span>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex flex-col gap-1.5 items-start">
+                            <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${editClass}">
+                                ${editText}
+                            </span>
+                            <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${statusClass}">
+                                ${statusText}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="p-4 text-center">
+                        <button onclick="openNewsModal(${news.id})" class="px-3.5 py-1.5 rounded-lg bg-gold/10 hover:bg-gold/20 text-gold hover:text-gold-light text-xs font-bold uppercase tracking-wider transition flex items-center gap-1 mx-auto focus:outline-none">
+                            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                            Detalhes
+                        </button>
+                    </td>
+                `);
+                tableBody.appendChild(row);
+            });
+
+            lucide.createIcons();
+            renderAdminNewsPagination();
+        }
+
+        // Render admin news pagination
+        function renderAdminNewsPagination() {
+            const paginationContainer = document.getElementById('admin-news-pagination');
+            if (!paginationContainer) return;
+            
+            const filteredNews = getFilteredNews();
+            const total = filteredNews.length;
+            const totalPages = Math.ceil(total / adminPageSize);
+            
+            if (totalPages <= 1) {
+                paginationContainer.innerHTML = '';
+                paginationContainer.classList.add('hidden');
+                return;
+            }
+            
+            paginationContainer.classList.remove('hidden');
+            
+            // Adjust page if out of bounds
+            if (adminCurrentPage > totalPages) {
+                adminCurrentPage = Math.max(1, totalPages);
+            }
+            
+            const startRange = (adminCurrentPage - 1) * adminPageSize + 1;
+            const endRange = Math.min(adminCurrentPage * adminPageSize, total);
+            
+            paginationContainer.innerHTML = DOMPurify.sanitize(`
+                <div class="text-xs text-gray-400 font-light">
+                    Exibindo <span class="font-semibold text-white">${startRange}-${endRange}</span> de <span class="font-semibold text-white">${total}</span> notícias
+                </div>
+                <div class="flex items-center gap-1.5" id="admin-news-page-buttons"></div>
+            `);
+            
+            const buttonContainer = document.getElementById('admin-news-page-buttons');
+            
+            // Previous Button
+            const prevBtn = document.createElement('button');
+            prevBtn.className = `p-2 rounded-lg text-xs font-bold transition border ${
+                adminCurrentPage === 1 
+                    ? 'border-white/5 text-gray-500 bg-white/[0.01] cursor-not-allowed' 
+                    : 'border-white/10 text-white bg-white/5 hover:border-gold hover:text-gold cursor-pointer'
+            }`;
+            prevBtn.innerHTML = DOMPurify.sanitize('<i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>');
+            prevBtn.disabled = adminCurrentPage === 1;
+            prevBtn.onclick = () => {
+                if (adminCurrentPage > 1) {
+                    adminCurrentPage--;
+                    renderAdminTableBody();
+                }
+            };
+            buttonContainer.appendChild(prevBtn);
+            
+            // Pages
+            for (let i = 1; i <= totalPages; i++) {
+                const pageBtn = document.createElement('button');
+                if (i === adminCurrentPage) {
+                    pageBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-gold text-black border border-gold';
+                } else {
+                    pageBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold border border-white/10 bg-white/5 text-white hover:border-gold hover:text-gold transition cursor-pointer';
+                }
+                pageBtn.textContent = i;
+                pageBtn.onclick = () => {
+                    adminCurrentPage = i;
+                    renderAdminTableBody();
+                };
+                buttonContainer.appendChild(pageBtn);
+            }
+            
+            // Next Button
+            const nextBtn = document.createElement('button');
+            nextBtn.className = `p-2 rounded-lg text-xs font-bold transition border ${
+                adminCurrentPage === totalPages 
+                    ? 'border-white/5 text-gray-500 bg-white/[0.01] cursor-not-allowed' 
+                    : 'border-white/10 text-white bg-white/5 hover:border-gold hover:text-gold cursor-pointer'
+            }`;
+            nextBtn.innerHTML = DOMPurify.sanitize('<i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>');
+            nextBtn.disabled = adminCurrentPage === totalPages;
+            nextBtn.onclick = () => {
+                if (adminCurrentPage < totalPages) {
+                    adminCurrentPage++;
+                    renderAdminTableBody();
+                }
+            };
+            buttonContainer.appendChild(nextBtn);
+            lucide.createIcons();
+        }
+
+        // Modal triggers
+        function openNewsModal(newsId) {
+            const news = adminNews.find(n => n.id === newsId);
+            if (!news) return;
+
+            document.getElementById("modalOriginalTitle").textContent = news.original_title;
+            document.getElementById("modalTranslatedTitle").textContent = news.translated_title ? `Tradução: ${news.translated_title}` : "";
+            
+            const linkEl = document.getElementById("modalArticleLink");
+            linkEl.href = news.link;
+            
+            document.getElementById("modalRelevanceScore").textContent = news.relevance_score !== null ? news.relevance_score : "0";
+            
+            const prioEl = document.getElementById("modalPriority");
+            prioEl.textContent = news.priority || "N/A";
+            if (news.priority && news.priority.toUpperCase() === "ALTA") prioEl.className = "text-lg font-black text-red-400 mt-1.5 uppercase tracking-wide";
+            else if (news.priority && news.priority.toUpperCase() === "MÉDIA") prioEl.className = "text-lg font-bold text-gold mt-1.5 uppercase tracking-wide";
+            else prioEl.className = "text-lg font-semibold text-gray-400 mt-1.5 uppercase tracking-wide";
+
+            document.getElementById("modalCategoryBadge").textContent = `NICHO: ${news.category || "N/A"}`;
+            
+            const statusEl = document.getElementById("modalSendStatus");
+            const status = news.send_status || "pendente";
+            if (status === "enviado_telegram") {
+                statusEl.textContent = "ENVIADO TELEGRAM";
+                statusEl.className = "text-xs font-bold text-green-400 mt-2 uppercase tracking-wide";
+            } else if (status === "falha") {
+                statusEl.textContent = "FALHA NO ENVIO";
+                statusEl.className = "text-xs font-bold text-red-400 mt-2 uppercase tracking-wide";
+            } else {
+                statusEl.textContent = "AGUARDANDO ENVIO";
+                statusEl.className = "text-xs font-bold text-yellow-500 mt-2 uppercase tracking-wide";
+            }
+
+            const editStatusEl = document.getElementById("modalEditorialStatus");
+            const editStatus = news.editorial_status || "pendente";
+            if (editStatus === "publicado") {
+                editStatusEl.textContent = "Publicado";
+                editStatusEl.className = "text-xs font-bold text-green-400 mt-2 uppercase tracking-wide";
+            } else if (editStatus === "falha") {
+                editStatusEl.textContent = "Falha";
+                editStatusEl.className = "text-xs font-bold text-red-400 mt-2 uppercase tracking-wide";
+            } else if (editStatus === "processando") {
+                editStatusEl.textContent = "Processando";
+                editStatusEl.className = "text-xs font-bold text-yellow-500 mt-2 uppercase tracking-wide animate-pulse";
+            } else {
+                editStatusEl.textContent = "Pendente";
+                editStatusEl.className = "text-xs font-bold text-gray-400 mt-2 uppercase tracking-wide";
+            }
+
+            // Editorial Executivo Fields in modal
+            const editorialSec = document.getElementById("modalEditorialSection");
+            if (editStatus === "publicado" && news.editorial_title) {
+                editorialSec.classList.remove("hidden");
+                document.getElementById("modalEditorialTitle").textContent = news.editorial_title;
+                document.getElementById("modalEditorialSummary").textContent = news.editorial_summary;
+                document.getElementById("modalEditorialCategory").textContent = news.editorial_category || "N/A";
+                document.getElementById("modalEditorialTags").textContent = news.editorial_tags || "Nenhuma";
+            } else {
+                editorialSec.classList.add("hidden");
+            }
+
+            document.getElementById("modalJustificationText").textContent = news.ai_justification || "Nenhuma justificativa fornecida pelo agente de IA.";
+
+            // Render AI Summary bullet points
+            const summaryList = document.getElementById("modalSummaryList");
+            summaryList.innerHTML = "";
+            const summaryText = news.ai_summary || "";
+            const lines = summaryText.split('\n').filter(l => l.trim() !== "");
+            
+            if (lines.length > 0) {
+                lines.forEach(line => {
+                    const clean = line.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+                    if (clean) {
+                        const li = document.createElement("li");
+                        li.className = "flex items-start gap-2 leading-snug";
+                        li.innerHTML = DOMPurify.sanitize(`<span class="text-gold mt-1">&bull;</span> <span>${clean}</span>`);
+                        summaryList.appendChild(li);
+                    }
+                });
+            } else {
+                summaryList.innerHTML = DOMPurify.sanitize(`<li class="text-gray-500 italic">Nenhum resumo em marcadores disponível.</li>`);
+            }
+
+            const modal = document.getElementById("aiModal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            const modal = document.getElementById("aiModal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        // Logout handler
+        async function handleLogout() {
+            if (token) {
+                try {
+                    await fetch(`${API_BASE_URL}/api/auth/logout`, {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${token}`
+                        }
+                    });
+                } catch (err) {
+                    console.error("Erro ao chamar endpoint de logout:", err);
+                }
+            }
+            localStorage.removeItem("admin_token");
+            token = null;
+            checkAuthentication();
+            showToast("Log Out", "Você foi desconectado.", "success");
+        }
+    </script>
+
+    <!-- AI JUSTIFICATION MODAL -->
+    <div id="aiModal" class="fixed inset-0 z-[300] hidden items-center justify-center p-4 bg-black/85 backdrop-blur-sm transition-all duration-300">
+        <div class="glass-panel rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-6 border-b border-white/10 bg-white/[0.02]">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 rounded bg-gold/15 border border-gold/30 text-gold">
+                        <i data-lucide="brain-circuit" class="w-5 h-5 animate-pulse"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-outfit text-lg font-bold text-white">Análise e Decisão do Agente IA</h3>
+                        <span id="modalCategoryBadge" class="text-[10px] uppercase font-bold tracking-widest text-gold mt-0.5 block">N/A</span>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="p-1 text-gray-400 hover:text-white transition focus:outline-none">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="p-6 md:p-8 overflow-y-auto space-y-6 text-sm">
+                <!-- Title & Link -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Título do Artigo</h4>
+                    <p id="modalOriginalTitle" class="text-white font-medium text-base mb-1.5 leading-snug"></p>
+                    <p id="modalTranslatedTitle" class="text-gray-400 font-light text-sm italic mb-3"></p>
+                    <a id="modalArticleLink" href="#" target="_blank" class="inline-flex items-center gap-1.5 text-xs text-gold hover:text-gold-light hover:underline font-bold uppercase tracking-wider">
+                        Acessar Link Original
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+                
+                <!-- Metrics -->
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    <div class="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Pontuação (Score)</span>
+                        <div class="flex items-baseline gap-1 mt-1">
+                            <span id="modalRelevanceScore" class="text-3xl font-extrabold text-white">0</span>
+                            <span class="text-xs text-gray-500 font-mono">/ 15</span>
+                        </div>
+                    </div>
+                    <div class="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Prioridade</span>
+                        <span id="modalPriority" class="text-lg font-bold text-white mt-1.5 uppercase tracking-wide">N/A</span>
+                    </div>
+                    <div class="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Status Editorial</span>
+                        <span id="modalEditorialStatus" class="text-xs font-bold text-white mt-2 uppercase tracking-wide">N/A</span>
+                    </div>
+                    <div class="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Status Telegram</span>
+                        <span id="modalSendStatus" class="text-xs font-bold text-white mt-2 uppercase tracking-wide">N/A</span>
+                    </div>
+                </div>
+                
+                <!-- Justification -->
+                <div class="p-5 rounded-2xl bg-gold/5 border border-gold/10">
+                    <span class="text-xs font-bold uppercase tracking-wider text-gold-light block mb-2 flex items-center gap-1.5">
+                        <i data-lucide="message-square" class="w-4 h-4 text-gold"></i>
+                        Justificativa do Agente
+                    </span>
+                    <p id="modalJustificationText" class="text-gray-200 leading-relaxed font-light whitespace-pre-wrap"></p>
+                </div>
+                
+                <!-- AI Summary -->
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-gray-500 block mb-2 flex items-center gap-1.5">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-gold"></i>
+                        Resumo Gerado (Marcadores)
+                    </span>
+                    <ul id="modalSummaryList" class="space-y-2.5 text-gray-300 font-light leading-relaxed">
+                    </ul>
+                </div>
+
+                <!-- Editorial Executivo Summary (if available) -->
+                <div id="modalEditorialSection" class="hidden border-t border-white/10 pt-6 space-y-4">
+                    <span class="text-xs font-bold uppercase tracking-wider text-gold-light block mb-2 flex items-center gap-1.5">
+                        <i data-lucide="award" class="w-4 h-4 text-gold"></i>
+                        Conteúdo Premium do Editor Executivo
+                    </span>
+                    <div class="p-5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-3">
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 block">Título Editorial</span>
+                            <p id="modalEditorialTitle" class="text-white font-semibold text-base mt-0.5 leading-snug"></p>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 block">Resumo Executivo (Conteúdo Premium)</span>
+                            <p id="modalEditorialSummary" class="text-gray-300 leading-relaxed font-light mt-1 whitespace-pre-wrap"></p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 pt-2">
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 block">Categoria Editorial</span>
+                                <span id="modalEditorialCategory" class="px-2.5 py-1 rounded text-xs bg-gold/15 text-gold border border-gold/20 font-bold uppercase tracking-wider inline-block mt-1">N/A</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 block">Tags Editoriais</span>
+                                <p id="modalEditorialTags" class="text-gray-400 text-xs font-light mt-1"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="p-6 border-t border-white/10 bg-white/[0.01] flex justify-end">
+                <button onclick="closeModal()" class="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white text-xs font-bold uppercase tracking-wider transition">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

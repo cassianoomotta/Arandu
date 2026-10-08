@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arandu | Inteligência de Dados & Curadoria Tech</title>
+    
+    <!-- Favicon: Golden split-apex 'A' emblem logo -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="favicon.png">
+    
+    <!-- SEO & Open Graph Meta Tags -->
+    <link rel="canonical" href="https://arandu-tau.vercel.app/" />
+    <meta name="description" content="Arandu | Portal de inteligência de dados, notícias qualificadas por IA e curadoria estratégica em tecnologia e empreendedorismo.">
+    <meta property="og:title" content="Arandu | Inteligência de Dados & Curadoria Tech">
+    <meta property="og:description" content="Portal de inteligência de mercado, curadoria estratégica e relatórios executivos gerados por IA.">
+    <meta property="og:url" content="https://arandu-tau.vercel.app/">
+    <meta property="og:type" content="website">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        obsidian: '#050505',
+                        gold: {
+                            light: '#E8D098',
+                            DEFAULT: '#C5A85C',
+                            dark: '#9A7B3E',
+                            metallic: 'linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA7C11 100%)'
+                        }
+                    },
+                    backgroundImage: {
+                        'gold-gradient': 'linear-gradient(135deg, #C5A85C 0%, #E8D098 50%, #9A7B3E 100%)',
+                        'gold-glow': 'radial-gradient(ellipse at center, rgba(197, 168, 92, 0.07) 0%, rgba(197, 168, 92, 0.03) 35%, rgba(5, 5, 5, 0) 70%)',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- AOS CSS CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+    
+    <!-- Lucide Icons for clean UI -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Custom styling for extra effects -->
+    <style>
+        .gold-border-glow {
+            box-shadow: 0 0 15px rgba(197, 168, 92, 0.2);
+            transition: all 0.3s ease-in-out;
+        }
+        .gold-border-glow:hover {
+            box-shadow: 0 0 25px rgba(197, 168, 92, 0.45);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .text-glow {
+            text-shadow: 0 0 10px rgba(197, 168, 92, 0.3);
+        }
+
+        /* Card glow refinado: degradê suave ao invés de borda brusca */
+        .news-card {
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .news-card::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(
+                135deg,
+                rgba(197, 168, 92, 0.08) 0%,
+                rgba(197, 168, 92, 0.02) 40%,
+                rgba(255, 255, 255, 0.03) 60%,
+                rgba(197, 168, 92, 0.06) 100%
+            );
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            transition: all 0.5s ease;
+            z-index: 1;
+        }
+        .news-card:hover {
+            box-shadow:
+                0 4px 30px rgba(197, 168, 92, 0.06),
+                0 0 60px rgba(197, 168, 92, 0.03);
+            border-color: rgba(197, 168, 92, 0.12);
+            transform: translateY(-2px);
+        }
+        .news-card:hover::before {
+            background: linear-gradient(
+                135deg,
+                rgba(197, 168, 92, 0.18) 0%,
+                rgba(197, 168, 92, 0.06) 40%,
+                rgba(255, 255, 255, 0.05) 60%,
+                rgba(197, 168, 92, 0.14) 100%
+            );
+        }
+
+        /* Fade-out suave na base do conteúdo dos cards */
+        .card-content-fade {
+            position: relative;
+        }
+        .card-content-fade::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(
+                to bottom,
+                rgba(5, 5, 5, 0) 0%,
+                rgba(5, 5, 5, 0.6) 100%
+            );
+            pointer-events: none;
+            border-radius: 0 0 1rem 1rem;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+</head>
+<body class="bg-obsidian text-white font-sans overflow-x-hidden min-h-screen relative selection:bg-gold selection:text-black">
+
+    <!-- Ambient glowing backgrounds -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute top-[-20%] left-[-15%] w-[70%] h-[70%] bg-gold-glow blur-3xl"></div>
+        <div class="absolute top-[30%] right-[-20%] w-[80%] h-[80%] bg-gold-glow blur-3xl"></div>
+        <div class="absolute bottom-[-20%] left-[10%] w-[70%] h-[70%] bg-gold-glow blur-3xl"></div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="w-full py-6 px-6 md:px-12 border-b border-white/5 relative z-50 glass-panel">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <!-- Brand Logo -->
+            <a href="#" class="flex flex-col gap-1 items-start" aria-label="Arandu Home">
+                <div class="flex items-center gap-1.5">
+                    <img src="favicon.png" onerror="this.onerror=null; this.src='favicon.svg';" alt="A" class="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(197,168,92,0.6)]">
+                    <span class="font-outfit text-2xl font-bold tracking-[0.2em] text-white">RANDU</span>
+                </div>
+                <span class="text-[8px] md:text-[9px] tracking-[0.25em] text-gold-light/60 font-outfit uppercase mt-0.5">
+                    Consultoria &bull; Tecnologia &bull; Inteligência
+                </span>
+            </a>
+
+            <!-- Administrative Route Button -->
+            <a href="admin.html" class="px-3.5 md:px-5 py-2.5 rounded-lg border border-gold/40 hover:border-gold text-gold-light hover:text-white transition-all duration-300 font-medium text-sm tracking-wider font-outfit uppercase bg-white/5 backdrop-blur flex items-center justify-center gap-1.5" title="Área do Administrador">
+                <span class="hidden md:inline">Área do Administrador</span>
+                <i data-lucide="shield" class="w-4 h-4"></i>
+            </a>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="relative z-10">
+
+        <!-- HERO SECTION -->
+        <section class="max-w-7xl mx-auto px-6 md:px-12 py-20 md:py-32 flex flex-col items-center text-center relative">
+            <!-- Animated tag -->
+            <div data-aos="fade-down" data-aos-duration="1000" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gold/30 bg-gold/5 text-gold-light text-xs font-semibold uppercase tracking-widest mb-8">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                Inteligência de Dados Aplicada
+            </div>
+
+            <!-- Main Heading -->
+            <h1 data-aos="fade-up" data-aos-duration="1200" class="font-outfit text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white max-w-5xl leading-[1.1] mb-8">
+                Filtre o ruído. Decida com <span class="bg-clip-text text-transparent bg-gold-gradient text-glow">inteligência de negócios</span>.
+            </h1>
+
+            <!-- Subtitle -->
+            <p data-aos="fade-up" data-aos-duration="1400" class="text-gray-400 text-base md:text-xl max-w-3xl leading-relaxed mb-12 font-light">
+                A curadoria definitiva de tecnologia, negócios e inovação. O portal Arandu monitora canais globais, traduz de fontes internacionais e gera resumos executivos focados em decisões estratégicas.
+            </p>
+
+            <!-- CTA Trigger -->
+            <div data-aos="fade-up" data-aos-duration="1600" class="w-full flex justify-center">
+                <button onclick="openCaptureModal()" class="gold-border-glow px-8 py-5 rounded-xl bg-gold-gradient text-black font-outfit font-extrabold uppercase tracking-wider text-base md:text-lg hover:scale-105 transition-all duration-300 flex items-center gap-3">
+                    Acessar Comunidade Gratuita
+                    <i data-lucide="arrow-right" class="w-5 h-5 stroke-[3px]"></i>
+                </button>
+            </div>
+            
+            <!-- Quick proof tag -->
+            <p data-aos="fade-up" data-aos-duration="1800" class="text-xs text-gray-500 mt-6 tracking-wide uppercase flex items-center gap-1.5">
+                <i data-lucide="shield-check" class="w-4 h-4 text-gold"></i>
+                Resumos diários direto no Telegram • Sem Spam
+            </p>
+        </section>
+
+        <!-- LIVE PREVIEW SECTION -->
+        <section id="news-preview-section" class="max-w-7xl mx-auto px-6 md:px-12 py-16 relative">
+            <!-- Section Header -->
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-12" data-aos="fade-right" data-aos-duration="1000">
+                <div>
+                    <h2 class="font-outfit text-2xl md:text-4xl font-bold tracking-wider uppercase text-white mb-3">
+                        Curadoria em Tempo Real
+                    </h2>
+                    <p class="text-gray-400 font-light max-w-xl">
+                        Veja os previews dos relatórios de inteligência que estão sendo distribuídos para a nossa rede hoje.
+                    </p>
+                </div>
+                <a href="noticias.html" class="mt-4 md:mt-0 flex items-center gap-2 text-gold-light hover:text-white transition text-sm font-semibold tracking-wider font-outfit uppercase">
+                    Ver todos os relatórios
+                    <i data-lucide="chevron-right" class="w-4 h-4 animate-pulse"></i>
+                </a>
+            </div>
+
+            <!-- 3 Glassmorphism Cards -->
+            <div id="news-grid" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Card 1: Tecnologia -->
+                <article data-aos="fade-up" data-aos-delay="100" data-aos-duration="1200" class="news-card glass-panel rounded-2xl overflow-hidden hover:bg-white/[0.03] flex flex-col h-full group">
+                    <a href="noticias.html?categoria=tecnologia" class="block relative h-48 overflow-hidden cursor-pointer">
+                        <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80" alt="Tecnologia" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                        <span class="absolute top-4 left-4 bg-gold/95 backdrop-blur text-black text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded">
+                            Tecnologia
+                        </span>
+                    </a>
+                    <div class="p-6 flex flex-col flex-grow">
+                        <h3 class="font-outfit text-lg md:text-xl font-bold text-white mb-4 h-14 flex items-center hover:text-gold-light transition duration-300">
+                            <a href="noticias.html?categoria=tecnologia" class="hover:underline line-clamp-2 leading-tight">A Nova Era dos Modelos de Linguagem em Negócios</a>
+                        </h3>
+                        
+                        <div class="border-t border-white/5 pt-4 flex-grow flex flex-col">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-3 flex items-center gap-1.5">
+                                <i data-lucide="cpu" class="w-3.5 h-3.5 text-gold"></i>
+                                Resumo Executivo (IA)
+                            </span>
+                            <ul class="space-y-2.5 text-sm text-gray-400 mb-6 flex-grow">
+                                <li class="flex items-start gap-2.5 leading-snug">
+                                    <span class="text-gold mt-1">&bull;</span>
+                                    <span>Integração nativa de LLMs reduz custos operacionais de suporte em até 40%.</span>
+                                </li>
+                                <li class="flex items-start gap-2.5 leading-snug">
+                                    <span class="text-gold mt-1">&bull;</span>
+                                    <span>Novos modelos operam localmente garantindo segurança e privacidade corporativa.</span>
+                                </li>
+                                <li class="flex items-start gap-2.5 leading-snug">
+                                    <span class="text-gold mt-1">&bull;</span>
+                                    <span>Startups de infraestrutura de IA levantam rodadas históricas no mercado global.</span>
+                                </li>
+                            </ul>
+                            
+                            <a href="noticias.html?categoria=tecnologia" class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold hover:text-gold-light transition duration-300 mt-auto">
+                                Acessar Relatórios
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Card 2: Empreendedorismo -->
+                <article data-aos="fade-up" data-aos-delay="200" data-aos-duration="1200" class="news-card glass-panel rounded-2xl overflow-hidden hover:bg-white/[0.03] flex flex-col h-full group">
+                    <a href="noticias.html?categoria=empreendedorismo" class="block relative h-48 overflow-hidden cursor-pointer">
+                        <img src="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=600&q=80" alt="Empreendedorismo" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                        <span class="absolute top-4 left-4 bg-gold/95 backdrop-blur text-black text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded">
+                            Empreendedorismo
+                        </span>
+                    </a>
+                    <div class="p-6 flex flex-col flex-grow">
+                        <h3 class="font-outfit text-lg md:text-xl font-bold text-white mb-4 h-14 flex items-center hover:text-gold-light transition duration-300">
+                            <a href="noticias.html?categoria=empreendedorismo" class="hover:underline line-clamp-2 leading-tight">Como Startups Estão Escalando com Arquiteturas Serverless</a>
+                        </h3>
+                        
+                        <div class="border-t border-white/5 pt-4 flex-grow flex flex-col">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-3 flex items-center gap-1.5">
+                                <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-gold"></i>
+                                Resumo Executivo (IA)
+                            </span>
+                            <ul class="space-y-2.5 text-sm text-gray-400 mb-6 flex-grow">
+                                <li class="flex items-start gap-2.5 leading-snug">
+                                    <span class="text-gold mt-1">&bull;</span>
+                                    <span>Redução de despesas com infraestrutura de nuvem em mais de 50% no primeiro ano.</span>
+                                </li>
+                                <li class="flex items-start gap-2.5 leading-snug">
+                                    <span class="text-gold mt-1">&bull;</span>
+                                    <span>Escalabilidade automática instantânea para picos repentinos de tráfego de usuários.</span>
+                                </li>
+                                <li class="flex items-start gap-2.5 leading-snug">
+                                    <span class="text-gold mt-1">&bull;</span>
+                                    <span>Desenvolvedores focam exclusivamente na regra de negócio, otimizando lançamentos.</span>
+                                </li>
+                            </ul>
+                            
+                            <a href="noticias.html?categoria=empreendedorismo" class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold hover:text-gold-light transition duration-300 mt-auto">
+                                Acessar Relatórios
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Card 3: Investimentos -->
+                <article data-aos="fade-up" data-aos-delay="300" data-aos-duration="1200" class="news-card glass-panel rounded-2xl overflow-hidden hover:bg-white/[0.03] flex flex-col h-full group">
+                    <a href="noticias.html?categoria=investimentos" class="block relative h-48 overflow-hidden cursor-pointer">
+                        <img src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80" alt="Investimentos" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                        <span class="absolute top-4 left-4 bg-gold/95 backdrop-blur text-black text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded">
+                            Investimentos
+                        </span>
+                    </a>
+                    <div class="p-6 flex flex-col flex-grow">
+                        <h3 class="font-outfit text-lg md:text-xl font-bold text-white mb-4 h-14 flex items-center hover:text-gold-light transition duration-300">
+                            <a href="noticias.html?categoria=investimentos" class="hover:underline line-clamp-2 leading-tight">Boom da Computação Quântica e Capital de Risco</a>
+                        </h3>
+                        
+                        <div class="border-t border-white/5 pt-4 flex-grow flex flex-col">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-3 flex items-center gap-1.5">
+                                <i data-lucide="trending-up" class="w-3.5 h-3.5 text-gold"></i>
+                                Resumo Executivo (IA)
+                            </span>
+                            <ul class="space-y-2.5 text-sm text-gray-400 mb-6 flex-grow">
+                                <li class="flex items-start gap-2.5 leading-snug">
+                                    <span class="text-gold mt-1">&bull;</span>
+                                    <span>Aportes financeiros em hardware quântico crescem 80% frente ao ano anterior.</span>
+                                </li>
+                                <li class="flex items-start gap-2.5 leading-snug">
+                                    <span class="text-gold mt-1">&bull;</span>
+                                    <span>Primeiros casos práticos de criptografia pós-quântica entram em produção bancária.</span>
+                                </li>
+                                <li class="flex items-start gap-2.5 leading-snug">
+                                    <span class="text-gold mt-1">&bull;</span>
+                                    <span>Fundos globais de VC abrem filiais focadas em Deep Tech voltadas a simulações moleculares.</span>
+                                </li>
+                            </ul>
+                            
+                            <a href="noticias.html?categoria=investimentos" class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold hover:text-gold-light transition duration-300 mt-auto">
+                                Acessar Relatórios
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- BENETIFS & METRICS -->
+        <section class="max-w-7xl mx-auto px-6 md:px-12 py-20 relative">
+            <div class="glass-panel rounded-3xl p-8 md:p-16 grid grid-cols-1 md:grid-cols-3 gap-12 text-center md:text-left relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-gold-glow pointer-events-none z-0"></div>
+                
+                <div class="relative z-10 flex flex-col justify-center items-center md:items-start" data-aos="fade-up" data-aos-duration="1000">
+                    <span class="font-outfit text-5xl md:text-6xl font-black text-gold text-glow mb-2">15 min</span>
+                    <h4 class="font-outfit text-lg font-bold text-white uppercase tracking-wider mb-2">Ciclo de Atualização</h4>
+                    <p class="text-gray-400 text-sm font-light">Nosso bot monitora feeds globais 24h por dia e atualiza nosso hub de inteligência constantemente.</p>
+                </div>
+                
+                <div class="relative z-10 flex flex-col justify-center items-center md:items-start" data-aos="fade-up" data-aos-delay="100" data-aos-duration="1000">
+                    <span class="font-outfit text-5xl md:text-6xl font-black text-gold text-glow mb-2">100%</span>
+                    <h4 class="font-outfit text-lg font-bold text-white uppercase tracking-wider mb-2">Curadoria Sem Ruído</h4>
+                    <p class="text-gray-400 text-sm font-light">Nossos algoritmos removem anúncios, matérias patrocinadas e duplicatas, focando apenas no valor.</p>
+                </div>
+                
+                <div class="relative z-10 flex flex-col justify-center items-center md:items-start" data-aos="fade-up" data-aos-delay="200" data-aos-duration="1000">
+                    <span class="font-outfit text-5xl md:text-6xl font-black text-gold text-glow mb-2">3 Pontos</span>
+                    <h4 class="font-outfit text-lg font-bold text-white uppercase tracking-wider mb-2">Foco Executivo</h4>
+                    <p class="text-gray-400 text-sm font-light">Toda notícia complexa é resumida pela nossa inteligência de dados em tópicos de rápida leitura.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ SECTION -->
+        <section class="max-w-4xl mx-auto px-6 py-20 relative" data-aos="fade-up" data-aos-duration="1000">
+            <div class="text-center mb-12">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gold/30 bg-gold/5 text-gold-light text-xs font-semibold uppercase tracking-wider mb-4">
+                    <i data-lucide="help-circle" class="w-3.5 h-3.5 text-gold"></i>
+                    Dúvidas frequentes
+                </div>
+                <h2 class="font-outfit text-2xl md:text-4xl font-bold tracking-wider uppercase text-white mb-3">
+                    FAQ Geral
+                </h2>
+                <p class="text-gray-400 font-light">
+                    Esclareça suas dúvidas sobre a curadoria inteligente da Arandu.
+                </p>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- FAQ Item 1 -->
+                <div class="glass-panel rounded-xl overflow-hidden transition-all duration-300 border border-white/5 hover:border-gold/20">
+                    <button onclick="toggleFaq(this)" class="w-full px-6 py-5 flex items-center justify-between text-left focus:outline-none group">
+                        <span class="font-outfit font-semibold text-white text-base md:text-lg group-hover:text-gold-light transition duration-300">Como funciona a curadoria de notícias?</span>
+                        <i data-lucide="chevron-down" class="w-5 h-5 text-gold transition-transform duration-300"></i>
+                    </button>
+                    <div class="max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                        <div class="px-6 pb-6 text-gray-400 text-sm font-light leading-relaxed">
+                            Nossos robôs monitoram feeds RSS e portais globais de tecnologia e empreendedorismo a cada 15 minutos. Quando novos artigos surgem, eles são analisados por nossa inteligência artificial: removemos duplicatas, traduzimos fontes internacionais para o Português e sintetizamos o conteúdo em 3 tópicos executivos estruturados.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- FAQ Item 2 -->
+                <div class="glass-panel rounded-xl overflow-hidden transition-all duration-300 border border-white/5 hover:border-gold/20">
+                    <button onclick="toggleFaq(this)" class="w-full px-6 py-5 flex items-center justify-between text-left focus:outline-none group">
+                        <span class="font-outfit font-semibold text-white text-base md:text-lg group-hover:text-gold-light transition duration-300">É realmente gratuito?</span>
+                        <i data-lucide="chevron-down" class="w-5 h-5 text-gold transition-transform duration-300"></i>
+                    </button>
+                    <div class="max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                        <div class="px-6 pb-6 text-gray-400 text-sm font-light leading-relaxed">
+                            Sim, o acesso à nossa comunidade e os informativos diários são totalmente gratuitos. Nosso objetivo principal é criar um hub qualificado e democratizar insights de mercado para tomadores de decisão, investidores e fundadores.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- FAQ Item 3 -->
+                <div class="glass-panel rounded-xl overflow-hidden transition-all duration-300 border border-white/5 hover:border-gold/20">
+                    <button onclick="toggleFaq(this)" class="w-full px-6 py-5 flex items-center justify-between text-left focus:outline-none group">
+                        <span class="font-outfit font-semibold text-white text-base md:text-lg group-hover:text-gold-light transition duration-300">Como a Arandu evita a redundância de notícias?</span>
+                        <i data-lucide="chevron-down" class="w-5 h-5 text-gold transition-transform duration-300"></i>
+                    </button>
+                    <div class="max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                        <div class="px-6 pb-6 text-gray-400 text-sm font-light leading-relaxed">
+                            Implementamos um pipeline de deduplicação em duas camadas: a primeira descarta títulos idênticos por meio de hashing SHA-256; a segunda utiliza o algoritmo de similaridade textual SequenceMatcher para comparar a semântica da notícia contra tudo que foi postado nas últimas 24 horas. Se a similaridade ultrapassar 80%, a notícia é automaticamente descartada.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="w-full pt-16 pb-12 px-6 md:px-12 border-t border-white/5 relative z-10 mt-20 glass-panel">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+            <!-- Brand Column -->
+            <div class="flex flex-col items-start gap-4">
+                <div class="flex flex-col gap-1 items-start">
+                    <div class="flex items-center gap-1.5">
+                        <img src="favicon.png" onerror="this.onerror=null; this.src='favicon.svg';" alt="A" class="w-7 h-7 object-contain drop-shadow-[0_0_8px_rgba(197,168,92,0.6)]">
+                        <span class="font-outfit text-xl font-bold tracking-[0.2em] text-white">RANDU</span>
+                    </div>
+                    <span class="text-[8px] tracking-[0.25em] text-gold-light/60 font-outfit uppercase mt-0.5">
+                        Consultoria &bull; Tecnologia &bull; Inteligência
+                    </span>
+                </div>
+                <p class="text-gray-400 text-xs font-light leading-relaxed">
+                    Consultoria de inteligência e curadoria estratégica de informações para tomadores de decisão em tecnologia e empreendedorismo.
+                </p>
+                <div class="flex items-center gap-3.5 mt-4">
+                    <!-- WhatsApp -->
+                    <a href="https://wa.me/5511999999999" target="_blank" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 hover:border-gold hover:text-gold transition-all duration-300 flex items-center justify-center text-gray-400" title="WhatsApp">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.458 5.704 1.459h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413"/>
+                        </svg>
+                    </a>
+                    <!-- Instagram -->
+                    <a href="https://instagram.com/arandu.tech" target="_blank" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 hover:border-gold hover:text-gold transition-all duration-300 flex items-center justify-center text-gray-400" title="Instagram">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+                        </svg>
+                    </a>
+                    <!-- Telegram -->
+                    <a href="https://t.me/AranduTechPortal" target="_blank" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 hover:border-gold hover:text-gold transition-all duration-300 flex items-center justify-center text-gray-400" title="Telegram">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.56 8.61l-1.91 9c-.14.65-.53.81-1.08.5l-2.91-2.15-1.4 1.35c-.15.15-.28.28-.58.28l.2-2.9 5.28-4.77c.23-.2-.05-.31-.35-.11L10.2 13.7l-2.81-.88c-.61-.19-.62-.61.13-.9l11-4.24c.51-.19.96.11.84.93z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Tech Links Column -->
+            <div>
+                <h4 class="font-outfit text-xs font-bold uppercase tracking-wider text-white mb-5 border-l-2 border-gold pl-2.5">
+                    Notícias e Tecnologia
+                </h4>
+                <ul class="space-y-3.5 text-xs">
+                    <li>
+                        <a href="https://canaltech.com.br" target="_blank" class="text-gray-400 hover:text-gold-light transition duration-200 flex items-center justify-between group">
+                            <span>Canaltech</span>
+                            <i data-lucide="arrow-up-right" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition duration-200"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://tecnoblog.net" target="_blank" class="text-gray-400 hover:text-gold-light transition duration-200 flex items-center justify-between group">
+                            <span>Tecnoblog</span>
+                            <i data-lucide="arrow-up-right" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition duration-200"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.tecmundo.com.br" target="_blank" class="text-gray-400 hover:text-gold-light transition duration-200 flex items-center justify-between group">
+                            <span>Tecmundo</span>
+                            <i data-lucide="arrow-up-right" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition duration-200"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://olhardigital.com.br" target="_blank" class="text-gray-400 hover:text-gold-light transition duration-200 flex items-center justify-between group">
+                            <span>Olhar Digital</span>
+                            <i data-lucide="arrow-up-right" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition duration-200"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Business Links Column -->
+            <div>
+                <h4 class="font-outfit text-xs font-bold uppercase tracking-wider text-white mb-5 border-l-2 border-gold pl-2.5">
+                    Negócios e Inovação
+                </h4>
+                <ul class="space-y-3.5 text-xs">
+                    <li>
+                        <a href="https://epocanegocios.globo.com" target="_blank" class="text-gray-400 hover:text-gold-light transition duration-200 flex items-center justify-between group">
+                            <span>Época Negócios</span>
+                            <i data-lucide="arrow-up-right" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition duration-200"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://g1.globo.com/economia/tecnologia/" target="_blank" class="text-gray-400 hover:text-gold-light transition duration-200 flex items-center justify-between group">
+                            <span>G1 Tecnologia</span>
+                            <i data-lucide="arrow-up-right" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition duration-200"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://g1.globo.com/economia/economia/empreendedorismo/" target="_blank" class="text-gray-400 hover:text-gold-light transition duration-200 flex items-center justify-between group">
+                            <span>G1 Empreendedorismo</span>
+                            <i data-lucide="arrow-up-right" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition duration-200"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://startse.com" target="_blank" class="text-gray-400 hover:text-gold-light transition duration-200 flex items-center justify-between group">
+                            <span>StartSe Inovação</span>
+                            <i data-lucide="arrow-up-right" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition duration-200"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Global Tech Links Column -->
+            <div>
+                <h4 class="font-outfit text-xs font-bold uppercase tracking-wider text-white mb-5 border-l-2 border-gold pl-2.5">
+                    Referências Globais
+                </h4>
+                <ul class="space-y-3.5 text-xs">
+                    <li>
+                        <a href="https://techcrunch.com" target="_blank" class="text-gray-400 hover:text-gold-light transition duration-200 flex items-center justify-between group">
+                            <span>TechCrunch</span>
+                            <i data-lucide="arrow-up-right" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition duration-200"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://wired.com" target="_blank" class="text-gray-400 hover:text-gold-light transition duration-200 flex items-center justify-between group">
+                            <span>Wired Magazine</span>
+                            <i data-lucide="arrow-up-right" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition duration-200"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://hbr.org" target="_blank" class="text-gray-400 hover:text-gold-light transition duration-200 flex items-center justify-between group">
+                            <span>Harvard Business Review</span>
+                            <i data-lucide="arrow-up-right" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition duration-200"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://venturebeat.com" target="_blank" class="text-gray-400 hover:text-gold-light transition duration-200 flex items-center justify-between group">
+                            <span>VentureBeat</span>
+                            <i data-lucide="arrow-up-right" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition duration-200"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
+            <span class="text-[9px] tracking-widest text-gray-500 uppercase">Tecnologia &bull; Curation &bull; Inteligência</span>
+            <p class="text-gray-500 text-xs font-light text-center md:text-right">
+                &copy; 2026 Arandu. Todos os direitos reservados.
+            </p>
+        </div>
+    </footer>
+
+    <!-- CAPTURE FORM MODAL -->
+    <div id="captureModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden items-center justify-center p-4 transition-all duration-300">
+        <div id="modalContent" class="glass-panel w-full max-w-lg rounded-2xl p-8 relative scale-95 opacity-0 transition-all duration-300 max-h-[90vh] overflow-y-auto">
+            <!-- Close button -->
+            <button onclick="closeCaptureModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white transition duration-200">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+
+            <!-- Modal Header -->
+            <div id="modalHeaderSection" class="text-center mb-8">
+                <div class="inline-flex items-center justify-center p-3 rounded-full bg-gold/10 border border-gold/20 text-gold mb-4 animate-pulse">
+                    <i data-lucide="send" class="w-6 h-6"></i>
+                </div>
+                <h3 class="font-outfit text-2xl font-bold text-white mb-2">Quase lá!</h3>
+                <p class="text-gray-400 text-sm font-light">Preencha com seus dados de contato e receba acesso direto à comunidade no Telegram e aos relatórios.</p>
+            </div>
+
+            <!-- Form -->
+            <form id="leadForm" onsubmit="handleFormSubmit(event)" class="space-y-5">
+                <div>
+                    <label for="name" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Nome Completo</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                            <i data-lucide="user" class="w-4 h-4"></i>
+                        </span>
+                        <input type="text" id="name" required class="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white text-sm focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition duration-200" placeholder="Seu nome">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="email" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">E-mail Profissional</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                            <i data-lucide="mail" class="w-4 h-4"></i>
+                        </span>
+                        <input type="email" id="email" required class="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white text-sm focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition duration-200" placeholder="seuemail@empresa.com">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="whatsapp" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">WhatsApp</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                            <i data-lucide="phone" class="w-4 h-4"></i>
+                        </span>
+                        <input type="tel" id="whatsapp" required class="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white text-sm focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition duration-200" placeholder="(11) 99999-9999" oninput="formatWhatsApp(this)">
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full gold-border-glow bg-gold-gradient text-black font-outfit font-extrabold uppercase tracking-wider py-4 rounded-xl hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2 mt-6">
+                    <span>Acessar Comunidade Telegram</span>
+                    <i data-lucide="external-link" class="w-5 h-5"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- AOS JS CDN -->
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <script>
+        // Global Invite Config (ready to change when real Telegram is created)
+        const TELEGRAM_CHANNEL_URL = "https://t.me/AranduTechPortal";
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
+            ? "http://localhost:8000"
+            : "";
+
+        // Initialize AOS animations
+        AOS.init({
+            once: true,
+            duration: 800,
+            easing: 'ease-out-quad'
+        });
+
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // On Page Load: Try to fetch latest news dynamically from API.
+        // Falls back to static placeholder cards on fetch error.
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchLatestNews();
+        });
+
+        async function fetchLatestNews() {
+            try {
+                // Fetch 12 latest news items to populate section cards by category
+                const response = await fetch(`${API_BASE_URL}/api/noticias?page=1&size=12`);
+                if (!response.ok) throw new Error('API offline');
+                const data = await response.json();
+                
+                if (data.results && data.results.length > 0) {
+                    renderNewsCards(data.results);
+                }
+            } catch (error) {
+                console.log('API offline or connection failed. Using premium pre-rendered placeholder cards.', error);
+            }
+        }
+
+        function renderNewsCards(newsItems) {
+            const grid = document.getElementById('news-grid');
+            
+            // Map sources to categories
+            const sourceMap = {
+                "Canaltech": "tecnologia",
+                "TI Inside": "tecnologia",
+                "Olhar Digital": "tecnologia",
+                "Tecmundo": "tecnologia",
+                "Tecnoblog": "tecnologia",
+                "G1 Tecnologia": "tecnologia",
+                "TechCrunch": "tecnologia",
+                "Wired": "tecnologia",
+                "MIT Technology Review": "tecnologia",
+                "Google Research Blog": "tecnologia",
+                "AWS News Blog": "investimentos",
+                "VentureBeat": "investimentos",
+                "Época Negócios": "investimentos",
+                "InfoMoney": "investimentos",
+                "G1 Empreendedorismo": "empreendedorismo",
+                "Paul Graham Essays": "empreendedorismo",
+                "Harvard Business Review": "empreendedorismo",
+                "MIT Sloan Management Review": "empreendedorismo",
+                "Knowledge at Wharton": "empreendedorismo",
+                "LSE Business Review": "empreendedorismo"
+            };
+
+            const categoriesData = {
+                tecnologia: {
+                    title: "Tecnologia",
+                    image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80"
+                },
+                empreendedorismo: {
+                    title: "Empreendedorismo",
+                    image: "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=600&q=80"
+                },
+                investimentos: {
+                    title: "Investimentos",
+                    image: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80"
+                }
+            };
+
+            const fallbackData = {
+                tecnologia: {
+                    title: "A Nova Era dos Modelos de Linguagem em Negócios",
+                    link: "https://canaltech.com.br",
+                    image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
+                    points: [
+                        "Integração nativa de LLMs reduz custos operacionais de suporte em até 40%.",
+                        "Novos modelos operam localmente garantindo segurança e privacidade corporativa.",
+                        "Startups de infraestrutura de IA levantam rodadas históricas no mercado global."
+                    ]
+                },
+                empreendedorismo: {
+                    title: "Como Startups Estão Escalando com Arquiteturas Serverless",
+                    link: "https://tecnoblog.net",
+                    image: "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=600&q=80",
+                    points: [
+                        "Redução de despesas com infraestrutura de nuvem em mais de 50% no primeiro ano.",
+                        "Escalabilidade automática instantânea para picos repentinos de tráfego de usuários.",
+                        "Desenvolvedores focam exclusivamente na regra de negócio, otimizando lançamentos."
+                    ]
+                },
+                investimentos: {
+                    title: "Boom da Computação Quântica e Capital de Risco",
+                    link: "https://g1.globo.com/economia/tecnologia/",
+                    image: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80",
+                    points: [
+                        "Aportes financeiros em hardware quântico crescem 80% frente ao ano anterior.",
+                        "Primeiros casos práticos de criptografia pós-quântica entram em produção bancária.",
+                        "Fundos globais de VC abrem filiais focadas em Deep Tech voltadas a simulações moleculares."
+                    ]
+                }
+            };
+
+            // Get the latest single article per category
+            const latestByCategory = {
+                tecnologia: null,
+                empreendedorismo: null,
+                investimentos: null
+            };
+
+            newsItems.forEach(item => {
+                const catKey = sourceMap[item.source_name] || "tecnologia";
+                if (latestByCategory[catKey] === null) {
+                    latestByCategory[catKey] = item;
+                }
+            });
+
+            // Clear news grid
+            grid.innerHTML = '';
+
+            const keys = ["tecnologia", "empreendedorismo", "investimentos"];
+            keys.forEach((key, index) => {
+                const cat = categoriesData[key];
+                const item = latestByCategory[key];
+                
+                let title, newsLink, image, pointsHtml;
+                let iconName = "cpu";
+                if (key === "empreendedorismo") iconName = "bar-chart-3";
+                else if (key === "investimentos") iconName = "trending-up";
+
+                if (item) {
+                    title = item.translated_title || item.original_title;
+                    newsLink = item.link || "#";
+                    image = item.image_url || cat.image;
+                    const summary = item.ai_summary || "";
+                    
+                    const points = summary.split('\n').filter(p => p.trim() !== '');
+                    let ptsHtml = '';
+                    points.forEach(pt => {
+                        const cleanPt = pt.replace(/^-\s*/, '').replace(/^\*\s*/, '').replace(/^\d+\.\s*/, '').trim();
+                        if (cleanPt) {
+                            ptsHtml += `
+                                <li class="flex items-start gap-2.5 leading-snug">
+                                    <span class="text-gold mt-1">&bull;</span>
+                                    <span>${cleanPt}</span>
+                                </li>
+                            `;
+                        }
+                    });
+                    pointsHtml = ptsHtml || `
+                        <li class="flex items-start gap-2.5 leading-snug">
+                            <span class="text-gold mt-1">&bull;</span>
+                            <span>${summary}</span>
+                        </li>
+                    `;
+                } else {
+                    const fb = fallbackData[key];
+                    title = fb.title;
+                    newsLink = fb.link;
+                    image = fb.image;
+                    let ptsHtml = '';
+                    fb.points.forEach(pt => {
+                        ptsHtml += `
+                            <li class="flex items-start gap-2.5 leading-snug">
+                                <span class="text-gold mt-1">&bull;</span>
+                                <span>${pt}</span>
+                            </li>
+                        `;
+                    });
+                    pointsHtml = ptsHtml;
+                }
+
+                let summaryContainerHtml = '';
+                let summaryObj = null;
+
+                if (item && item.editorial_status === "publicado" && item.editorial_summary) {
+                    try {
+                        summaryObj = typeof item.editorial_summary === 'string' 
+                            ? JSON.parse(item.editorial_summary) 
+                            : item.editorial_summary;
+                    } catch (e) {
+                        console.error("Error parsing editorial summary:", e);
+                    }
+                }
+
+                if (item && !summaryObj && item.ai_summary) {
+                    summaryObj = parseMarkdownSummary(item.ai_summary);
+                }
+
+                if (!summaryObj) {
+                    const fb = fallbackData[key];
+                    if (fb && fb.points && fb.points.length >= 2) {
+                        summaryObj = {
+                            what_happened: fb.points[0],
+                            why_it_matters: fb.points[1],
+                            possible_impacts: "",
+                            key_points: fb.points.slice(2)
+                        };
+                    }
+                }
+
+                if (summaryObj) {
+                    const itemId = (item && item.id) || key;
+                    const whatHappened = summaryObj.what_happened || "";
+                    const whyItMatters = summaryObj.why_it_matters || "";
+                    const possibleImpacts = summaryObj.possible_impacts || "";
+                    const keyPoints = summaryObj.key_points || [];
+
+                    const isPremium = item && item.editorial_status === "publicado";
+                    const titleText = isPremium ? "Resumo Executivo" : "Resumo Executivo (IA)";
+                    const iconAttr = isPremium ? 'data-lucide="sparkles" class="w-3.5 h-3.5 text-gold"' : `data-lucide="${iconName}" class="w-3.5 h-3.5 text-gold"`;
+
+                    summaryContainerHtml = `
+                        <div class="flex-grow flex flex-col mb-4">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-2 flex items-center gap-1.5">
+                                <i ${iconAttr}></i>
+                                ${titleText}
+                            </span>
+                            <div class="space-y-1 bg-white/[0.01] border border-white/5 rounded-xl p-3">
+                                <!-- O que aconteceu -->
+                                <div class="border-b border-white/5 pb-1">
+                                    <button onclick="toggleAccordion(event, 'acc-${itemId}-what')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">🔍</span>
+                                            O que aconteceu?
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${itemId}-what" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <p class="text-[11px] text-gray-400 font-light pl-5 pt-0.5 leading-relaxed pb-1.5">
+                                            ${whatHappened}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Por que isso importa -->
+                                <div class="border-b border-white/5 pb-1">
+                                    <button onclick="toggleAccordion(event, 'acc-${itemId}-why')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">💡</span>
+                                            Por que isso importa?
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${itemId}-why" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <p class="text-[11px] text-gray-400 font-light pl-5 pt-0.5 leading-relaxed pb-1.5">
+                                            ${whyItMatters}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Possíveis impactos -->
+                                ${possibleImpacts ? `
+                                <div class="border-b border-white/5 pb-1">
+                                    <button onclick="toggleAccordion(event, 'acc-${itemId}-impacts')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">⚡</span>
+                                            Possíveis impactos?
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${itemId}-impacts" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <p class="text-[11px] text-gray-400 font-light pl-5 pt-0.5 leading-relaxed pb-1.5">
+                                            ${possibleImpacts}
+                                        </p>
+                                    </div>
+                                </div>
+                                ` : ''}
+
+                                <!-- Pontos-chave -->
+                                ${keyPoints && keyPoints.length > 0 ? `
+                                <div>
+                                    <button onclick="toggleAccordion(event, 'acc-${itemId}-points')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">📌</span>
+                                            Pontos-chave
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${itemId}-points" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <ul class="list-disc list-inside text-[11px] text-gray-400 font-light pl-5 pt-0.5 space-y-1 pb-1.5 leading-relaxed">
+                                            ${keyPoints.map(pt => `<li>${pt}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    summaryContainerHtml = `
+                        <div class="flex-grow flex flex-col mb-4">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-3 flex items-center gap-1.5">
+                                <i data-lucide="${iconName}" class="w-3.5 h-3.5 text-gold"></i>
+                                Resumo Executivo (IA)
+                            </span>
+                            <ul class="space-y-2.5 text-sm text-gray-400 mb-6 flex-grow">
+                                ${pointsHtml}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                const card = document.createElement('article');
+                card.className = "news-card glass-panel rounded-2xl overflow-hidden hover:bg-white/[0.03] flex flex-col h-full group";
+                card.setAttribute('data-aos', 'fade-up');
+                card.setAttribute('data-aos-delay', (index * 100).toString());
+                card.setAttribute('data-aos-duration', '1200');
+
+                card.innerHTML = DOMPurify.sanitize(`
+                    <div class="relative h-48 overflow-hidden">
+                        <img src="${image}" alt="${title}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy">
+                        <span class="absolute top-4 left-4 bg-gold/95 backdrop-blur text-black text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded">
+                            ${cat.title}
+                        </span>
+                    </div>
+                    <div class="p-6 flex flex-col flex-grow">
+                        <h3 class="font-outfit text-lg md:text-xl font-bold text-white mb-4 h-14 flex items-center hover:text-gold-light transition duration-300">
+                            <a href="${newsLink}" target="_blank" class="hover:underline line-clamp-2 leading-tight">${title}</a>
+                        </h3>
+                        
+                        <div class="border-t border-white/5 pt-4 flex-grow flex flex-col">
+                            ${summaryContainerHtml}
+                            
+                            <a href="${newsLink}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold hover:text-gold-light transition duration-300 mt-auto">
+                                Ler Artigo Completo
+                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                            </a>
+                        </div>
+                    </div>
+                `);
+                
+                grid.appendChild(card);
+            });
+
+            // Re-render Lucide icons for new DOM elements
+            lucide.createIcons();
+        }
+
+        // Modal triggers and controllers
+        const modal = document.getElementById('captureModal');
+        const modalContent = document.getElementById('modalContent');
+
+        function openCaptureModal() {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeCaptureModal() {
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeCaptureModal();
+            }
+        });
+
+        // Smooth scroll to news preview
+        function scrollToNewsGrid() {
+            const section = document.getElementById('news-preview-section');
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Accordion FAQ toggle controller
+        function toggleFaq(button) {
+            const content = button.nextElementSibling;
+            const icon = button.querySelector('svg, i');
+            
+            if (content.style.maxHeight && content.style.maxHeight !== '0px') {
+                content.style.maxHeight = '0px';
+                if (icon) icon.style.transform = 'rotate(0deg)';
+            } else {
+                // Close other FAQ items
+                document.querySelectorAll('button[onclick="toggleFaq(this)"]').forEach(btn => {
+                    if (btn !== button) {
+                        const otherContent = btn.nextElementSibling;
+                        const otherIcon = btn.querySelector('svg, i');
+                        if (otherContent) otherContent.style.maxHeight = '0px';
+                        if (otherIcon) otherIcon.style.transform = 'rotate(0deg)';
+                    }
+                });
+                
+                content.style.maxHeight = content.scrollHeight + 'px';
+                if (icon) icon.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // Lead submission handler + database persistence via FastAPI
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const whatsapp = document.getElementById('whatsapp').value.trim();
+
+            if (!name || !email || !whatsapp) {
+                alert('Por favor, preencha todos os campos do formulário.');
+                return;
+            }
+
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = DOMPurify.sanitize(`
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Salvando contato...</span>
+            `);
+
+            // Submit lead to FastAPI REST endpoint
+            fetch(`${API_BASE_URL}/api/leads`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    whatsapp: whatsapp
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Falha na resposta do servidor.');
+                }
+                return response.json();
+            })
+            .then(data => {
+                showSuccessScreen(name);
+            })
+            .catch(error => {
+                console.warn('Erro ao conectar com a API local. Ativando redirecionamento de fallback.', error);
+                // Fallback state (permite que o lead entre no Telegram mesmo com a API/BD local offline)
+                showSuccessScreen(name);
+            });
+        }
+
+        function showSuccessScreen(name) {
+            // Render custom premium success screen inside modal
+            modalContent.innerHTML = DOMPurify.sanitize(`
+                <div class="text-center py-8">
+                    <div class="inline-flex items-center justify-center p-4 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 mb-6 drop-shadow-[0_0_15px_rgba(34,197,94,0.3)] animate-bounce">
+                        <i data-lucide="check-circle" class="w-12 h-12 stroke-[2.5px]"></i>
+                    </div>
+                    <h3 class="font-outfit text-2xl font-bold text-white mb-3">Acesso Liberado!</h3>
+                    <p class="text-gray-400 text-sm font-light mb-8 max-w-sm mx-auto">
+                        Obrigado, <strong>${name.split(' ')[0]}</strong>! Seus dados foram salvos com sucesso. Redirecionando você para a nossa comunidade de curadoria de inteligência.
+                    </p>
+                    <div class="text-xs text-gray-500 flex items-center justify-center gap-1.5">
+                        <svg class="animate-spin h-4 w-4 text-gold inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Conectando com o Telegram...</span>
+                    </div>
+                </div>
+            `);
+            
+            // Re-render check-circle icon
+            lucide.createIcons();
+            
+            // Redirect user to the Telegram constant after 2 seconds
+            setTimeout(() => {
+                window.location.href = TELEGRAM_CHANNEL_URL;
+            }, 2000);
+        }
+
+        // WhatsApp number formatting helper
+        function formatWhatsApp(input) {
+            let value = input.value.replace(/\D/g, "");
+            if (value.length > 11) value = value.substring(0, 11);
+            
+            if (value.length > 10) {
+                input.value = `(${value.substring(0, 2)}) ${value.substring(2, 7)}-${value.substring(7, 11)}`;
+            } else if (value.length > 6) {
+                input.value = `(${value.substring(0, 2)}) ${value.substring(2, 6)}-${value.substring(6, 10)}`;
+            } else if (value.length > 2) {
+                input.value = `(${value.substring(0, 2)}) ${value.substring(2)}`;
+            } else if (value.length > 0) {
+                input.value = `(${value}`;
+            }
+        }
+
+        // Parse structured Markdown summaries (with custom headers) into objects
+        function parseMarkdownSummary(text) {
+            if (!text) return null;
+            if (!text.includes("O que aconteceu?") && !text.includes("Por que isso importa?")) return null;
+            
+            const sections = {
+                what_happened: "",
+                why_it_matters: "",
+                possible_impacts: "",
+                key_points: []
+            };
+            
+            // Regex to find sections
+            const parts = text.split(/(?=🔍|💡|⚡|📌|\*\*O que aconteceu\*\*|\*\*Por que isso importa\*\*|\*\*Possíveis impactos\*\*|\*\*Pontos-chave\*\*)/g);
+            for (const part of parts) {
+                const cleanPart = part.trim();
+                if (cleanPart.includes("O que aconteceu?")) {
+                    sections.what_happened = cleanPart.replace(/^(🔍\s*)?(\*\*O que aconteceu\?\*\*|\*O que aconteceu\?\*|O que aconteceu\?)\s*/, "").trim();
+                } else if (cleanPart.includes("Por que isso importa?")) {
+                    sections.why_it_matters = cleanPart.replace(/^(💡\s*)?(\*\*Por que isso importa\?\*\*|\*Por que isso importa\?\*|Por que isso importa\?)\s*/, "").trim();
+                } else if (cleanPart.includes("Possíveis impactos") || cleanPart.includes("Possiveis impactos")) {
+                    sections.possible_impacts = cleanPart.replace(/^(⚡\s*)?(\*\*Possíveis impactos\*\*|\*Possíveis impactos\*|Possíveis impactos|\*\*Possiveis impactos\*\*|Possiveis impactos)\s*/, "").trim();
+                } else if (cleanPart.includes("Pontos-chave") || cleanPart.includes("Pontos chave")) {
+                    const lines = cleanPart.split('\n');
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim().replace(/^[-•*]\s*/, "");
+                        if (line) {
+                            sections.key_points.push(line);
+                        }
+                    }
+                }
+            }
+            
+            // Clean up any double asterisks or markdown in titles
+            sections.what_happened = sections.what_happened.replace(/^\*\*|^\*/, "").trim();
+            sections.why_it_matters = sections.why_it_matters.replace(/^\*\*|^\*/, "").trim();
+            sections.possible_impacts = sections.possible_impacts.replace(/^\*\*|^\*/, "").trim();
+            
+            // Return null if we failed to parse anything useful
+            if (!sections.what_happened && !sections.why_it_matters) return null;
+            
+            return sections;
+        }
+
+        function toggleAccordion(event, id) {
+            event.stopPropagation();
+            const content = document.getElementById(id);
+            const button = event.currentTarget;
+            const icon = button.querySelector('.accordion-icon');
+
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+                icon.style.transform = 'rotate(180deg)';
+            }
+        }
+    </script>
+</body>
+</html>

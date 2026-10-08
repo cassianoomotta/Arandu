@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arandu | Todos os Relatórios & Curadoria</title>
+    
+    <!-- Favicon: Golden split-apex 'A' emblem logo -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="favicon.png">
+    
+    <!-- SEO & Open Graph Meta Tags -->
+    <link rel="canonical" href="https://arandu-tau.vercel.app/noticias.html" />
+    <meta name="description" content="Arandu | Feed de relatórios executivos e curadoria de notícias de tecnologia e negócios qualificadas por IA.">
+    <meta property="og:title" content="Arandu | Todos os Relatórios & Curadoria">
+    <meta property="og:description" content="Feed de notícias e curadoria de mercado com resumos executivos gerados por inteligência artificial.">
+    <meta property="og:url" content="https://arandu-tau.vercel.app/noticias.html">
+    <meta property="og:type" content="website">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#050505',
+                        gold: {
+                            DEFAULT: '#C5A85C',
+                            light: '#E8D098',
+                            dark: '#9A7B3E',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                    },
+                    backgroundImage: {
+                        'gold-glow': 'radial-gradient(ellipse at center, rgba(197, 168, 92, 0.07) 0%, rgba(197, 168, 92, 0.03) 35%, rgba(5, 5, 5, 0) 70%)',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom Scrollbar & Premium Styles -->
+    <style type="text/css">
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #C5A85C33;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #C5A85C66;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .text-glow {
+            text-shadow: 0 0 15px rgba(232, 208, 152, 0.2);
+        }
+        .glow-btn {
+            position: relative;
+            overflow: hidden;
+        }
+        .glow-btn::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transition: all 0.6s ease;
+        }
+        .glow-btn:hover::after {
+            left: 100%;
+        }
+        @keyframes pulse-gold {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(197, 168, 92, 0.4); }
+            50% { box-shadow: 0 0 20px 4px rgba(197, 168, 92, 0.2); }
+        }
+        .pulse-gold-animation {
+            animation: pulse-gold 2s infinite;
+        }
+        .toast-notification {
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .toast-notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Card glow refinado: degradê suave ao invés de borda brusca */
+        .news-card {
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .news-card::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(
+                135deg,
+                rgba(197, 168, 92, 0.08) 0%,
+                rgba(197, 168, 92, 0.02) 40%,
+                rgba(255, 255, 255, 0.03) 60%,
+                rgba(197, 168, 92, 0.06) 100%
+            );
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            transition: all 0.5s ease;
+            z-index: 1;
+        }
+        .news-card:hover {
+            box-shadow:
+                0 4px 30px rgba(197, 168, 92, 0.06),
+                0 0 60px rgba(197, 168, 92, 0.03);
+            border-color: rgba(197, 168, 92, 0.12);
+            transform: translateY(-2px);
+        }
+        .news-card:hover::before {
+            background: linear-gradient(
+                135deg,
+                rgba(197, 168, 92, 0.18) 0%,
+                rgba(197, 168, 92, 0.06) 40%,
+                rgba(255, 255, 255, 0.05) 60%,
+                rgba(197, 168, 92, 0.14) 100%
+            );
+        }
+
+        /* Fade-out suave na base do conteúdo dos cards */
+        .card-content-fade {
+            position: relative;
+        }
+        .card-content-fade::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(
+                to bottom,
+                rgba(5, 5, 5, 0) 0%,
+                rgba(5, 5, 5, 0.6) 100%
+            );
+            pointer-events: none;
+            border-radius: 0 0 1rem 1rem;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+</head>
+<body class="bg-obsidian text-white font-sans overflow-x-hidden min-h-screen relative selection:bg-gold selection:text-black">
+
+    <!-- Ambient glowing backgrounds -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute top-[-20%] left-[-15%] w-[70%] h-[70%] bg-gold-glow blur-3xl"></div>
+        <div class="absolute top-[30%] right-[-20%] w-[80%] h-[80%] bg-gold-glow blur-3xl"></div>
+        <div class="absolute bottom-[-20%] left-[10%] w-[70%] h-[70%] bg-gold-glow blur-3xl"></div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="w-full py-6 px-6 md:px-12 border-b border-white/5 relative z-50 glass-panel">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <!-- Brand Logo -->
+            <a href="index.html" class="flex flex-col gap-1 items-start" aria-label="Arandu Home">
+                <div class="flex items-center gap-1.5">
+                    <img src="favicon.png" onerror="this.onerror=null; this.src='favicon.svg';" alt="A" class="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(197,168,92,0.6)]">
+                    <span class="font-outfit text-2xl font-bold tracking-[0.2em] text-white">RANDU</span>
+                </div>
+                <span class="text-[8px] md:text-[9px] tracking-[0.25em] text-gold-light/60 font-outfit uppercase mt-0.5">
+                    Consultoria &bull; Tecnologia &bull; Inteligência
+                </span>
+            </a>
+
+            <div class="flex items-center gap-6">
+                <a href="index.html" class="text-gray-400 hover:text-white transition-colors text-sm font-medium tracking-wider font-outfit uppercase">
+                    Voltar ao Início
+                </a>
+                <!-- Administrative Route Button -->
+                <a href="admin.html" class="px-3.5 md:px-5 py-2.5 rounded-lg border border-gold/40 hover:border-gold text-gold-light hover:text-white transition-all duration-300 font-medium text-sm tracking-wider font-outfit uppercase bg-white/5 backdrop-blur flex items-center justify-center gap-1.5" title="Área do Administrador">
+                    <span class="hidden md:inline">Área do Administrador</span>
+                    <i data-lucide="shield" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="relative z-10 max-w-7xl mx-auto px-6 md:px-12 py-16">
+        
+        <!-- Hero Header -->
+        <div class="text-center max-w-3xl mx-auto mb-16">
+            <span class="text-gold text-xs font-bold tracking-[0.3em] uppercase block mb-3">CURADORIA E INTELIGÊNCIA</span>
+            <h1 class="font-outfit text-4xl md:text-5xl font-black text-white tracking-tight uppercase leading-tight mb-4">
+                TODOS OS RELATÓRIOS
+            </h1>
+            <p class="text-gray-400 text-sm md:text-base font-light leading-relaxed">
+                Explore a biblioteca completa de publicações monitoradas, traduzidas e resumidas em tempo real. Filtre por categorias para focar no que mais importa para o seu negócio.
+            </p>
+        </div>
+
+        <!-- UNIFIED EXPANDABLE FILTER PANEL -->
+        <div id="filter-panel-card" class="glass-panel border border-white/10 rounded-2xl overflow-hidden mb-8 transition-all duration-300 hover:border-gold/30 shadow-lg shadow-black/40">
+            <!-- Clickable Header Bar (Entire bar triggers expansion) -->
+            <div id="filter-header-btn" onclick="toggleFilterPanel()" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 md:p-5 cursor-pointer select-none bg-white/[0.02] hover:bg-white/[0.05] transition-all duration-200 group" role="button" aria-expanded="false" aria-controls="filters-panel" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){toggleFilterPanel();event.preventDefault();}">
+                
+                <!-- Left: Title & Filter Summary Chips -->
+                <div class="flex flex-wrap items-center gap-2.5 text-xs">
+                    <!-- Title Pill -->
+                    <div class="flex items-center gap-2 font-bold uppercase tracking-wider text-gold group-hover:text-gold-light transition-colors mr-1">
+                        <div class="w-7 h-7 rounded-lg bg-gold/10 border border-gold/20 flex items-center justify-center group-hover:border-gold/40 group-hover:bg-gold/20 transition-all">
+                            <i data-lucide="filter" class="w-3.5 h-3.5 text-gold"></i>
+                        </div>
+                        <span class="tracking-widest font-outfit text-sm">Painel de Filtros</span>
+                    </div>
+
+                    <span class="text-white/20 hidden sm:inline">|</span>
+
+                    <!-- Interactive Chip: Active Category -->
+                    <button type="button" id="chip-filter-cat" onclick="openAndFocusCategory(event)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-gold/50 hover:bg-gold/10 transition-all text-xs text-gray-300 hover:text-white cursor-pointer group/chip" title="Clique para alterar a categoria">
+                        <span class="text-gray-400 font-medium">Filtro:</span>
+                        <strong class="text-gold-light font-bold" id="summary-filter">Ver Tudo</strong>
+                        <i data-lucide="chevron-down" class="w-3 h-3 text-gold/60 opacity-60 group-hover/chip:opacity-100 transition-opacity"></i>
+                    </button>
+
+                    <span class="text-white/20 hidden sm:inline">|</span>
+
+                    <!-- Interactive Chip: Active Sort -->
+                    <button type="button" id="chip-filter-sort" onclick="openAndFocusSort(event)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-gold/50 hover:bg-gold/10 transition-all text-xs text-gray-300 hover:text-white cursor-pointer group/chip" title="Clique para alterar a ordenação">
+                        <span class="text-gray-400 font-medium">Ordem:</span>
+                        <strong class="text-gold-light font-bold" id="summary-sort">Mais Recentes</strong>
+                        <i data-lucide="chevron-down" class="w-3 h-3 text-gold/60 opacity-60 group-hover/chip:opacity-100 transition-opacity"></i>
+                    </button>
+
+                    <!-- Search Chip (Visible when searching) -->
+                    <div id="summary-search-text" class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold/10 border border-gold/30 text-xs text-gold-light">
+                        <i data-lucide="search" class="w-3 h-3 text-gold"></i>
+                        <span>Busca:</span>
+                        <strong class="text-white max-w-[120px] truncate" id="summary-search-val"></strong>
+                        <button type="button" onclick="clearSearchFilter(event)" class="ml-1 text-gray-400 hover:text-white hover:bg-white/10 rounded p-0.5 cursor-pointer" title="Remover termo de busca">
+                            <i data-lucide="x" class="w-3 h-3"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right: Expand / Collapse Toggle Button -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                    <span id="filter-status-hint" class="text-[11px] font-medium text-gray-400 group-hover:text-gold-light transition-colors">
+                        Clique para expandir
+                    </span>
+                    <div class="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white/5 border border-white/10 group-hover:border-gold/40 group-hover:bg-gold/10 text-xs font-bold uppercase tracking-wider text-gray-300 group-hover:text-white transition-all duration-300">
+                        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-gold"></i>
+                        <span id="filter-btn-label">Filtros &amp; Opções</span>
+                        <i data-lucide="chevron-down" id="filter-chevron" class="w-4 h-4 text-gold transition-transform duration-300"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expandable Body: Everything inside the filter panel -->
+            <div id="filters-panel" class="max-h-0 opacity-0 overflow-hidden transition-all duration-500 ease-in-out border-t border-white/5">
+                <div class="p-5 md:p-6 flex flex-col gap-6 bg-black/40 backdrop-blur-sm" onclick="event.stopPropagation()">
+                    
+                    <!-- Row 1: Categorias -->
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-gold-light/70 flex items-center gap-1.5">
+                                <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-gold"></i>
+                                Categorias de Relatórios
+                            </span>
+                            <span class="text-[11px] text-gray-500 font-mono" id="category-hint">Selecione uma categoria</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2.5" id="filter-tabs">
+                            <button type="button" onclick="setCategoryFilter('all')" id="tab-all" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5 cursor-pointer shadow-md shadow-gold/20 hover:scale-[1.02]">
+                                <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                                Ver Tudo
+                            </button>
+                            <button type="button" onclick="setCategoryFilter('tecnologia')" id="tab-tecnologia" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/10 hover:border-gold/40 hover:text-white flex items-center gap-1.5 cursor-pointer hover:scale-[1.02]">
+                                <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i>
+                                Tecnologia
+                            </button>
+                            <button type="button" onclick="setCategoryFilter('empreendedorismo')" id="tab-empreendedorismo" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/10 hover:border-gold/40 hover:text-white flex items-center gap-1.5 cursor-pointer hover:scale-[1.02]">
+                                <i data-lucide="briefcase" class="w-3.5 h-3.5 text-amber-400"></i>
+                                Empreendedorismo
+                            </button>
+                            <button type="button" onclick="setCategoryFilter('investimentos')" id="tab-investimentos" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/10 hover:border-gold/40 hover:text-white flex items-center gap-1.5 cursor-pointer hover:scale-[1.02]">
+                                <i data-lucide="trending-up" class="w-3.5 h-3.5 text-emerald-400"></i>
+                                Investimentos
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Search, Sorting and Instant Action -->
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end pt-2 border-t border-white/5">
+                        <!-- Text Search -->
+                        <div class="md:col-span-5">
+                            <label for="search-input" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 block mb-2 flex items-center justify-between">
+                                <span>Pesquisa de Texto</span>
+                                <span class="text-[10px] text-gray-500 lowercase font-normal">título, resumo ou fonte</span>
+                            </label>
+                            <div class="relative w-full">
+                                <input type="text" id="search-input" oninput="handleSearch()" placeholder="Pesquisar notícias e termos..." class="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold/60 focus:bg-white/[0.08] transition-all">
+                                <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5"></i>
+                                <button type="button" id="clearSearchBtn" onclick="clearSearchFilter(event)" class="hidden absolute right-3 top-3 text-gray-400 hover:text-white p-0.5 rounded transition cursor-pointer" title="Limpar pesquisa">
+                                    <i data-lucide="x" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Sorting Select -->
+                        <div class="md:col-span-4">
+                            <label for="sort-select" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 block mb-2">Ordem de Exibição</label>
+                            <div class="relative w-full">
+                                <select id="sort-select" onchange="handleSortChange()" class="w-full bg-[#121214] border border-white/10 rounded-lg py-2.5 px-4 pr-10 text-sm text-white focus:outline-none focus:border-gold/60 transition-colors appearance-none cursor-pointer">
+                                    <option value="date-desc">Mais Recentes</option>
+                                    <option value="date-asc">Mais Antigas</option>
+                                    <option value="relevance-desc">Maior Relevância</option>
+                                    <option value="relevance-asc">Menor Relevância</option>
+                                </select>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 absolute right-3.5 top-3.5 pointer-events-none"></i>
+                            </div>
+                        </div>
+
+                        <!-- Instant Search Button -->
+                        <div class="md:col-span-3">
+                            <button id="instantSearchBtn" onclick="triggerInstantSearch()" class="pulse-gold-animation w-full py-2.5 rounded-lg bg-gradient-to-r from-gold-dark via-gold to-gold-light text-black text-xs font-extrabold uppercase tracking-wider hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2 glow-btn cursor-pointer" title="Buscar novas notícias em tempo real">
+                                <i data-lucide="zap" class="w-4 h-4"></i>
+                                <span>Buscar Agora</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Bottom Action & Results Bar -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-white/5 text-xs text-gray-400">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-block w-2 h-2 rounded-full bg-gold animate-pulse"></span>
+                            <span id="filter-count-badge" class="font-medium text-gray-300">Carregando relatórios...</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button type="button" onclick="resetAllFilters(event)" class="px-3.5 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:border-gold/40 hover:text-white transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer text-gray-300" title="Restaurar valores padrão">
+                                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-gold"></i>
+                                Limpar Filtros
+                            </button>
+                            <button type="button" onclick="toggleFilterPanel(false)" class="px-3.5 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:border-white/30 hover:text-white transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer text-gray-400" title="Recolher painel de filtros">
+                                <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
+                                Recolher Painel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Status Bar (hidden by default) -->
+        <div id="searchStatusBar" class="hidden mb-8 glass-panel rounded-xl p-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div id="searchStatusIcon" class="p-2 rounded-lg bg-gold/10 text-gold">
+                    <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
+                </div>
+                <div>
+                    <span id="searchStatusTitle" class="text-sm font-bold text-white block">Buscando notícias...</span>
+                    <span id="searchStatusMsg" class="text-[11px] text-gray-400 font-light">Coletando de todas as fontes configuradas</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- News Feed Grid -->
+        <div id="news-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Populated via JavaScript -->
+        </div>
+
+        <!-- Pagination Controls -->
+        <div id="pagination-controls" class="flex items-center justify-center gap-2 mt-12 mb-8">
+            <!-- Populated via JavaScript -->
+        </div>
+
+        <!-- Empty state placeholder -->
+        <div id="empty-state" class="hidden text-center py-20">
+            <i data-lucide="alert-circle" class="w-12 h-12 text-gold/40 mx-auto mb-4"></i>
+            <h3 class="font-outfit text-lg font-bold text-white mb-1">Nenhum resultado encontrado</h3>
+            <p class="text-sm text-gray-400 mb-6">Tente alterar os filtros ou o termo de pesquisa.</p>
+            <button onclick="triggerInstantSearch()" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-gold-dark via-gold to-gold-light text-black text-xs font-extrabold uppercase tracking-wider hover:scale-[1.03] transition-all duration-300 glow-btn">
+                <i data-lucide="zap" class="w-4 h-4"></i>
+                Buscar Notícias Agora
+            </button>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="w-full pt-16 pb-12 px-6 md:px-12 border-t border-white/5 relative z-10 mt-20 glass-panel">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+            <!-- Brand Column -->
+            <div class="flex flex-col items-start gap-4">
+                <div class="flex flex-col gap-1 items-start">
+                    <div class="flex items-center gap-1.5">
+                        <img src="favicon.png" onerror="this.onerror=null; this.src='favicon.svg';" alt="A" class="w-7 h-7 object-contain drop-shadow-[0_0_8px_rgba(197,168,92,0.6)]">
+                        <span class="font-outfit text-xl font-bold tracking-[0.2em] text-white">RANDU</span>
+                    </div>
+                    <span class="text-[8px] tracking-[0.25em] text-gold-light/60 font-outfit uppercase mt-0.5">
+                        Consultoria &bull; Tecnologia &bull; Inteligência
+                    </span>
+                </div>
+                <p class="text-gray-400 text-xs font-light leading-relaxed">
+                    Consultoria de inteligência e curadoria estratégica de informações para tomadores de decisão em tecnologia e empreendedorismo.
+                </p>
+                <div class="flex items-center gap-3.5 mt-4">
+                    <!-- WhatsApp -->
+                    <a href="https://wa.me/5511999999999" target="_blank" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 hover:border-gold hover:text-gold transition-all duration-300 flex items-center justify-center text-gray-400" title="WhatsApp">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.458 5.704 1.459h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413"/>
+                        </svg>
+                    </a>
+                    <!-- Instagram -->
+                    <a href="https://instagram.com/arandu.tech" target="_blank" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 hover:border-gold hover:text-gold transition-all duration-300 flex items-center justify-center text-gray-400" title="Instagram">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+                        </svg>
+                    </a>
+                    <!-- Telegram -->
+                    <a href="https://t.me/AranduTechPortal" target="_blank" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 hover:border-gold hover:text-gold transition-all duration-300 flex items-center justify-center text-gray-400" title="Telegram">
+                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18.966-.967 5.58-1.365 7.717-.168.9-.501 1.201-.82 1.23-1.042.096-1.832-.69-2.842-1.352-1.58-1.04-2.472-1.685-4.002-2.694-1.768-1.166-.622-1.807.386-2.856.264-.275 4.85-4.448 4.939-4.831.011-.047.021-.223-.083-.317-.105-.094-.258-.062-.369-.037-.157.036-2.658 1.69-7.502 4.966-.71.488-1.354.726-1.93.712-.635-.015-1.859-.36-2.768-.656-1.116-.363-2.003-.555-1.926-1.172.04-.321.482-.65 1.326-.988 5.197-2.264 8.665-3.758 10.404-4.482 4.95-2.056 5.978-2.413 6.649-2.425.148-.003.477.034.69.207.18.147.23.344.25.485.02.146.026.425.011.666z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Quick Links -->
+            <div class="flex flex-col items-start gap-4">
+                <h4 class="font-outfit text-sm font-bold text-white tracking-widest uppercase text-glow">Links Rápidos</h4>
+                <ul class="flex flex-col gap-2.5 text-xs text-gray-400 font-light">
+                    <li><a href="index.html#features" class="hover:text-gold transition">Recursos</a></li>
+                    <li><a href="index.html#curadoria" class="hover:text-gold transition">Curadoria do Dia</a></li>
+                    <li><a href="index.html#faq" class="hover:text-gold transition">FAQ</a></li>
+                    <li><a href="admin.html" class="hover:text-gold transition">Painel Administrativo</a></li>
+                </ul>
+            </div>
+
+            <!-- Best Pages Recommendation -->
+            <div class="flex flex-col items-start gap-4">
+                <h4 class="font-outfit text-sm font-bold text-white tracking-widest uppercase text-glow">Recomendações</h4>
+                <ul class="flex flex-col gap-2.5 text-xs text-gray-400 font-light">
+                    <li><a href="https://techcrunch.com" target="_blank" class="hover:text-gold transition">TechCrunch</a></li>
+                    <li><a href="https://www.technologyreview.com" target="_blank" class="hover:text-gold transition">MIT Tech Review</a></li>
+                    <li><a href="http://www.paulgraham.com/articles.html" target="_blank" class="hover:text-gold transition">Paul Graham Essays</a></li>
+                    <li><a href="https://venturebeat.com" target="_blank" class="hover:text-gold transition">VentureBeat</a></li>
+                </ul>
+            </div>
+
+            <!-- Contact / Channel Info -->
+            <div class="flex flex-col items-start gap-4">
+                <h4 class="font-outfit text-sm font-bold text-white tracking-widest uppercase text-glow">Canal de Transmissão</h4>
+                <p class="text-xs text-gray-400 font-light leading-relaxed">
+                    Receba os insights diretamente no seu aplicativo favorito. Distribuição automatizada em menos de 15 minutos de intervalo.
+                </p>
+                <a href="https://t.me/AranduTechPortal" target="_blank" class="glow-btn inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-gold-dark via-gold to-gold-light text-black text-xs font-bold uppercase tracking-wider transition hover:scale-105 duration-300">
+                    Acessar Telegram
+                    <i data-lucide="send" class="w-3 h-3"></i>
+                </a>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] text-gray-500 font-light tracking-wider uppercase">
+            <span>&copy; 2026 Arandu. Todos os direitos reservados.</span>
+            <span>Desenvolvido com foco em alta performance &amp; Inteligência de Dados</span>
+        </div>
+    </footer>
+
+    <!-- LOGIC FOR NEWS LIST AND FILTERS -->
+    <script>
+        let allNews = [];
+        let activeCategory = 'all';
+        let activeSort = 'date-desc';
+
+        // Parse structured Markdown summaries (with custom headers) into objects
+        function parseMarkdownSummary(text) {
+            if (!text) return null;
+            if (!text.includes("O que aconteceu?") && !text.includes("Por que isso importa?")) return null;
+            
+            const sections = {
+                what_happened: "",
+                why_it_matters: "",
+                possible_impacts: "",
+                key_points: []
+            };
+            
+            // Regex to find sections
+            const parts = text.split(/(?=🔍|💡|⚡|📌|\*\*O que aconteceu\*\*|\*\*Por que isso importa\*\*|\*\*Possíveis impactos\*\*|\*\*Pontos-chave\*\*)/g);
+            for (const part of parts) {
+                const cleanPart = part.trim();
+                if (cleanPart.includes("O que aconteceu?")) {
+                    sections.what_happened = cleanPart.replace(/^(🔍\s*)?(\*\*O que aconteceu\?\*\*|\*O que aconteceu\?\*|O que aconteceu\?)\s*/, "").trim();
+                } else if (cleanPart.includes("Por que isso importa?")) {
+                    sections.why_it_matters = cleanPart.replace(/^(💡\s*)?(\*\*Por que isso importa\?\*\*|\*Por que isso importa\?\*|Por que isso importa\?)\s*/, "").trim();
+                } else if (cleanPart.includes("Possíveis impactos") || cleanPart.includes("Possiveis impactos")) {
+                    sections.possible_impacts = cleanPart.replace(/^(⚡\s*)?(\*\*Possíveis impactos\*\*|\*Possíveis impactos\*|Possíveis impactos|\*\*Possiveis impactos\*\*|Possiveis impactos)\s*/, "").trim();
+                } else if (cleanPart.includes("Pontos-chave") || cleanPart.includes("Pontos chave")) {
+                    const lines = cleanPart.split('\n');
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim().replace(/^[-•*]\s*/, "");
+                        if (line) {
+                            sections.key_points.push(line);
+                        }
+                    }
+                }
+            }
+            
+            // Clean up any double asterisks or markdown in titles
+            sections.what_happened = sections.what_happened.replace(/^\*\*|^\*/, "").trim();
+            sections.why_it_matters = sections.why_it_matters.replace(/^\*\*|^\*/, "").trim();
+            sections.possible_impacts = sections.possible_impacts.replace(/^\*\*|^\*/, "").trim();
+            
+            // Return null if we failed to parse anything useful
+            if (!sections.what_happened && !sections.why_it_matters) return null;
+            
+            return sections;
+        }
+
+        // Static fallbacks in case API is offline
+        const fallbackNews = [
+            {
+                source_name: "Canaltech",
+                original_title: "A Nova Era dos Modelos de Linguagem em Negócios",
+                link: "https://canaltech.com.br",
+                image_url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Integração nativa de LLMs reduz custos operacionais de suporte em até 40%.\n- Novos modelos operam localmente garantindo segurança e privacidade corporativa.\n- Startups de infraestrutura de IA levantam rodadas históricas no mercado global.",
+                created_at: new Date(Date.now() - 3600000).toISOString()
+            },
+            {
+                source_name: "TechCrunch",
+                original_title: "Apple Intelligence Expands Globally in 2026",
+                link: "https://techcrunch.com",
+                image_url: "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Novas funcionalidades de inteligência local chegam a mais de 15 países na Europa.\n- Integração com assistentes de voz ganha processamento semântico avançado.\n- Foco em privacidade no chip garante processamento local sem envio à nuvem.",
+                created_at: new Date(Date.now() - 7200000).toISOString()
+            },
+            {
+                source_name: "MIT Technology Review",
+                original_title: "MIT: O Avanço dos Semicondutores de Próxima Geração",
+                link: "https://www.technologyreview.com",
+                image_url: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Novas fundições começam testes em larga escala de litografia ultravioleta extrema para chips de 2nm.\n- Novos materiais reduzem em 30% a dissipação térmica em servidores de alto desempenho.\n- Arquitetura híbrida de transistores acelera cálculos de redes neurais profundas.",
+                created_at: new Date(Date.now() - 10800000).toISOString()
+            },
+            {
+                source_name: "Tecnoblog",
+                original_title: "Como Startups Estão Escalando com Arquiteturas Serverless",
+                link: "https://tecnoblog.net",
+                image_url: "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Redução de despesas com infraestrutura de nuvem em mais de 50% no primeiro ano de operação.\n- Escalabilidade automática instantânea para picos repentinos de tráfego de usuários.\n- Desenvolvedores focam exclusivamente na regra de negócio, otimizando lançamentos.",
+                created_at: new Date(Date.now() - 14400000).toISOString()
+            },
+            {
+                source_name: "Paul Graham Essays",
+                original_title: "Paul Graham: Como Conseguir Ideias de Startups",
+                link: "http://www.paulgraham.com",
+                image_url: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- O ensaio foca na identificação de problemas orgânicos gerados pelas mudanças tecnológicas disruptivas.\n- Recomenda criar projetos baseados nas próprias necessidades para validar o mercado.\n- Explica que as melhores startups parecem ideias ruins no início.",
+                created_at: new Date(Date.now() - 18000000).toISOString()
+            },
+            {
+                source_name: "G1 Empreendedorismo",
+                original_title: "Negócios Digitais Lideram Abertura de Empresas no País",
+                link: "https://g1.globo.com/economia/empreendedorismo",
+                image_url: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Microempresas focadas em software e consultoria estratégica comandam a retomada de contratações.\n- Setor de tecnologia cresce acima da média nacional impulsionado pela digitalização acelerada.\n- Facilidades no registro online e tributação simplificada reduzem barreiras de entrada.",
+                created_at: new Date(Date.now() - 21600000).toISOString()
+            },
+            {
+                source_name: "G1 Tecnologia",
+                original_title: "Boom da Computação Quântica e Capital de Risco",
+                link: "https://g1.globo.com/economia/tecnologia/",
+                image_url: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Aportes financeiros em hardware e algoritmos quânticos crescem 80% globalmente no último ano.\n- Primeiros casos práticos de criptografia pós-quântica entram em produção bancária.\n- Fundos globais de VC abrem filiais focadas em Deep Tech voltadas a simulações moleculares.",
+                created_at: new Date(Date.now() - 25200000).toISOString()
+            },
+            {
+                source_name: "VentureBeat",
+                original_title: "VentureBeat: Capital Foca em Climatetech e Fusão",
+                link: "https://venturebeat.com",
+                image_url: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Investidores injetam recordes de US$ 2.4 bilhões em rodadas de inovação de matriz energética sustentável.\n- Fusão nuclear atrai grandes rodadas de investimentos com foco em sustentabilidade.\n- Startups de descarbonização registram valuations recordes devido a metas ESG globais.",
+                created_at: new Date(Date.now() - 28800000).toISOString()
+            },
+            {
+                source_name: "InfoMoney",
+                original_title: "As Empresas Mais Inovadoras e Resilientes do Ano",
+                link: "https://www.infomoney.com.br",
+                image_url: "https://images.unsplash.com/photo-1542744094-3a31f103e35f?auto=format&fit=crop&w=600&q=80",
+                ai_summary: "- Ranking especial destaca corporações financeiras e de biotecnologia na vanguarda de transformação digital.\n- Adaptação rápida a modelos de trabalho híbridos define vencedores globais.\n- Investimento em cibersegurança e automação de processos sustenta o lucro no ano.",
+                created_at: new Date(Date.now() - 32400000).toISOString()
+            }
+        ];
+
+        // Map sources to categories
+        const sourceMap = {
+            // --- Tecnologia ---
+            "Canaltech": "tecnologia",
+            "TI Inside": "tecnologia",
+            "Olhar Digital": "tecnologia",
+            "Tecmundo": "tecnologia",
+            "Tecnoblog": "tecnologia",
+            "G1 Tecnologia": "tecnologia",
+            "TechCrunch": "tecnologia",
+            "Wired": "tecnologia",
+            "MIT Technology Review": "tecnologia",
+            "Google Research Blog": "tecnologia",
+            // --- Investimentos ---
+            "AWS News Blog": "investimentos",
+            "VentureBeat": "investimentos",
+            "Época Negócios": "investimentos",
+            "InfoMoney": "investimentos",
+            // --- Empreendedorismo ---
+            "G1 Empreendedorismo": "empreendedorismo",
+            "Paul Graham Essays": "empreendedorismo",
+            "Stanford eCorner": "empreendedorismo",
+            // --- Blogs de Universidades de Negócios, Tecnologia e Empreendedorismo ---
+            "Harvard Business Review": "empreendedorismo",
+            "MIT Sloan Management Review": "empreendedorismo",
+            "Knowledge at Wharton": "empreendedorismo",
+            "LSE Business Review": "empreendedorismo"
+        };
+
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
+            ? "http://localhost:8000"
+            : "";
+
+        let currentPage = 1;
+        const pageSize = 18;
+
+        // Fetch list of news
+        async function fetchNewsList() {
+            try {
+                // Fetch initial batch of recent articles
+                const response = await fetch(`${API_BASE_URL}/api/noticias?page=1&size=36`);
+                if (response.ok) {
+                    const data = await response.json();
+                    allNews = data.results || data.items || [];
+                } else {
+                    console.log('Backend response issue. Falling back to default list.');
+                    allNews = fallbackNews;
+                }
+            } catch (err) {
+                console.log('Backend offline. Loading fallback curated list.', err);
+                allNews = fallbackNews;
+            }
+            renderFeed();
+        }
+
+        // Render articles based on filters
+        function renderFeed() {
+            const container = document.getElementById('news-grid-container');
+            const emptyState = document.getElementById('empty-state');
+            const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
+
+            container.innerHTML = '';
+            
+            // Filter news
+            const filtered = allNews.filter(item => {
+                const category = sourceMap[item.source_name] || 'tecnologia';
+                
+                // Category Filter
+                if (activeCategory !== 'all' && category !== activeCategory) {
+                    return false;
+                }
+
+                // Search Term
+                if (searchTerm) {
+                    const title = (item.translated_title || item.original_title || "").toLowerCase();
+                    const summary = (item.ai_summary || "").toLowerCase();
+                    const source = (item.source_name || "").toLowerCase();
+                    if (!title.includes(searchTerm) && !summary.includes(searchTerm) && !source.includes(searchTerm)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            // Sort news based on activeSort
+            filtered.sort((a, b) => {
+                if (activeSort === 'date-desc') {
+                    const dateA = new Date(a.original_published_at || a.created_at || 0);
+                    const dateB = new Date(b.original_published_at || b.created_at || 0);
+                    return dateB - dateA;
+                } else if (activeSort === 'date-asc') {
+                    const dateA = new Date(a.original_published_at || a.created_at || 0);
+                    const dateB = new Date(b.original_published_at || b.created_at || 0);
+                    return dateA - dateB;
+                } else if (activeSort === 'relevance-desc') {
+                    const scoreA = a.relevance_score || 0;
+                    const scoreB = b.relevance_score || 0;
+                    if (scoreB !== scoreA) {
+                        return scoreB - scoreA;
+                    }
+                    // Tie-breaker: date descending
+                    const dateA = new Date(a.original_published_at || a.created_at || 0);
+                    const dateB = new Date(b.original_published_at || b.created_at || 0);
+                    return dateB - dateA;
+                } else if (activeSort === 'relevance-asc') {
+                    const scoreA = a.relevance_score || 0;
+                    const scoreB = b.relevance_score || 0;
+                    if (scoreA !== scoreB) {
+                        return scoreA - scoreB;
+                    }
+                    // Tie-breaker: date descending
+                    const dateA = new Date(a.original_published_at || a.created_at || 0);
+                    const dateB = new Date(b.original_published_at || b.created_at || 0);
+                    return dateB - dateA;
+                }
+                return 0;
+            });
+
+            const totalFiltered = filtered.length;
+            const totalPages = Math.ceil(totalFiltered / pageSize);
+
+            // Update real-time counter in filter panel
+            const filterCountBadge = document.getElementById('filter-count-badge');
+            if (filterCountBadge) {
+                if (totalFiltered === 0) {
+                    filterCountBadge.innerHTML = 'Nenhum relatório encontrado';
+                } else if (totalFiltered === 1) {
+                    filterCountBadge.innerHTML = 'Exibindo <strong class="text-gold font-bold">1</strong> relatório';
+                } else {
+                    filterCountBadge.innerHTML = `Exibindo <strong class="text-gold font-bold">${totalFiltered}</strong> relatórios`;
+                }
+            }
+
+            if (currentPage > totalPages) {
+                currentPage = Math.max(1, totalPages);
+            }
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                container.classList.add('hidden');
+                const paginationContainer = document.getElementById('pagination-controls');
+                if (paginationContainer) paginationContainer.classList.add('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            container.classList.remove('hidden');
+
+            const paginatedItems = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+            paginatedItems.forEach((item, index) => {
+                const title = item.translated_title || item.original_title;
+                const category = sourceMap[item.source_name] || 'tecnologia';
+                const formattedCategory = category.toUpperCase();
+                const image = item.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80';
+                
+                // Formatted domain
+                let domain = 'artigo original';
+                try {
+                    domain = new URL(item.link).hostname.replace('www.', '');
+                } catch (e) {}
+
+                // Publish Date Formatting
+                let dateStr = 'Recente';
+                const rawDate = item.original_published_at || item.created_at;
+                if (rawDate) {
+                    try {
+                        let dateInput = rawDate.replace(' ', 'T');
+                        if (!dateInput.endsWith('Z') && !/[+-]\d{2}(?::?\d{2})?$/.test(dateInput)) {
+                            dateInput += 'Z';
+                        }
+                        const date = new Date(dateInput);
+                        dateStr = date.toLocaleDateString('pt-BR', { 
+                            day: 'numeric', 
+                            month: 'short', 
+                            hour: '2-digit', 
+                            minute: '2-digit',
+                            timeZone: 'America/Sao_Paulo'
+                        });
+                    } catch (e) {}
+                }
+
+                // Parse Bullet Points
+                let summary = item.ai_summary || "";
+                
+                // Strip preamble lines (Gemini sometimes adds "Aqui está o resumo executivo:" before bullets)
+                const preamblePatterns = [
+                    /^aqui est[áa]/i, /^segue/i, /^resumo executivo/i, 
+                    /^veja/i, /^confira/i, /^abaixo/i
+                ];
+                
+                // Filter out fallback placeholder text
+                const fallbackPatterns = [
+                    /Resumo autom[áa]tico indispon[íi]vel/i,
+                    /Coleta executada com sucesso/i,
+                    /Not[íi]cia de tecnologia relevante reportada/i,
+                    /Assunto principal:/i
+                ];
+                
+                const lines = summary.split('\n').filter(p => p.trim() !== '');
+                const cleanLines = [];
+                
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    
+                    // Skip preamble lines
+                    if (preamblePatterns.some(pat => pat.test(trimmed))) continue;
+                    
+                    // Skip fallback placeholder lines
+                    if (fallbackPatterns.some(pat => pat.test(trimmed))) continue;
+                    
+                    // Clean bullet prefix and markdown bold
+                    let clean = trimmed
+                        .replace(/^[-•*]\s*/, '')          // Remove bullet prefix
+                        .replace(/^\d+\.\s*/, '')           // Remove numbered list prefix
+                        .replace(/\*\*([^*]+)\*\*/g, '$1')  // Remove markdown bold
+                        .trim();
+                    
+                    if (clean.length > 5) {
+                        cleanLines.push(clean);
+                    }
+                }
+                
+                let pointsHtml = '';
+                if (cleanLines.length > 0) {
+                    cleanLines.forEach(pt => {
+                        pointsHtml += `
+                            <li class="flex items-start gap-2.5 leading-snug">
+                                <span class="text-gold mt-1">&bull;</span>
+                                <span>${pt}</span>
+                            </li>
+                        `;
+                    });
+                } else {
+                    // Fallback when summary is empty, truncated, or only has placeholder text
+                    pointsHtml = `
+                        <li class="flex items-start gap-2.5 leading-snug">
+                            <span class="text-gold mt-1">&bull;</span>
+                            <span>Resumo sendo processado pela IA. Clique em "Ler Fonte" para acessar o artigo completo.</span>
+                        </li>
+                    `;
+                }
+
+                // Set proper category icon
+                let iconName = "cpu";
+                if (category === "empreendedorismo") iconName = "bar-chart-3";
+                else if (category === "investimentos") iconName = "trending-up";
+
+                // Check for editorial / premium additions
+                let premiumBadgeHtml = '';
+                let scoresHtml = '';
+                let tagsHtml = '';
+
+                if (item.editorial_status === "publicado") {
+
+                    const scores = item.editorial_scores || {};
+                    const clarity = scores.clarity_score || 0;
+                    const impact = scores.impact_score || 0;
+                    const innovation = scores.innovation_score || 0;
+
+                    scoresHtml = `
+                        <div class="grid grid-cols-3 gap-2 border-t border-white/5 pt-3 mt-3 text-center">
+                            <div>
+                                <span class="block text-[8px] text-gray-500 uppercase tracking-wider font-bold">Clareza</span>
+                                <span class="text-[11px] font-bold text-emerald-400 font-mono">${clarity}%</span>
+                            </div>
+                            <div>
+                                <span class="block text-[8px] text-gray-500 uppercase tracking-wider font-bold">Impacto</span>
+                                <span class="text-[11px] font-bold text-amber-400 font-mono">${impact}%</span>
+                            </div>
+                            <div>
+                                <span class="block text-[8px] text-gray-500 uppercase tracking-wider font-bold">Inovação</span>
+                                <span class="text-[11px] font-bold text-cyan-400 font-mono">${innovation}%</span>
+                            </div>
+                        </div>
+                    `;
+
+                    let parsedTags = [];
+                    if (item.editorial_tags) {
+                        try {
+                            parsedTags = typeof item.editorial_tags === 'string' ? JSON.parse(item.editorial_tags) : item.editorial_tags;
+                        } catch (e) {
+                            parsedTags = [];
+                        }
+                    }
+                    if (parsedTags && parsedTags.length > 0) {
+                        const tagsList = parsedTags.map(tag => `<span class="bg-white/5 text-gray-400 text-[8px] px-1.5 py-0.5 rounded border border-white/5 font-mono">#${tag}</span>`).join('');
+                        tagsHtml = `
+                            <div class="flex flex-wrap gap-1 mt-3">
+                                ${tagsList}
+                            </div>
+                        `;
+                    }
+                }
+
+                let summaryContainerHtml = '';
+                let summaryObj = null;
+                if (item.editorial_summary) {
+                    try {
+                        summaryObj = typeof item.editorial_summary === 'string' ? JSON.parse(item.editorial_summary) : item.editorial_summary;
+                    } catch (e) {
+                        console.error("Error parsing editorial summary:", e);
+                    }
+                }
+
+                if (!summaryObj && item.ai_summary) {
+                    summaryObj = parseMarkdownSummary(item.ai_summary);
+                }
+
+                if (summaryObj) {
+                    const whatHappened = summaryObj.what_happened || "";
+                    const whyItMatters = summaryObj.why_it_matters || "";
+                    const possibleImpacts = summaryObj.possible_impacts || "";
+                    const keyPoints = summaryObj.key_points || [];
+
+                    const isPremium = item.editorial_status === "publicado";
+                    const titleText = isPremium ? "Resumo Executivo" : "Resumo Executivo (IA)";
+                    const iconAttr = isPremium ? 'data-lucide="sparkles" class="w-3.5 h-3.5 text-gold"' : `data-lucide="${iconName}" class="w-3.5 h-3.5 text-gold"`;
+
+                    summaryContainerHtml = `
+                        <div class="flex-grow flex flex-col mb-3">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-2 flex items-center gap-1.5">
+                                <i ${iconAttr}></i>
+                                ${titleText}
+                            </span>
+                            <div class="space-y-1 bg-white/[0.01] border border-white/5 rounded-xl p-3">
+                                <!-- O que aconteceu -->
+                                <div class="border-b border-white/5 pb-1">
+                                    <button onclick="toggleAccordion(event, 'acc-${item.id}-what')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">🔍</span>
+                                            O que aconteceu?
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${item.id}-what" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <p class="text-[11px] text-gray-400 font-light pl-5 pt-0.5 leading-relaxed pb-1.5">
+                                            ${whatHappened}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Por que importa -->
+                                <div class="border-b border-white/5 pb-1 pt-1">
+                                    <button onclick="toggleAccordion(event, 'acc-${item.id}-why')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">💡</span>
+                                            Por que isso importa?
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${item.id}-why" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <p class="text-[11px] text-gray-400 font-light pl-5 pt-0.5 leading-relaxed pb-1.5">
+                                            ${whyItMatters}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Impactos -->
+                                <div class="border-b border-white/5 pb-1 pt-1">
+                                    <button onclick="toggleAccordion(event, 'acc-${item.id}-impact')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">⚡</span>
+                                            Possíveis impactos
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${item.id}-impact" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <p class="text-[11px] text-gray-400 font-light pl-5 pt-0.5 leading-relaxed pb-1.5">
+                                            ${possibleImpacts}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Pontos chave -->
+                                <div class="pt-1">
+                                    <button onclick="toggleAccordion(event, 'acc-${item.id}-points')" class="w-full flex items-center justify-between py-1.5 text-[11px] font-semibold text-gray-300 hover:text-white transition focus:outline-none">
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="text-gold">📌</span>
+                                            Pontos-chave
+                                        </span>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 transition-transform duration-300 accordion-icon"></i>
+                                    </button>
+                                    <div id="acc-${item.id}-points" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                                        <ul class="list-disc list-outside pl-9 pr-2 pt-0.5 text-[11px] text-gray-400 font-light leading-relaxed space-y-1 pb-1.5">
+                                            ${keyPoints.map(pt => `<li>${pt}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    summaryContainerHtml = `
+                        <div class="flex-grow flex flex-col mb-3">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-gold-light/60 block mb-2 flex items-center gap-1.5">
+                                <i data-lucide="${iconName}" class="w-3.5 h-3.5 text-gold"></i>
+                                Resumo Executivo (IA)
+                            </span>
+                            <ul class="space-y-2.5 text-sm text-gray-400 flex-grow">
+                                ${pointsHtml}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                const card = document.createElement('div');
+                card.className = "glass-panel rounded-2xl overflow-hidden hover:border-gold/30 hover:bg-white/[0.04] transition-all duration-500 flex flex-col h-full group";
+                card.innerHTML = DOMPurify.sanitize(`
+                    <a href="${item.link}" target="_blank" class="block relative h-48 overflow-hidden cursor-pointer">
+                        <img src="${image}" alt="${title}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy">
+                        <span class="absolute top-4 left-4 bg-gold/95 backdrop-blur text-black text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded">
+                            ${formattedCategory}
+                        </span>
+                        ${premiumBadgeHtml}
+                        <span class="absolute bottom-4 right-4 bg-black/60 backdrop-blur text-[10px] text-gray-300 px-2 py-0.5 rounded font-mono">
+                            ${dateStr}
+                        </span>
+                    </a>
+                    <div class="p-6 flex flex-col flex-grow">
+                        <h3 class="font-outfit text-lg font-bold text-white mb-4 h-14 flex items-center hover:text-gold-light transition duration-300">
+                            <a href="${item.link}" target="_blank" class="hover:underline line-clamp-2 leading-tight">${title}</a>
+                        </h3>
+                        
+                        <div class="border-t border-white/5 pt-4 flex-grow flex flex-col">
+                            ${summaryContainerHtml}
+                            ${tagsHtml}
+                            ${scoresHtml}
+                            <div class="flex items-center justify-between pt-4 border-t border-white/5 mt-4">
+                                <span class="text-[10px] text-gray-500 font-medium">Fonte: ${domain}</span>
+                                <a href="${item.link}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold hover:text-gold-light transition duration-300">
+                                    Ler Fonte
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                container.appendChild(card);
+            });
+
+            renderPagination(totalFiltered);
+        }
+
+        // Render pagination controls
+        function renderPagination(totalFiltered) {
+            const paginationContainer = document.getElementById('pagination-controls');
+            if (!paginationContainer) return;
+            
+            const totalPages = Math.ceil(totalFiltered / pageSize);
+            paginationContainer.innerHTML = '';
+            
+            if (totalPages <= 1) {
+                paginationContainer.classList.add('hidden');
+                return;
+            }
+            
+            paginationContainer.classList.remove('hidden');
+            
+            // Previous button
+            const prevBtn = document.createElement('button');
+            prevBtn.className = `px-4 py-2 rounded-lg text-xs font-bold uppercase transition border ${
+                currentPage === 1 
+                    ? 'border-white/5 bg-white/[0.02] text-gray-500 cursor-not-allowed' 
+                    : 'border-white/10 bg-white/5 text-white hover:border-gold hover:text-gold cursor-pointer'
+            }`;
+            prevBtn.textContent = 'Anterior';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderFeed();
+                    window.scrollTo({ top: document.getElementById('news-grid-container').offsetTop - 120, behavior: 'smooth' });
+                }
+            };
+            paginationContainer.appendChild(prevBtn);
+            
+            // Page numbers
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+            
+            if (startPage > 1) {
+                const firstBtn = document.createElement('button');
+                firstBtn.className = 'px-3.5 py-2 rounded-lg text-xs font-bold border border-white/10 bg-white/5 text-white hover:border-gold hover:text-gold transition cursor-pointer';
+                firstBtn.textContent = '1';
+                firstBtn.onclick = () => {
+                    currentPage = 1;
+                    renderFeed();
+                    window.scrollTo({ top: document.getElementById('news-grid-container').offsetTop - 120, behavior: 'smooth' });
+                };
+                paginationContainer.appendChild(firstBtn);
+                
+                if (startPage > 2) {
+                    const dots = document.createElement('span');
+                    dots.className = 'text-gray-500 px-1 self-center';
+                    dots.textContent = '...';
+                    paginationContainer.appendChild(dots);
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = document.createElement('button');
+                if (i === currentPage) {
+                    pageBtn.className = 'px-3.5 py-2 rounded-lg text-xs font-bold bg-gold text-black border border-gold';
+                } else {
+                    pageBtn.className = 'px-3.5 py-2 rounded-lg text-xs font-bold border border-white/10 bg-white/5 text-white hover:border-gold hover:text-gold transition cursor-pointer';
+                }
+                pageBtn.textContent = i;
+                pageBtn.onclick = () => {
+                    currentPage = i;
+                    renderFeed();
+                    window.scrollTo({ top: document.getElementById('news-grid-container').offsetTop - 120, behavior: 'smooth' });
+                };
+                paginationContainer.appendChild(pageBtn);
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    const dots = document.createElement('span');
+                    dots.className = 'text-gray-500 px-1 self-center';
+                    dots.textContent = '...';
+                    paginationContainer.appendChild(dots);
+                }
+                
+                const lastBtn = document.createElement('button');
+                lastBtn.className = 'px-3.5 py-2 rounded-lg text-xs font-bold border border-white/10 bg-white/5 text-white hover:border-gold hover:text-gold transition cursor-pointer';
+                lastBtn.textContent = totalPages;
+                lastBtn.onclick = () => {
+                    currentPage = totalPages;
+                    renderFeed();
+                    window.scrollTo({ top: document.getElementById('news-grid-container').offsetTop - 120, behavior: 'smooth' });
+                };
+                paginationContainer.appendChild(lastBtn);
+            }
+            
+            // Next button
+            const nextBtn = document.createElement('button');
+            nextBtn.className = `px-4 py-2 rounded-lg text-xs font-bold uppercase transition border ${
+                currentPage === totalPages 
+                    ? 'border-white/5 bg-white/[0.02] text-gray-500 cursor-not-allowed' 
+                    : 'border-white/10 bg-white/5 text-white hover:border-gold hover:text-gold cursor-pointer'
+            }`;
+            nextBtn.textContent = 'Próxima';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderFeed();
+                    window.scrollTo({ top: document.getElementById('news-grid-container').offsetTop - 120, behavior: 'smooth' });
+                }
+            };
+            paginationContainer.appendChild(nextBtn);
+            lucide.createIcons();
+        }
+
+        function toggleAccordion(event, id) {
+            event.stopPropagation();
+            const content = document.getElementById(id);
+            const button = event.currentTarget;
+            const icon = button.querySelector('.accordion-icon');
+
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+                icon.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        function toggleFilterPanel(forceOpen = null) {
+            const panel = document.getElementById('filters-panel');
+            const chevron = document.getElementById('filter-chevron');
+            const statusHint = document.getElementById('filter-status-hint');
+            const filterHeader = document.getElementById('filter-header-btn');
+            const filterCard = document.getElementById('filter-panel-card');
+            if (!panel || !chevron) return;
+            
+            const isCurrentlyActive = panel.classList.contains('active');
+            const shouldOpen = forceOpen !== null ? forceOpen : !isCurrentlyActive;
+            
+            if (!shouldOpen) {
+                panel.style.maxHeight = panel.scrollHeight + 'px';
+                panel.offsetHeight; // trigger reflow
+                panel.style.maxHeight = '0px';
+                panel.style.opacity = '0';
+                panel.classList.remove('active');
+                chevron.style.transform = 'rotate(0deg)';
+                if (statusHint) statusHint.textContent = 'Clique para expandir';
+                if (filterHeader) filterHeader.setAttribute('aria-expanded', 'false');
+                if (filterCard) filterCard.classList.remove('border-gold/40');
+            } else {
+                panel.classList.add('active');
+                panel.style.maxHeight = (panel.scrollHeight + 60) + 'px';
+                panel.style.opacity = '1';
+                chevron.style.transform = 'rotate(180deg)';
+                if (statusHint) statusHint.textContent = 'Clique para recolher';
+                if (filterHeader) filterHeader.setAttribute('aria-expanded', 'true');
+                if (filterCard) filterCard.classList.add('border-gold/40');
+                
+                setTimeout(() => {
+                    if (panel.classList.contains('active')) {
+                        panel.style.maxHeight = '1200px';
+                    }
+                }, 500);
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function openAndFocusCategory(event) {
+            if (event) event.stopPropagation();
+            toggleFilterPanel(true);
+            const target = document.getElementById('filter-tabs');
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        function openAndFocusSort(event) {
+            if (event) event.stopPropagation();
+            toggleFilterPanel(true);
+            const target = document.getElementById('sort-select');
+            if (target) {
+                setTimeout(() => target.focus(), 250);
+            }
+        }
+
+        function clearSearchFilter(event) {
+            if (event) event.stopPropagation();
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            handleSearch();
+        }
+
+        function resetAllFilters(event) {
+            if (event) event.stopPropagation();
+            activeCategory = 'all';
+            activeSort = 'date-desc';
+            const sortSelect = document.getElementById('sort-select');
+            if (sortSelect) sortSelect.value = 'date-desc';
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.value = '';
+            currentPage = 1;
+            updateCategoryTabsUI();
+            updateFilterSummary();
+            renderFeed();
+        }
+
+        function updateCategoryTabsUI() {
+            const tabs = ['all', 'tecnologia', 'empreendedorismo', 'investimentos'];
+            tabs.forEach(tab => {
+                const el = document.getElementById(`tab-${tab}`);
+                if (!el) return;
+                if (tab === activeCategory) {
+                    el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5 cursor-pointer shadow-md shadow-gold/20 hover:scale-[1.02]";
+                } else {
+                    el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/10 hover:border-gold/40 hover:text-white flex items-center gap-1.5 cursor-pointer hover:scale-[1.02]";
+                }
+            });
+        }
+
+        function handleSortChange() {
+            const sortSelect = document.getElementById('sort-select');
+            if (sortSelect) {
+                activeSort = sortSelect.value;
+                currentPage = 1;
+                updateFilterSummary();
+                renderFeed();
+            }
+        }
+
+        function updateFilterSummary() {
+            const summaryFilter = document.getElementById('summary-filter');
+            const summarySort = document.getElementById('summary-sort');
+            const summarySearchText = document.getElementById('summary-search-text');
+            const summarySearchVal = document.getElementById('summary-search-val');
+            const clearSearchBtn = document.getElementById('clearSearchBtn');
+            const chipFilterCat = document.getElementById('chip-filter-cat');
+            const chipFilterSort = document.getElementById('chip-filter-sort');
+            
+            const categoryNames = {
+                'all': 'Ver Tudo',
+                'tecnologia': 'Tecnologia',
+                'empreendedorismo': 'Empreendedorismo',
+                'investimentos': 'Investimentos'
+            };
+            
+            const sortNames = {
+                'date-desc': 'Mais Recentes',
+                'date-asc': 'Mais Antigas',
+                'relevance-desc': 'Maior Relevância',
+                'relevance-asc': 'Menor Relevância'
+            };
+            
+            if (summaryFilter) {
+                summaryFilter.textContent = categoryNames[activeCategory] || activeCategory;
+            }
+            if (summarySort) {
+                summarySort.textContent = sortNames[activeSort] || activeSort;
+            }
+            
+            // Highlight chip if not default
+            if (chipFilterCat) {
+                if (activeCategory !== 'all') {
+                    chipFilterCat.classList.add('border-gold/60', 'bg-gold/15', 'text-white');
+                    chipFilterCat.classList.remove('bg-white/5', 'text-gray-300');
+                } else {
+                    chipFilterCat.classList.remove('border-gold/60', 'bg-gold/15', 'text-white');
+                    chipFilterCat.classList.add('bg-white/5', 'text-gray-300');
+                }
+            }
+
+            if (chipFilterSort) {
+                if (activeSort !== 'date-desc') {
+                    chipFilterSort.classList.add('border-gold/60', 'bg-gold/15', 'text-white');
+                    chipFilterSort.classList.remove('bg-white/5', 'text-gray-300');
+                } else {
+                    chipFilterSort.classList.remove('border-gold/60', 'bg-gold/15', 'text-white');
+                    chipFilterSort.classList.add('bg-white/5', 'text-gray-300');
+                }
+            }
+
+            const searchInput = document.getElementById('search-input');
+            const searchVal = searchInput ? searchInput.value.trim() : '';
+            if (searchVal) {
+                if (summarySearchText) summarySearchText.classList.remove('hidden');
+                if (summarySearchVal) summarySearchVal.textContent = `"${searchVal}"`;
+                if (clearSearchBtn) clearSearchBtn.classList.remove('hidden');
+            } else {
+                if (summarySearchText) summarySearchText.classList.add('hidden');
+                if (clearSearchBtn) clearSearchBtn.classList.add('hidden');
+            }
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        // Category tab navigation controller
+        function setCategoryFilter(category) {
+            activeCategory = category;
+            currentPage = 1; // Reset to page 1
+            updateCategoryTabsUI();
+            updateFilterSummary();
+            renderFeed();
+        }
+
+        // Live text filter
+        function handleSearch() {
+            currentPage = 1; // Reset to page 1
+            updateFilterSummary();
+            renderFeed();
+        }
+
+        // Instant search: triggers backend pipeline and refreshes news
+        async function triggerInstantSearch() {
+            const btn = document.getElementById('instantSearchBtn');
+            const statusBar = document.getElementById('searchStatusBar');
+            const statusIcon = document.getElementById('searchStatusIcon');
+            const statusTitle = document.getElementById('searchStatusTitle');
+            const statusMsg = document.getElementById('searchStatusMsg');
+
+            // Disable button and show loading state
+            btn.disabled = true;
+            btn.classList.remove('pulse-gold-animation');
+            btn.innerHTML = DOMPurify.sanitize(`
+                <svg class="animate-spin h-4 w-4 text-black inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Buscando...</span>
+            `);
+
+            try {
+                // 1. Fetch current status of the pipeline
+                let currentStatus = "idle";
+                let currentPhase = "";
+                let currentDetail = "";
+                
+                try {
+                    const checkRes = await fetch(`${API_BASE_URL}/api/pipeline-status`);
+                    if (checkRes.ok) {
+                        const checkData = await checkRes.json();
+                        currentStatus = checkData.status;
+                        currentPhase = checkData.current_phase;
+                        currentDetail = checkData.current_detail;
+                    }
+                } catch (e) {
+                    console.log('Error checking pipeline status:', e);
+                }
+
+                const token = localStorage.getItem('admin_token');
+                
+                // If it is running, or if we are admin and can trigger it
+                if (currentStatus === "running" || token) {
+                    // Show status bar
+                    statusBar.classList.remove('hidden');
+                    statusIcon.innerHTML = DOMPurify.sanitize('<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>');
+                    statusIcon.className = 'p-2 rounded-lg bg-gold/10 text-gold';
+                    statusTitle.textContent = currentStatus === "running" ? `Fase: ${currentPhase || 'Executando...'}` : 'Pipeline de coleta acionado...';
+                    statusMsg.textContent = currentStatus === "running" ? (currentDetail || 'A IA está processando novas pesquisas...') : 'Iniciando pipeline de coleta...';
+                    lucide.createIcons();
+
+                    let pollFinished = false;
+                    
+                    // A. Polling Loop
+                    const pollPromise = (async () => {
+                        let consecutiveErrors = 0;
+                        while (!pollFinished) {
+                            try {
+                                const statusRes = await fetch(`${API_BASE_URL}/api/pipeline-status`);
+                                if (statusRes.ok) {
+                                    consecutiveErrors = 0;
+                                    const data = await statusRes.json();
+                                    if (data.status === 'running') {
+                                        statusTitle.textContent = `Fase: ${data.current_phase || 'Executando...'}`;
+                                        statusMsg.textContent = data.current_detail || 'A IA está processando novas pesquisas...';
+                                    } else if (data.status === 'failed') {
+                                        statusTitle.textContent = 'Erro no Pipeline';
+                                        statusMsg.textContent = data.last_error || 'Falha ao executar o pipeline.';
+                                        break;
+                                    } else { // idle
+                                        statusTitle.textContent = 'Pipeline concluído';
+                                        statusMsg.textContent = 'Atualizando a lista de notícias...';
+                                        break;
+                                    }
+                                } else {
+                                    consecutiveErrors++;
+                                }
+                            } catch (e) {
+                                consecutiveErrors++;
+                                console.log('Error polling status', e);
+                            }
+                            
+                            // Break if backend appears totally down/unreachable repeatedly
+                            if (consecutiveErrors >= 5) {
+                                break;
+                            }
+                            
+                            await new Promise(resolve => setTimeout(resolve, 1500));
+                        }
+                    })();
+
+                    // B. POST trigger if not already running and token is present
+                    let triggerPromise = Promise.resolve();
+                    if (currentStatus !== "running" && token) {
+                        triggerPromise = (async () => {
+                            try {
+                                const pipelineRes = await fetch(`${API_BASE_URL}/api/admin/coleta-manual`, {
+                                    method: 'POST',
+                                    headers: { 'Authorization': `Bearer ${token}` }
+                                });
+                                if (!pipelineRes.ok) {
+                                    const errData = await pipelineRes.json();
+                                    throw new Error(errData.detail || 'Falha ao iniciar o pipeline.');
+                                }
+                            } catch (e) {
+                                console.error('Trigger error', e);
+                                // Check if it started anyway, otherwise stop polling
+                                await new Promise(resolve => setTimeout(resolve, 2000));
+                                const checkRes = await fetch(`${API_BASE_URL}/api/pipeline-status`);
+                                if (checkRes.ok) {
+                                    const checkData = await checkRes.json();
+                                    if (checkData.status !== 'running') {
+                                        pollFinished = true;
+                                        throw e;
+                                    }
+                                }
+                            }
+                        })();
+                    }
+
+                    // Await both trigger and polling to complete
+                    await Promise.all([triggerPromise, pollPromise.finally(() => { pollFinished = true; })]);
+                }
+
+                // C. Fetch final news list
+                if (!statusBar.classList.contains('hidden')) {
+                    statusTitle.textContent = 'Atualizando a lista de notícias...';
+                    statusMsg.textContent = 'Carregando os resultados mais recentes do servidor.';
+                }
+                
+                await fetchNewsList();
+
+                // D. Show feedback
+                statusIcon.innerHTML = DOMPurify.sanitize('<i data-lucide="check-circle" class="w-5 h-5"></i>');
+                statusIcon.className = 'p-2 rounded-lg bg-green-500/10 text-green-400';
+                statusTitle.textContent = 'Notícias atualizadas com sucesso!';
+                statusMsg.textContent = `${allNews.length} notícias disponíveis. Filtrados: ${document.getElementById('news-grid-container').children.length} artigos exibidos.`;
+                lucide.createIcons();
+
+                showNotificationToast('Busca Concluída', `${allNews.length} notícias carregadas com sucesso!`, 'success');
+
+            } catch (err) {
+                // E. Error feedback
+                statusIcon.innerHTML = DOMPurify.sanitize('<i data-lucide="alert-triangle" class="w-5 h-5"></i>');
+                statusIcon.className = 'p-2 rounded-lg bg-red-500/10 text-red-400';
+                statusTitle.textContent = 'Erro na busca';
+                statusMsg.textContent = err.message || 'Não foi possível conectar ao servidor. As notícias de cache serão exibidas.';
+                lucide.createIcons();
+
+                showNotificationToast('Erro na Busca', 'Falha ao conectar. Exibindo notícias em cache.', 'error');
+            } finally {
+                // Restore button state
+                btn.disabled = false;
+                btn.classList.add('pulse-gold-animation');
+                btn.innerHTML = DOMPurify.sanitize(`
+                    <i data-lucide="zap" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Buscar Agora</span>
+                    <span class="sm:hidden">Buscar</span>
+                `);
+                lucide.createIcons();
+
+                // Auto-hide status bar after 6 seconds if it was displayed
+                if (!statusBar.classList.contains('hidden')) {
+                    setTimeout(() => {
+                        statusBar.classList.add('hidden');
+                        statusIcon.className = 'p-2 rounded-lg bg-gold/10 text-gold';
+                    }, 6000);
+                }
+            }
+        }
+
+        // Toast notification system
+        function showNotificationToast(title, message, type = 'success') {
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification fixed bottom-6 right-6 z-[200] glass-panel px-5 py-4 rounded-xl flex items-center gap-3 shadow-2xl max-w-sm';
+            
+            const iconClass = type === 'success' 
+                ? 'p-1.5 rounded-full bg-green-500/10 text-green-400' 
+                : 'p-1.5 rounded-full bg-red-500/10 text-red-400';
+            const iconName = type === 'success' ? 'check' : 'alert-triangle';
+
+            toast.innerHTML = DOMPurify.sanitize(`
+                <div class="${iconClass}"><i data-lucide="${iconName}" class="w-4 h-4"></i></div>
+                <div>
+                    <h4 class="font-outfit text-xs font-bold text-white">${title}</h4>
+                    <p class="text-gray-400 text-[11px] font-light mt-0.5">${message}</p>
+                </div>
+            `);
+
+            document.body.appendChild(toast);
+            lucide.createIcons();
+
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+
+            // Auto-remove after 4 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 4000);
+        }
+
+        // Initialize Page
+        function initializeNewsPage() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const categoriaParam = urlParams.get('categoria');
+            if (categoriaParam && ['tecnologia', 'empreendedorismo', 'investimentos'].includes(categoriaParam)) {
+                activeCategory = categoriaParam;
+            }
+            updateCategoryTabsUI();
+            updateFilterSummary();
+            fetchNewsList();
+            if (window.lucide) lucide.createIcons();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeNewsPage);
+        } else {
+            initializeNewsPage();
+        }
+    </script>
+</body>
+</html>

@@ -154,10 +154,11 @@ async def lifespan(app: FastAPI):
     Handles application startup and shutdown events using context managers.
     """
     import os
+    from database.config import is_serverless
+    is_serverless_run = is_serverless()
     
-    # Run DB schema check only if not on serverless/Vercel or if RUN_MIGRATIONS is set
-    is_vercel = "VERCEL" in os.environ or "VERCEL_ENV" in os.environ
-    should_migrate = os.getenv("RUN_MIGRATIONS", "false" if is_vercel else "true").lower() == "true"
+    # Run DB schema check only if not on serverless/Vercel or if RUN_MIGRATIONS is explicitly set
+    should_migrate = os.getenv("RUN_MIGRATIONS", "false" if is_serverless_run else "true").lower() == "true"
     
     if should_migrate:
         try:
@@ -169,7 +170,7 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("Lifespan: Skipping DDL migrations on serverless boot for fast startup.")
 
-    disable_scheduler = is_vercel or os.getenv("DISABLE_SCHEDULER", "false").lower() == "true"
+    disable_scheduler = is_serverless_run or os.getenv("DISABLE_SCHEDULER", "false").lower() == "true"
     
     if disable_scheduler:
         logger.info("Background Scheduler is disabled (serverless environment).")
@@ -178,40 +179,43 @@ async def lifespan(app: FastAPI):
         
     logger.info("Initializing application lifespan with background scheduler...")
     
-    # 1. Register the ingestion task (every 2 hours)
-    scheduler.add_job(
-        execute_scheduled_ingestion, 
-        trigger="interval", 
-        hours=2,
-        id="ingestion_pipeline_job",
-        replace_existing=True
-    )
-    
-    # 1.5. Register the editor task (every 30 minutes)
-    scheduler.add_job(
-        execute_scheduled_editor,
-        trigger="interval",
-        minutes=30,
-        id="editor_pipeline_job",
-        replace_existing=True
-    )
-    
-    # 2. Register the news cleanup task (daily at 03:00 AM UTC)
-    scheduler.add_job(
-        execute_news_cleanup,
-        trigger="cron",
-        hour=3,
-        minute=0,
-        id="news_cleanup_job",
-        replace_existing=True
-    )
-    
-    # 3. Start the Async scheduler
-    scheduler.start()
-    logger.info("Background Scheduler started successfully (ingestion + 20-day cleanup).")
+    try:
+        # 1. Register the ingestion task (every 2 hours)
+        scheduler.add_job(
+            execute_scheduled_ingestion, 
+            trigger="interval", 
+            hours=2,
+            id="ingestion_pipeline_job",
+            replace_existing=True
+        )
+        
+        # 1.5. Register the editor task (every 30 minutes)
+        scheduler.add_job(
+            execute_scheduled_editor,
+            trigger="interval",
+            minutes=30,
+            id="editor_pipeline_job",
+            replace_existing=True
+        )
+        
+        # 2. Register the news cleanup task (daily at 03:00 AM UTC)
+        scheduler.add_job(
+            execute_news_cleanup,
+            trigger="cron",
+            hour=3,
+            minute=0,
+            id="news_cleanup_job",
+            replace_existing=True
+        )
+        
+        # 3. Start the Async scheduler
+        scheduler.start()
+        logger.info("Background Scheduler started successfully (ingestion + 20-day cleanup).")
+    except Exception as se:
+        logger.error(f"Failed to start scheduler: {se}")
     
     # Trigger initial ingestion in background on startup if DB is empty of news (local only)
-    if not is_vercel:
+    if not is_serverless_run:
         try:
             with get_db_session() as session:
                 news_count = session.query(News).count()
@@ -1041,12 +1045,15 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def get_static_path(filename: str) -> str:
     candidates = [
+        os.path.join(BASE_DIR, "public", filename),
         os.path.join(BASE_DIR, filename),
+        os.path.join(os.getcwd(), "public", filename),
+        os.path.join(os.getcwd(), filename),
         os.path.join(os.path.dirname(BASE_DIR), filename),
         filename
     ]
     for c in candidates:
-        if os.path.exists(c):
+        if os.path.exists(c) and os.path.isfile(c):
             return c
     return os.path.join(BASE_DIR, filename)
 
