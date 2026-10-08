@@ -223,78 +223,152 @@
             </p>
         </div>
 
-        <!-- Filter Toggle & Summary Bar -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/5 border border-white/10 rounded-xl p-4 mb-6 hover:border-gold/30 transition-all duration-300">
-            <div class="flex flex-wrap items-center gap-2.5 text-xs text-gray-400">
-                <span class="font-bold uppercase tracking-wider text-gold/80 flex items-center gap-1.5">
-                    <i data-lucide="filter" class="w-3.5 h-3.5"></i> Painel de Filtros
-                </span>
-                <span class="text-white/20 hidden sm:inline">|</span>
-                <span>Filtro: <strong class="text-white" id="summary-filter">Ver Tudo</strong></span>
-                <span class="text-white/20">|</span>
-                <span>Ordem: <strong class="text-white" id="summary-sort">Mais Recentes</strong></span>
-                <span id="summary-search-text" class="hidden"><span class="text-white/20">|</span> Busca: <strong class="text-white" id="summary-search-val"></strong></span>
-            </div>
-            <button onclick="toggleFilterPanel()" class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-wider text-gray-300 hover:text-white hover:border-gold/30 hover:bg-white/10 transition-all duration-300 select-none cursor-pointer">
-                <i data-lucide="sliders-horizontal" class="w-4 h-4 text-gold"></i>
-                <span>Filtros & Ordenação</span>
-                <i data-lucide="chevron-down" id="filter-chevron" class="w-4 h-4 transition-transform duration-300"></i>
-            </button>
-        </div>
+        <!-- UNIFIED EXPANDABLE FILTER PANEL -->
+        <div id="filter-panel-card" class="glass-panel border border-white/10 rounded-2xl overflow-hidden mb-8 transition-all duration-300 hover:border-gold/30 shadow-lg shadow-black/40">
+            <!-- Clickable Header Bar (Entire bar triggers expansion) -->
+            <div id="filter-header-btn" onclick="toggleFilterPanel()" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 md:p-5 cursor-pointer select-none bg-white/[0.02] hover:bg-white/[0.05] transition-all duration-200 group" role="button" aria-expanded="false" aria-controls="filters-panel" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){toggleFilterPanel();event.preventDefault();}">
+                
+                <!-- Left: Title & Filter Summary Chips -->
+                <div class="flex flex-wrap items-center gap-2.5 text-xs">
+                    <!-- Title Pill -->
+                    <div class="flex items-center gap-2 font-bold uppercase tracking-wider text-gold group-hover:text-gold-light transition-colors mr-1">
+                        <div class="w-7 h-7 rounded-lg bg-gold/10 border border-gold/20 flex items-center justify-center group-hover:border-gold/40 group-hover:bg-gold/20 transition-all">
+                            <i data-lucide="filter" class="w-3.5 h-3.5 text-gold"></i>
+                        </div>
+                        <span class="tracking-widest font-outfit text-sm">Painel de Filtros</span>
+                    </div>
 
-        <!-- Expandable Filters Panel (hidden by default) -->
-        <div id="filters-panel" class="max-h-0 opacity-0 overflow-hidden transition-all duration-500 ease-in-out">
-            <div class="glass-panel border border-white/5 rounded-xl p-5 mb-8 flex flex-col gap-6">
-                <!-- Row 1: Categories -->
-                <div>
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-3">Categorias</span>
-                    <div class="flex flex-wrap items-center gap-2" id="filter-tabs">
-                        <button onclick="setCategoryFilter('all')" id="tab-all" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5 cursor-pointer">
-                            Ver Tudo
-                        </button>
-                        <button onclick="setCategoryFilter('tecnologia')" id="tab-tecnologia" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5 cursor-pointer">
-                            Tecnologia
-                        </button>
-                        <button onclick="setCategoryFilter('empreendedorismo')" id="tab-empreendedorismo" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5 cursor-pointer">
-                            Empreendedorismo
-                        </button>
-                        <button onclick="setCategoryFilter('investimentos')" id="tab-investimentos" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5 cursor-pointer">
-                            Investimentos
+                    <span class="text-white/20 hidden sm:inline">|</span>
+
+                    <!-- Interactive Chip: Active Category -->
+                    <button type="button" id="chip-filter-cat" onclick="openAndFocusCategory(event)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-gold/50 hover:bg-gold/10 transition-all text-xs text-gray-300 hover:text-white cursor-pointer group/chip" title="Clique para alterar a categoria">
+                        <span class="text-gray-400 font-medium">Filtro:</span>
+                        <strong class="text-gold-light font-bold" id="summary-filter">Ver Tudo</strong>
+                        <i data-lucide="chevron-down" class="w-3 h-3 text-gold/60 opacity-60 group-hover/chip:opacity-100 transition-opacity"></i>
+                    </button>
+
+                    <span class="text-white/20 hidden sm:inline">|</span>
+
+                    <!-- Interactive Chip: Active Sort -->
+                    <button type="button" id="chip-filter-sort" onclick="openAndFocusSort(event)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-gold/50 hover:bg-gold/10 transition-all text-xs text-gray-300 hover:text-white cursor-pointer group/chip" title="Clique para alterar a ordenação">
+                        <span class="text-gray-400 font-medium">Ordem:</span>
+                        <strong class="text-gold-light font-bold" id="summary-sort">Mais Recentes</strong>
+                        <i data-lucide="chevron-down" class="w-3 h-3 text-gold/60 opacity-60 group-hover/chip:opacity-100 transition-opacity"></i>
+                    </button>
+
+                    <!-- Search Chip (Visible when searching) -->
+                    <div id="summary-search-text" class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold/10 border border-gold/30 text-xs text-gold-light">
+                        <i data-lucide="search" class="w-3 h-3 text-gold"></i>
+                        <span>Busca:</span>
+                        <strong class="text-white max-w-[120px] truncate" id="summary-search-val"></strong>
+                        <button type="button" onclick="clearSearchFilter(event)" class="ml-1 text-gray-400 hover:text-white hover:bg-white/10 rounded p-0.5 cursor-pointer" title="Remover termo de busca">
+                            <i data-lucide="x" class="w-3 h-3"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- Row 2: Search and Sorting -->
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                    <!-- Text Search -->
-                    <div class="md:col-span-5">
-                        <label for="search-input" class="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">Pesquisa de Texto</label>
-                        <div class="relative w-full">
-                            <input type="text" id="search-input" oninput="handleSearch()" placeholder="Pesquisar notícias..." class="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold/50 transition-colors">
-                            <i data-lucide="search" class="w-4 h-4 text-gray-500 absolute left-3.5 top-3.5"></i>
-                        </div>
+                <!-- Right: Expand / Collapse Toggle Button -->
+                <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                    <span id="filter-status-hint" class="text-[11px] font-medium text-gray-400 group-hover:text-gold-light transition-colors">
+                        Clique para expandir
+                    </span>
+                    <div class="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white/5 border border-white/10 group-hover:border-gold/40 group-hover:bg-gold/10 text-xs font-bold uppercase tracking-wider text-gray-300 group-hover:text-white transition-all duration-300">
+                        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-gold"></i>
+                        <span id="filter-btn-label">Filtros &amp; Opções</span>
+                        <i data-lucide="chevron-down" id="filter-chevron" class="w-4 h-4 text-gold transition-transform duration-300"></i>
                     </div>
+                </div>
+            </div>
+
+            <!-- Expandable Body: Everything inside the filter panel -->
+            <div id="filters-panel" class="max-h-0 opacity-0 overflow-hidden transition-all duration-500 ease-in-out border-t border-white/5">
+                <div class="p-5 md:p-6 flex flex-col gap-6 bg-black/40 backdrop-blur-sm" onclick="event.stopPropagation()">
                     
-                    <!-- Sorting Select -->
-                    <div class="md:col-span-4">
-                        <label for="sort-select" class="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">Ordem de Exibição</label>
-                        <div class="relative w-full">
-                            <select id="sort-select" onchange="handleSortChange()" class="w-full bg-[#121214] border border-white/10 rounded-lg py-2.5 px-4 pr-10 text-sm text-white focus:outline-none focus:border-gold/50 transition-colors appearance-none cursor-pointer">
-                                <option value="date-desc">Mais Recentes</option>
-                                <option value="date-asc">Mais Antigas</option>
-                                <option value="relevance-desc">Maior Relevância</option>
-                                <option value="relevance-asc">Menor Relevância</option>
-                            </select>
-                            <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500 absolute right-3.5 top-3.5 pointer-events-none"></i>
+                    <!-- Row 1: Categorias -->
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-gold-light/70 flex items-center gap-1.5">
+                                <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-gold"></i>
+                                Categorias de Relatórios
+                            </span>
+                            <span class="text-[11px] text-gray-500 font-mono" id="category-hint">Selecione uma categoria</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2.5" id="filter-tabs">
+                            <button type="button" onclick="setCategoryFilter('all')" id="tab-all" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5 cursor-pointer shadow-md shadow-gold/20 hover:scale-[1.02]">
+                                <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                                Ver Tudo
+                            </button>
+                            <button type="button" onclick="setCategoryFilter('tecnologia')" id="tab-tecnologia" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/10 hover:border-gold/40 hover:text-white flex items-center gap-1.5 cursor-pointer hover:scale-[1.02]">
+                                <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i>
+                                Tecnologia
+                            </button>
+                            <button type="button" onclick="setCategoryFilter('empreendedorismo')" id="tab-empreendedorismo" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/10 hover:border-gold/40 hover:text-white flex items-center gap-1.5 cursor-pointer hover:scale-[1.02]">
+                                <i data-lucide="briefcase" class="w-3.5 h-3.5 text-amber-400"></i>
+                                Empreendedorismo
+                            </button>
+                            <button type="button" onclick="setCategoryFilter('investimentos')" id="tab-investimentos" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/10 hover:border-gold/40 hover:text-white flex items-center gap-1.5 cursor-pointer hover:scale-[1.02]">
+                                <i data-lucide="trending-up" class="w-3.5 h-3.5 text-emerald-400"></i>
+                                Investimentos
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Instant Search Button -->
-                    <div class="md:col-span-3">
-                        <button id="instantSearchBtn" onclick="triggerInstantSearch()" class="pulse-gold-animation w-full py-2.5 rounded-lg bg-gradient-to-r from-gold-dark via-gold to-gold-light text-black text-xs font-extrabold uppercase tracking-wider hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2 glow-btn cursor-pointer" title="Buscar novas notícias em tempo real">
-                            <i data-lucide="zap" class="w-4 h-4"></i>
-                            <span>Buscar Agora</span>
-                        </button>
+                    <!-- Row 2: Search, Sorting and Instant Action -->
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end pt-2 border-t border-white/5">
+                        <!-- Text Search -->
+                        <div class="md:col-span-5">
+                            <label for="search-input" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 block mb-2 flex items-center justify-between">
+                                <span>Pesquisa de Texto</span>
+                                <span class="text-[10px] text-gray-500 lowercase font-normal">título, resumo ou fonte</span>
+                            </label>
+                            <div class="relative w-full">
+                                <input type="text" id="search-input" oninput="handleSearch()" placeholder="Pesquisar notícias e termos..." class="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold/60 focus:bg-white/[0.08] transition-all">
+                                <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5"></i>
+                                <button type="button" id="clearSearchBtn" onclick="clearSearchFilter(event)" class="hidden absolute right-3 top-3 text-gray-400 hover:text-white p-0.5 rounded transition cursor-pointer" title="Limpar pesquisa">
+                                    <i data-lucide="x" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Sorting Select -->
+                        <div class="md:col-span-4">
+                            <label for="sort-select" class="text-[10px] font-bold uppercase tracking-widest text-gray-400 block mb-2">Ordem de Exibição</label>
+                            <div class="relative w-full">
+                                <select id="sort-select" onchange="handleSortChange()" class="w-full bg-[#121214] border border-white/10 rounded-lg py-2.5 px-4 pr-10 text-sm text-white focus:outline-none focus:border-gold/60 transition-colors appearance-none cursor-pointer">
+                                    <option value="date-desc">Mais Recentes</option>
+                                    <option value="date-asc">Mais Antigas</option>
+                                    <option value="relevance-desc">Maior Relevância</option>
+                                    <option value="relevance-asc">Menor Relevância</option>
+                                </select>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 absolute right-3.5 top-3.5 pointer-events-none"></i>
+                            </div>
+                        </div>
+
+                        <!-- Instant Search Button -->
+                        <div class="md:col-span-3">
+                            <button id="instantSearchBtn" onclick="triggerInstantSearch()" class="pulse-gold-animation w-full py-2.5 rounded-lg bg-gradient-to-r from-gold-dark via-gold to-gold-light text-black text-xs font-extrabold uppercase tracking-wider hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2 glow-btn cursor-pointer" title="Buscar novas notícias em tempo real">
+                                <i data-lucide="zap" class="w-4 h-4"></i>
+                                <span>Buscar Agora</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Bottom Action & Results Bar -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-white/5 text-xs text-gray-400">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-block w-2 h-2 rounded-full bg-gold animate-pulse"></span>
+                            <span id="filter-count-badge" class="font-medium text-gray-300">Carregando relatórios...</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button type="button" onclick="resetAllFilters(event)" class="px-3.5 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:border-gold/40 hover:text-white transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer text-gray-300" title="Restaurar valores padrão">
+                                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-gold"></i>
+                                Limpar Filtros
+                            </button>
+                            <button type="button" onclick="toggleFilterPanel(false)" class="px-3.5 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:border-white/30 hover:text-white transition-all text-xs font-medium flex items-center gap-1.5 cursor-pointer text-gray-400" title="Recolher painel de filtros">
+                                <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
+                                Recolher Painel
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -661,6 +735,18 @@
 
             const totalFiltered = filtered.length;
             const totalPages = Math.ceil(totalFiltered / pageSize);
+
+            // Update real-time counter in filter panel
+            const filterCountBadge = document.getElementById('filter-count-badge');
+            if (filterCountBadge) {
+                if (totalFiltered === 0) {
+                    filterCountBadge.innerHTML = 'Nenhum relatório encontrado';
+                } else if (totalFiltered === 1) {
+                    filterCountBadge.innerHTML = 'Exibindo <strong class="text-gold font-bold">1</strong> relatório';
+                } else {
+                    filterCountBadge.innerHTML = `Exibindo <strong class="text-gold font-bold">${totalFiltered}</strong> relatórios`;
+                }
+            }
 
             if (currentPage > totalPages) {
                 currentPage = Math.max(1, totalPages);
@@ -1099,24 +1185,97 @@
             }
         }
 
-        function toggleFilterPanel() {
+        function toggleFilterPanel(forceOpen = null) {
             const panel = document.getElementById('filters-panel');
             const chevron = document.getElementById('filter-chevron');
+            const statusHint = document.getElementById('filter-status-hint');
+            const filterHeader = document.getElementById('filter-header-btn');
+            const filterCard = document.getElementById('filter-panel-card');
             if (!panel || !chevron) return;
             
-            if (panel.classList.contains('active')) {
+            const isCurrentlyActive = panel.classList.contains('active');
+            const shouldOpen = forceOpen !== null ? forceOpen : !isCurrentlyActive;
+            
+            if (!shouldOpen) {
+                panel.style.maxHeight = panel.scrollHeight + 'px';
+                panel.offsetHeight; // trigger reflow
                 panel.style.maxHeight = '0px';
                 panel.style.opacity = '0';
                 panel.classList.remove('active');
-                panel.classList.remove('mb-6');
                 chevron.style.transform = 'rotate(0deg)';
+                if (statusHint) statusHint.textContent = 'Clique para expandir';
+                if (filterHeader) filterHeader.setAttribute('aria-expanded', 'false');
+                if (filterCard) filterCard.classList.remove('border-gold/40');
             } else {
                 panel.classList.add('active');
-                panel.classList.add('mb-6');
-                panel.style.maxHeight = panel.scrollHeight + 'px';
+                panel.style.maxHeight = (panel.scrollHeight + 60) + 'px';
                 panel.style.opacity = '1';
                 chevron.style.transform = 'rotate(180deg)';
+                if (statusHint) statusHint.textContent = 'Clique para recolher';
+                if (filterHeader) filterHeader.setAttribute('aria-expanded', 'true');
+                if (filterCard) filterCard.classList.add('border-gold/40');
+                
+                setTimeout(() => {
+                    if (panel.classList.contains('active')) {
+                        panel.style.maxHeight = '1200px';
+                    }
+                }, 500);
             }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function openAndFocusCategory(event) {
+            if (event) event.stopPropagation();
+            toggleFilterPanel(true);
+            const target = document.getElementById('filter-tabs');
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        function openAndFocusSort(event) {
+            if (event) event.stopPropagation();
+            toggleFilterPanel(true);
+            const target = document.getElementById('sort-select');
+            if (target) {
+                setTimeout(() => target.focus(), 250);
+            }
+        }
+
+        function clearSearchFilter(event) {
+            if (event) event.stopPropagation();
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            handleSearch();
+        }
+
+        function resetAllFilters(event) {
+            if (event) event.stopPropagation();
+            activeCategory = 'all';
+            activeSort = 'date-desc';
+            const sortSelect = document.getElementById('sort-select');
+            if (sortSelect) sortSelect.value = 'date-desc';
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.value = '';
+            currentPage = 1;
+            updateCategoryTabsUI();
+            updateFilterSummary();
+            renderFeed();
+        }
+
+        function updateCategoryTabsUI() {
+            const tabs = ['all', 'tecnologia', 'empreendedorismo', 'investimentos'];
+            tabs.forEach(tab => {
+                const el = document.getElementById(`tab-${tab}`);
+                if (!el) return;
+                if (tab === activeCategory) {
+                    el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5 cursor-pointer shadow-md shadow-gold/20 hover:scale-[1.02]";
+                } else {
+                    el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/10 hover:border-gold/40 hover:text-white flex items-center gap-1.5 cursor-pointer hover:scale-[1.02]";
+                }
+            });
         }
 
         function handleSortChange() {
@@ -1134,6 +1293,9 @@
             const summarySort = document.getElementById('summary-sort');
             const summarySearchText = document.getElementById('summary-search-text');
             const summarySearchVal = document.getElementById('summary-search-val');
+            const clearSearchBtn = document.getElementById('clearSearchBtn');
+            const chipFilterCat = document.getElementById('chip-filter-cat');
+            const chipFilterSort = document.getElementById('chip-filter-sort');
             
             const categoryNames = {
                 'all': 'Ver Tudo',
@@ -1149,38 +1311,53 @@
                 'relevance-asc': 'Menor Relevância'
             };
             
-            if (summaryFilter) summaryFilter.textContent = categoryNames[activeCategory] || activeCategory;
-            if (summarySort) summarySort.textContent = sortNames[activeSort] || activeSort;
+            if (summaryFilter) {
+                summaryFilter.textContent = categoryNames[activeCategory] || activeCategory;
+            }
+            if (summarySort) {
+                summarySort.textContent = sortNames[activeSort] || activeSort;
+            }
             
+            // Highlight chip if not default
+            if (chipFilterCat) {
+                if (activeCategory !== 'all') {
+                    chipFilterCat.classList.add('border-gold/60', 'bg-gold/15', 'text-white');
+                    chipFilterCat.classList.remove('bg-white/5', 'text-gray-300');
+                } else {
+                    chipFilterCat.classList.remove('border-gold/60', 'bg-gold/15', 'text-white');
+                    chipFilterCat.classList.add('bg-white/5', 'text-gray-300');
+                }
+            }
+
+            if (chipFilterSort) {
+                if (activeSort !== 'date-desc') {
+                    chipFilterSort.classList.add('border-gold/60', 'bg-gold/15', 'text-white');
+                    chipFilterSort.classList.remove('bg-white/5', 'text-gray-300');
+                } else {
+                    chipFilterSort.classList.remove('border-gold/60', 'bg-gold/15', 'text-white');
+                    chipFilterSort.classList.add('bg-white/5', 'text-gray-300');
+                }
+            }
+
             const searchInput = document.getElementById('search-input');
-            if (searchInput && searchInput.value.trim()) {
+            const searchVal = searchInput ? searchInput.value.trim() : '';
+            if (searchVal) {
                 if (summarySearchText) summarySearchText.classList.remove('hidden');
-                if (summarySearchVal) summarySearchVal.textContent = `"${searchInput.value.trim()}"`;
+                if (summarySearchVal) summarySearchVal.textContent = `"${searchVal}"`;
+                if (clearSearchBtn) clearSearchBtn.classList.remove('hidden');
             } else {
                 if (summarySearchText) summarySearchText.classList.add('hidden');
+                if (clearSearchBtn) clearSearchBtn.classList.add('hidden');
             }
+
+            if (window.lucide) lucide.createIcons();
         }
 
         // Category tab navigation controller
         function setCategoryFilter(category) {
             activeCategory = category;
             currentPage = 1; // Reset to page 1
-
-            // Remove active classes from all tabs
-            const tabs = ['all', 'tecnologia', 'empreendedorismo', 'investimentos'];
-            tabs.forEach(tab => {
-                const el = document.getElementById(`tab-${tab}`);
-                if (el) {
-                    el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5 cursor-pointer";
-                }
-            });
-
-            // Set active class on target tab
-            const activeEl = document.getElementById(`tab-${category}`);
-            if (activeEl) {
-                activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5 cursor-pointer";
-            }
-
+            updateCategoryTabsUI();
             updateFilterSummary();
             renderFeed();
         }
@@ -1401,21 +1578,11 @@
             const categoriaParam = urlParams.get('categoria');
             if (categoriaParam && ['tecnologia', 'empreendedorismo', 'investimentos'].includes(categoriaParam)) {
                 activeCategory = categoriaParam;
-                const tabs = ['all', 'tecnologia', 'empreendedorismo', 'investimentos'];
-                tabs.forEach(tab => {
-                    const el = document.getElementById(`tab-${tab}`);
-                    if (el) {
-                        el.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-white/5 text-gray-400 border border-white/5 hover:border-gold/30 hover:text-white flex items-center gap-1.5 cursor-pointer";
-                    }
-                });
-                const activeEl = document.getElementById(`tab-${categoriaParam}`);
-                if (activeEl) {
-                    activeEl.className = "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-gold text-black flex items-center gap-1.5 cursor-pointer";
-                }
             }
+            updateCategoryTabsUI();
             updateFilterSummary();
             fetchNewsList();
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
         }
 
         if (document.readyState === 'loading') {
