@@ -43,6 +43,18 @@ SessionLocal = sessionmaker(
     bind=engine
 )
 
+_tables_initialized = False
+
+def ensure_sqlite_tables():
+    global _tables_initialized
+    if not _tables_initialized and settings.DATABASE_URL.startswith("sqlite"):
+        try:
+            from database.models import Base
+            Base.metadata.create_all(bind=engine)
+            _tables_initialized = True
+        except Exception as e:
+            logger.warning(f"Failed to ensure sqlite tables: {e}")
+
 @contextmanager
 def get_db_session() -> Generator[Session, None, None]:
     """
@@ -50,6 +62,7 @@ def get_db_session() -> Generator[Session, None, None]:
     It automatically commits the transaction on success, rolls back on exceptions,
     and ensures the session is closed.
     """
+    ensure_sqlite_tables()
     session = SessionLocal()
     try:
         yield session

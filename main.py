@@ -237,12 +237,14 @@ async def lifespan(app: FastAPI):
         pass
 
 
-# Initialize FastAPI app with lifespan events
+# Initialize FastAPI app with lifespan events (disabled on serverless to avoid startup crashes)
+from database.config import is_serverless
+
 app = FastAPI(
     title="Arandu News Portal API",
     description="API para portal de curadoria de notícias de tecnologia e empreendedorismo.",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=None if is_serverless() else lifespan
 )
 
 # Enable CORS for frontend cross-origin requests
@@ -1032,13 +1034,20 @@ def health_check():
     """
     Checks if API and database connection are working.
     """
+    db_status = "connected"
+    db_error = None
     try:
         with get_db_session() as session:
-            # Simple query to check connection (database-agnostic)
             session.execute(text("SELECT 1"))
-        return {"status": "healthy", "database": "connected"}
     except Exception as e:
-        return {"status": "unhealthy", "database_error": str(e)}
+        db_status = "error"
+        db_error = str(e)
+    return {
+        "status": "healthy" if db_status == "connected" else "degraded",
+        "database": db_status,
+        "database_error": db_error,
+        "is_serverless": is_serverless()
+    }
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
