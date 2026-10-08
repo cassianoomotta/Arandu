@@ -2,6 +2,9 @@ import sys
 import os
 import traceback
 
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+
 # Force serverless environment flags at runtime entry
 os.environ["VERCEL"] = "1"
 os.environ["SERVERLESS"] = "1"
@@ -9,41 +12,57 @@ os.environ["DISABLE_SCHEDULER"] = "true"
 os.environ["RUN_MIGRATIONS"] = "false"
 os.environ["DISABLE_TIMEOUTS"] = "false"
 
-# Add root directory to sys.path to allow importing main and database modules
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
-try:
-    from main import app
-except Exception as startup_err:
-    tb_str = traceback.format_exc()
-    from fastapi import FastAPI
-    from fastapi.responses import JSONResponse, HTMLResponse
-    
-    app = FastAPI(title="Arandu Emergency Fallback")
-    
-    @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
-    def catch_all_fallback(path: str = ""):
-        # If user is asking for an HTML page or static file, try to serve it directly
-        candidate_paths = [
-            os.path.join(root_dir, path) if path else os.path.join(root_dir, "index.html"),
-            os.path.join(root_dir, f"{path}.html") if path and not path.endswith(".html") else None,
-            os.path.join(os.getcwd(), path) if path else None,
-        ]
-        for c_path in candidate_paths:
-            if c_path and os.path.exists(c_path) and os.path.isfile(c_path):
-                try:
-                    with open(c_path, "r", encoding="utf-8", errors="ignore") as f:
-                        return HTMLResponse(content=f.read())
-                except Exception:
-                    pass
-                    
+app = FastAPI(title="Arandu Diagnostic & Production API")
+
+@app.get("/api/health")
+def health_check():
+    import_main_error = None
+    main_imported = False
+    try:
+        import main
+        main_imported = True
+    except Exception as e:
+        import_main_error = traceback.format_exc()
+
+    return {
+        "status": "healthy",
+        "python_version": sys.version,
+        "main_imported": main_imported,
+        "import_error": import_main_error,
+        "env_keys": [k for k in os.environ.keys() if not any(s in k.lower() for s in ['key', 'secret', 'token', 'pass', 'database'])]
+    }
+
+# Forward /api/noticias dynamically to main if possible
+@app.get("/api/noticias")
+def proxy_noticias(page: int = 1, size: int = 20, source_id: int = None, send_status: str = None, editorial_status: str = None, order_by: str = "published"):
+    try:
+        import main
+        from fastapi.responses import Response
+        res = Response()
+        return main.get_news(response=res, page=page, size=size, source_id=source_id, send_status=send_status, editorial_status=editorial_status, order_by=order_by)
+    except Exception as e:
         return JSONResponse(
             status_code=500,
             content={
-                "error": "Backend Startup Exception",
-                "message": str(startup_err),
-                "traceback": tb_str.splitlines()
+                "error": "Failed to fetch news from main",
+                "message": str(e),
+                "traceback": traceback.format_exc().splitlines()
             }
+        )
+
+# Catch-all route for any other API route
+@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
+async def catch_all(path: str = ""):
+    try:
+        import main
+        # If main is loaded, forward using ASGI app
+        return await main.app(scope=None, receive=None, send=None)
+    except Exception as e:
+        return JSONResponse(
+            status_code=404,
+            content={"message": f"Route /api/{path} not found or main unavailable", "error": str(e)}
         )
