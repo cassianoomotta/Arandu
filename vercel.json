@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "*.html"
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/coleta",

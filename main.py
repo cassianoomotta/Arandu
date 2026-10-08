@@ -1037,38 +1037,55 @@ def health_check():
         return {"status": "unhealthy", "database_error": str(e)}
 
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def get_static_path(filename: str) -> str:
+    candidates = [
+        os.path.join(BASE_DIR, filename),
+        os.path.join(os.path.dirname(BASE_DIR), filename),
+        filename
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return os.path.join(BASE_DIR, filename)
+
 @app.get("/", summary="Servir index.html")
 @app.get("/index.html", summary="Servir index.html")
 def read_index():
-    return FileResponse("index.html")
+    return FileResponse(get_static_path("index.html"))
 
 @app.get("/noticias.html", summary="Servir noticias.html")
 def read_noticias():
-    return FileResponse("noticias.html")
+    return FileResponse(get_static_path("noticias.html"))
 
 @app.get("/admin.html", summary="Servir admin.html")
 def read_admin():
-    return FileResponse("admin.html")
+    return FileResponse(get_static_path("admin.html"))
 
 @app.get("/favicon.ico", summary="Servir favicon.ico")
 def read_favicon_ico():
-    if os.path.exists("favicon.ico"):
-        return FileResponse("favicon.ico", media_type="image/x-icon")
-    elif os.path.exists("favicon.png"):
-        return FileResponse("favicon.png", media_type="image/png")
-    return FileResponse("scripts/arandu_emblem_transparent.png", media_type="image/png")
+    ico_path = get_static_path("favicon.ico")
+    if os.path.exists(ico_path):
+        return FileResponse(ico_path, media_type="image/x-icon")
+    png_path = get_static_path("favicon.png")
+    if os.path.exists(png_path):
+        return FileResponse(png_path, media_type="image/png")
+    return FileResponse(get_static_path("scripts/arandu_emblem_transparent.png"), media_type="image/png")
 
 @app.get("/favicon.png", summary="Servir favicon.png")
 def read_favicon_png():
-    if os.path.exists("favicon.png"):
-        return FileResponse("favicon.png", media_type="image/png")
-    return FileResponse("scripts/arandu_emblem_transparent.png", media_type="image/png")
+    png_path = get_static_path("favicon.png")
+    if os.path.exists(png_path):
+        return FileResponse(png_path, media_type="image/png")
+    return FileResponse(get_static_path("scripts/arandu_emblem_transparent.png"), media_type="image/png")
 
 @app.get("/favicon.svg", summary="Servir favicon.svg")
 def read_favicon_svg():
-    if os.path.exists("favicon.svg"):
-        return FileResponse("favicon.svg", media_type="image/svg+xml")
-    return FileResponse("favicon.png", media_type="image/png")
+    svg_path = get_static_path("favicon.svg")
+    if os.path.exists(svg_path):
+        return FileResponse(svg_path, media_type="image/svg+xml")
+    return FileResponse(get_static_path("favicon.png"), media_type="image/png")
 
 
 
